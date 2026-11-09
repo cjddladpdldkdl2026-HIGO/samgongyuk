@@ -90,6 +90,16 @@
   .slides.drag { transition: none; cursor: grabbing; user-select: none; }
   .slide { flex: 0 0 100%; min-width: 0; opacity: .35; transition: opacity .6s; }
   .slide.on { opacity: 1; }
+  /* 슬라이드 전체 배경 그림 (bg): 왼쪽 글씨 쪽은 어둡게, 아래는 격자 바닥으로 자연스럽게 */
+  .slide { position: relative; }
+  .slide.has-bg::before {
+    content: ""; position: absolute; inset: 0; z-index: 0; pointer-events: none;
+    background:
+      linear-gradient(90deg, rgba(7,1,15,.9) 0%, rgba(7,1,15,.62) 38%, rgba(7,1,15,.15) 68%, rgba(7,1,15,.35) 100%),
+      linear-gradient(0deg, var(--bg-0) 0%, rgba(7,1,15,0) 32%),
+      linear-gradient(180deg, rgba(7,1,15,.55) 0%, rgba(7,1,15,0) 18%),
+      var(--bg-img) center / cover no-repeat;
+  }
   .slide .sun { background: linear-gradient(180deg, var(--gold) 0%, #ff8a3d 40%, var(--c) 75%, var(--violet) 100%); }
   .slide .screen { border-color: var(--c); box-shadow: 0 0 6px var(--c), 0 0 24px var(--c), 0 30px 60px rgba(0,0,0,.6); }
   .nav-arrow {
@@ -395,6 +405,7 @@
    - hero     : 큰 배너에 보일 사진 (없으면 thumb 사진 사용)
    - chars    : 큰 배너에 크게 보일 캐릭터 그림들 (여러 장이면 번갈아 나옴, 있으면 hero 대신 사용)
    - needsServer : true 면 'PT AI LAB 실행.bat'으로 열었을 때만 실행 (마이크·음성 모델 쓰는 게임)
+   - bg       : 큰 배너 슬라이드 전체에 깔리는 배경 그림 (thumbs 폴더 등)
    - shout    : 캐릭터 위에 올라가는 입체 글씨, 한 줄씩 ["닿아라", "아..쫌..!!!"]
    ============================================================ */
 const APPS = [
@@ -410,6 +421,7 @@ const APPS = [
     glow: "#ff2e88",
     thumb: "thumbs/neoege-play.jpg",   // 카드에 보일 게임 화면 사진
     hero: "thumbs/neoege-title.jpg",   // 큰 배너에 보일 사진 (없으면 thumb 사용)
+    bg: "thumbs/bg-neoege.jpg",        // 배너 전체 배경
     chars: ["thumbs/char-3.jpg", "thumbs/char-2.jpg", "thumbs/char-1.jpg"],   // 배너 캐릭터 그림 (번갈아 나와요)
     shout: ["닿아라", "닿아라", "아..쫌..!!!"],   // 배너 입체 글씨 (한 줄씩)
     facts: [["8", "근육"], ["3", "난이도"], ["3D", "뼈 모델"]],
@@ -442,6 +454,7 @@ const APPS = [
     glow: "#fde74c",
     thumb: "games/Vertebral_Wizard/images/title.jpg",
     hero: "games/Vertebral_Wizard/images/title.jpg",
+    bg: "thumbs/bg-wizard.jpg",
     facts: [["🎤", "음성 인식"], ["PIXEL", "도트 RPG"], ["EN", "해부학 단어"]],
     needsServer: true,   // 마이크·음성 모델 때문에 'PT AI LAB 실행.bat'으로 열어야 해요
     featured: true
@@ -513,7 +526,7 @@ function renderHero() {
     const facts = (a.facts || []).map(([n, l]) => `<div><b>${esc(n)}</b>${esc(l)}</div>`).join("");
     const pic = a.hero || a.thumb;
     return `
-    <div class="slide" style="--c:${glow(a)}" aria-roledescription="slide" aria-label="${i + 1} / ${list.length}">
+    <div class="slide${a.bg ? " has-bg" : ""}" style="--c:${glow(a)}${a.bg ? `;--bg-img:url('${a.bg}')` : ""}" aria-roledescription="slide" aria-label="${i + 1} / ${list.length}">
       <div class="hero-inner">
         <div>
           <p class="eyebrow">동아리 추천 ${String(i + 1).padStart(2, "0")} · ${esc(a.year || "")}</p>
