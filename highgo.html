@@ -441,7 +441,7 @@
    - featured : true 로 하면 맨 위 큰 배너 슬라이드에 들어가요 (여러 개 가능, 옆으로 넘겨 봐요)
    - hero     : 큰 배너에 보일 사진 (없으면 thumb 사진 사용)
    - chars    : 큰 배너에 크게 보일 캐릭터 그림들 (여러 장이면 번갈아 나옴, 있으면 hero 대신 사용)
-   - needsServer : true 면 'PT AI LAB 실행.bat'으로 열었을 때만 실행 (마이크·음성 모델 쓰는 게임)
+   - needsServer : true 면 마이크·음성 모델을 쓰는 게임. 파일을 더블클릭해서 열었으면 공개 사이트의 게임으로 이동
    - bg       : 큰 배너 슬라이드 전체에 깔리는 배경 그림 (thumbs 폴더 등)
    - shout    : 캐릭터 위에 올라가는 입체 글씨, 한 줄씩 ["닿아라", "아..쫌..!!!"]
    ============================================================ */
@@ -545,6 +545,7 @@ const ROWS = [
   { id: "row-tool", key: "tool", eyebrow: "02 · Tools", title: "학습 도구" },
   { id: "row-soon", key: "soon", eyebrow: "03 · Coming soon", title: "공개 예정" }
 ];
+const SITE_URL = "https://soos3497.github.io/pt-ai-lab/";   // 공개 사이트 주소
 const CAT_KO = { game: "게임", tool: "학습 도구", soon: "공개 예정" };
 
 const $ = (id) => document.getElementById(id);
@@ -554,7 +555,8 @@ const glow = (a) => a.glow || "#7c6a9c";
 function launch(a) {
   if (!a.url) { alert("아직 실행 주소(url)가 없어요. APPS 목록에 url을 넣어주세요!"); return; }
   if (a.needsServer && location.protocol === "file:") {
-    alert("이 게임은 마이크와 음성 인식을 써서 그냥 더블클릭으로는 안 열려요.\n\nhighgo 폴더의 'PT AI LAB 실행.bat'을 더블클릭해서 허브를 연 다음 다시 눌러 주세요!\n(검은 창은 게임하는 동안 켜 두세요)");
+    // 컴퓨터에 있는 파일로 열었을 때: 마이크·음성 모델이 안 되니까 공개 사이트의 같은 게임으로 바로 이동
+    location.href = SITE_URL + a.url;
     return;
   }
   // 우리 게임은 같은 탭에서 열기 (새 탭은 브라우저가 막는 경우가 있어서). 뒤로 가기로 허브에 돌아와요.
