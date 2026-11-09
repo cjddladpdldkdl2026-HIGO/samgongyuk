@@ -155,6 +155,13 @@
   .shout span:nth-child(1) { color: #fff; --side: #ff2e88; }
   .shout span:nth-child(2) { color: var(--gold); --side: #d1006b; margin-left: 18%; }
   .shout span:nth-child(3) { color: var(--cyan-soft); --side: #6a2bff; margin-left: 6%; font-size: clamp(46px, 6.2vw, 96px); }
+  /* 한 줄짜리 외침: 더 크게, 더 기울여서, 덜덜 떨리게 */
+  .shout.one { left: -34%; bottom: 4%; transform: rotate(-13deg); }
+  .shout.one span {
+    font-size: clamp(66px, 8.4vw, 136px); letter-spacing: -.02em;
+    color: var(--gold); --side: #3a1fd6; -webkit-text-stroke-width: 4px;
+  }
+  .slide.on .shout.one span { animation: slam-in .55s cubic-bezier(.2,1.7,.4,1) .15s both, shake .45s ease-in-out .8s 3; }
   .slide.on .shout span { animation: slam-in .55s cubic-bezier(.2,1.7,.4,1) both; }
   .slide.on .shout span:nth-child(2) { animation-delay: .35s; }
   .slide.on .shout span:nth-child(3) { animation: slam-in .55s cubic-bezier(.2,1.7,.4,1) .8s both, shake .5s ease-in-out 1.5s 2; }
@@ -377,6 +384,8 @@
     .shout { left: -6%; bottom: -10%; }
     .shout span { font-size: 34px; -webkit-text-stroke-width: 2px; }
     .shout span:nth-child(3) { font-size: 42px; }
+    .shout.one { left: -4%; bottom: 2%; }
+    .shout.one span { font-size: 52px; -webkit-text-stroke-width: 3px; }
     .dots { bottom: 4vh; }
     .hero-art { order: -1; width: min(280px, 75%); }
     .facts { gap: 18px; }
@@ -491,7 +500,7 @@ const APPS = [
     hero: "games/Vertebral_Wizard/images/title.jpg",
     bg: "thumbs/bg-wizard.jpg",
     chars: ["thumbs/char-wizard.jpg"],
-    shout: ["버~엇", "테부라!!"],
+    shout: ["버~엇 테부라!!"],   // 한 줄이면 크게, 사선으로 외치는 글씨
     facts: [["🎤", "음성 인식"], ["PIXEL", "도트 RPG"], ["EN", "해부학 단어"]],
     needsServer: true,   // 마이크·음성 모델 때문에 'PT AI LAB 실행.bat'으로 열어야 해요
     featured: true
@@ -585,7 +594,7 @@ function renderHero() {
         ${a.chars ? `
         <div class="hero-art char"><div class="sun"></div>
           <div class="frame">${a.chars.map((src, k) => `<img src="${src}" alt="" draggable="false"${k === 0 ? ' class="on"' : ""}>`).join("")}</div>
-          ${a.shout ? `<div class="shout" aria-label="${esc(a.shout.join(" "))}">${a.shout.map(t => `<span>${esc(t)}</span>`).join("")}</div>` : ""}
+          ${a.shout ? `<div class="shout${a.shout.length === 1 ? " one" : ""}" aria-label="${esc(a.shout.join(" "))}">${a.shout.map(t => `<span>${esc(t)}</span>`).join("")}</div>` : ""}
         </div>` : `
         <div class="hero-art"><div class="sun"></div>${pic
           ? `<div class="screen" style="background-image:url('${pic}')"><div class="bar"><i></i><i></i><i></i></div></div>`
