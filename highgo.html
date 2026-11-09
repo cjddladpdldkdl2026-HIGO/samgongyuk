@@ -63,6 +63,43 @@
   nav { display: flex; gap: 4px; }
   nav a { padding: 8px 12px; border-radius: 8px; color: var(--ink-dim); font-size: 15px; white-space: nowrap; }
   nav a:hover, nav a.active { color: var(--ink); background: rgba(155,92,255,.16); }
+  /* 🏆 랭킹 버튼: 누르고 있는 동안만 랭킹 창이 보여요 */
+  .rank-btn {
+    padding: 7px 14px; border-radius: 999px; white-space: nowrap; font: 700 14px var(--font-ui);
+    color: #0a0420; background: var(--gold); border: 0; box-shadow: 0 0 14px rgba(253,231,76,.45);
+    user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; touch-action: none;
+    transition: transform .12s, box-shadow .12s;
+  }
+  .rank-btn:hover { box-shadow: 0 0 22px rgba(253,231,76,.7); }
+  .rank-btn.on { transform: scale(.94); box-shadow: 0 0 30px rgba(253,231,76,.9); }
+  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .rank-panel {
+    position: fixed; inset: 0; z-index: 150; display: flex; align-items: flex-start; justify-content: center;
+    padding: 84px 16px 16px; pointer-events: none;
+    background: rgba(7,1,15,.55); backdrop-filter: blur(3px);
+    opacity: 0; visibility: hidden; transition: opacity .15s, visibility .15s;
+  }
+  .rank-panel.open { opacity: 1; visibility: visible; }
+  .rank-card {
+    width: min(460px, 100%); padding: 22px 22px 18px; border-radius: 18px;
+    background: linear-gradient(160deg, rgba(29,7,66,.97), rgba(11,4,30,.98));
+    border: 1px solid var(--gold); box-shadow: 0 0 30px rgba(253,231,76,.3), 0 30px 60px rgba(0,0,0,.6);
+    transform: translateY(-10px) scale(.96); transition: transform .2s cubic-bezier(.2,1.5,.4,1);
+  }
+  .rank-panel.open .rank-card { transform: none; }
+  .rank-card h2 { font-family: var(--font-display); font-size: 26px; margin: 2px 0 14px; color: var(--gold); text-shadow: 0 0 14px rgba(253,231,76,.5); }
+  .rank-list { list-style: none; display: grid; gap: 6px; }
+  .rank-list li {
+    display: grid; grid-template-columns: 34px 1fr auto; align-items: center; gap: 10px;
+    padding: 9px 12px; border-radius: 10px; background: rgba(17,4,42,.7); border: 1px solid var(--line);
+  }
+  .rank-list .no { font-family: 'Orbitron', sans-serif; font-weight: 900; font-size: 16px; text-align: center; color: var(--ink-dim); }
+  .rank-list li:nth-child(-n+3) .no { font-size: 22px; }
+  .rank-list .who b { display: block; font-size: 15px; }
+  .rank-list .who small { color: var(--ink-faint); font-size: 12px; }
+  .rank-list .pts { font-family: 'Orbitron', sans-serif; font-weight: 700; font-size: 18px; color: var(--cyan-soft); text-shadow: var(--glow-cyan); }
+  .rank-list .empty-row { display: block; text-align: center; color: var(--ink-dim); padding: 18px 12px; }
+  .rank-note { margin-top: 12px; font-size: 12px; color: var(--ink-faint); text-align: center; }
   .search {
     margin-left: auto; width: 220px; padding: 9px 14px;
     background: rgba(17,4,42,.7); border: 1px solid var(--line); border-radius: 10px;
@@ -376,7 +413,10 @@
 
   @media (max-width: 820px) {
     nav { display: none; }
-    .search { width: 150px; }
+    .search { width: 120px; }
+    header { gap: 10px; }
+    .rank-btn { margin-left: auto; }
+    .rank-btn + .sr-only + .search { margin-left: 0; }
     .hero { min-height: 0; }
     .hero-inner { grid-template-columns: 1fr; padding: 32px 4vw 12vh; }
     .nav-arrow { display: none; }   /* 휴대폰은 손가락으로 밀어서 넘기기 */
@@ -404,8 +444,20 @@
     <a href="#row-tool">학습 도구</a>
     <a href="#row-soon">공개 예정</a>
   </nav>
+  <button class="rank-btn" id="rankBtn" aria-describedby="rankHint">🏆 랭킹</button>
+  <span class="sr-only" id="rankHint">누르고 있는 동안 랭킹이 보여요</span>
   <input class="search" id="search" placeholder="🔍 검색">
 </header>
+
+<!-- 랭킹: 버튼을 누르고 있는 동안만 보여요 -->
+<div class="rank-panel" id="rankPanel" aria-hidden="true">
+  <div class="rank-card">
+    <p class="eyebrow">Ranking · 내 최고 기록</p>
+    <h2>🏆 랭킹</h2>
+    <ol class="rank-list" id="rankList"></ol>
+    <p class="rank-note">이 기기(브라우저)에 저장된 기록이에요. 손을 떼면 닫혀요.</p>
+  </div>
+</div>
 
 <section class="hero" id="hero"></section>
 
@@ -739,6 +791,46 @@ $("mClose").onclick = () => $("modalBg").classList.remove("open");
 $("modalBg").onclick = (e) => { if (e.target.id === "modalBg") $("modalBg").classList.remove("open"); };
 document.addEventListener("keydown", (e) => { if (e.key === "Escape") $("modalBg").classList.remove("open"); });
 $("search").oninput = (e) => renderRows(e.target.value);
+
+/* ── 🏆 랭킹: 각 게임이 이 브라우저에 저장한 최고 점수를 모아서 높은 순으로 ── */
+const DIFF_KO = { easy: "쉬움", normal: "보통", medium: "보통", hard: "어려움" };
+function readJSON(key) { try { return JSON.parse(localStorage.getItem(key)) || {}; } catch { return {}; } }
+function collectScores() {
+  const rows = [];
+  // 너에게 닿기를: best["부위:난이도"] = 점수
+  const neo = readJSON("nimi-todoke/v1").best || {};
+  const REGION_KO = { arm: "어깨·위팔", forearm: "아래팔", hip: "엉덩이·넙다리", leg: "종아리·발" };
+  for (const [k, v] of Object.entries(neo)) {
+    const [region, diff] = k.split(":");
+    if (typeof v === "number") rows.push({ game: "너에게 닿기를", detail: `${REGION_KO[region] || region} · ${DIFF_KO[diff] || diff}`, score: v });
+  }
+  // HIGO 뼈 게임: best["모드:난이도"] = { score, accuracy, ... }
+  const higo = readJSON("fps-aim-trainer/v1").best || {};
+  for (const [k, v] of Object.entries(higo)) {
+    const [, diff] = k.split(":");
+    const score = typeof v === "number" ? v : v && v.score;
+    if (typeof score === "number") rows.push({ game: "HIGO 뼈 게임", detail: `${DIFF_KO[diff] || diff}${v && v.accuracy != null ? ` · 정확도 ${Math.round(v.accuracy)}%` : ""}`, score });
+  }
+  return rows.sort((a, b) => b.score - a.score);
+}
+function renderRanking() {
+  const rows = collectScores().slice(0, 10);
+  const medal = ["🥇", "🥈", "🥉"];
+  $("rankList").innerHTML = rows.length
+    ? rows.map((r, i) => `<li><span class="no">${medal[i] || i + 1}</span><span class="who"><b>${esc(r.game)}</b><small>${esc(r.detail)}</small></span><span class="pts">${r.score.toLocaleString("ko-KR")}</span></li>`).join("")
+    : `<li class="empty-row">아직 기록이 없어요.<br>게임을 한 판 하고 다시 눌러 보세요! 🎮</li>`;
+}
+(function rankingHold() {
+  const btn = $("rankBtn"), panel = $("rankPanel");
+  const show = () => { renderRanking(); panel.classList.add("open"); panel.setAttribute("aria-hidden", "false"); btn.classList.add("on"); };
+  const hide = () => { panel.classList.remove("open"); panel.setAttribute("aria-hidden", "true"); btn.classList.remove("on"); };
+  btn.addEventListener("pointerdown", e => { e.preventDefault(); try { btn.setPointerCapture(e.pointerId); } catch {} show(); });
+  ["pointerup", "pointercancel", "lostpointercapture"].forEach(t => btn.addEventListener(t, hide));
+  btn.addEventListener("contextmenu", e => e.preventDefault());   // 휴대폰 길게 누르기 메뉴 막기
+  btn.addEventListener("keydown", e => { if ((e.key === " " || e.key === "Enter") && !e.repeat) { e.preventDefault(); show(); } });
+  btn.addEventListener("keyup", e => { if (e.key === " " || e.key === "Enter") hide(); });
+  btn.addEventListener("blur", hide);
+})();
 
 renderHero();
 renderRows();
