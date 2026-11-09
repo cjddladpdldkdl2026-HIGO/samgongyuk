@@ -511,7 +511,14 @@ function launch(a) {
     alert("이 게임은 마이크와 음성 인식을 써서 그냥 더블클릭으로는 안 열려요.\n\nhighgo 폴더의 'PT AI LAB 실행.bat'을 더블클릭해서 허브를 연 다음 다시 눌러 주세요!\n(검은 창은 게임하는 동안 켜 두세요)");
     return;
   }
-  window.open(a.url, "_blank");
+  // 우리 게임은 같은 탭에서 열기 (새 탭은 브라우저가 막는 경우가 있어서). 뒤로 가기로 허브에 돌아와요.
+  // 바깥 사이트(https://...)만 새 탭으로 열고, 막히면 같은 탭으로 이동.
+  if (/^https?:\/\//.test(a.url)) {
+    const w = window.open(a.url, "_blank", "noopener");
+    if (!w) location.href = a.url;
+  } else {
+    location.href = a.url;
+  }
 }
 
 /* ── 대표 게임 슬라이더: featured: true 인 것들이 옆으로 넘어가요 ── */
