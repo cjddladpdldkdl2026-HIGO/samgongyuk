@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Voice Test - Vertebral Wizard</title>
+<style>
+  @font-face{ font-family:'Press Start 2P'; src:url(fonts/PressStart2P-latin.woff2) format('woff2'); font-display:swap; }
+  @font-face{ font-family:'Galmuri11'; src:url(fonts/Galmuri11.woff2) format('woff2'); font-display:swap; }
+  @font-face{ font-family:'Galmuri11'; font-weight:700; src:url(fonts/Galmuri11-Bold.woff2) format('woff2'); font-display:swap; }
+  :root{
+    --ink:#0c0c14; --panel:#1a1a2e; --panel-light:#2a2a44;
+    --gold:#ffd75e; --gold-dark:#c9982f;
+    --green:#4ade80; --red:#ef4444; --accent:#7c5cff; --text:#f4f0ff; --dim:#8d86c9;
+  }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; background:#07060f; color:var(--text);
+    font-family:'Galmuri11',system-ui,-apple-system,"Malgun Gothic",sans-serif; }
+  .px{ font-family:'Press Start 2P', monospace; letter-spacing:1px; }
+  .wrap{ max-width:760px; margin:0 auto; padding:16px; }
+  header{ display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:14px; }
+  header h1{ font-size:14px; margin:0; color:var(--gold); text-shadow:2px 2px 0 #000; }
+  #status{ font-size:12px; padding:6px 10px; border:2px solid var(--panel-light); background:var(--panel); }
+  #status.ok{ border-color:var(--green); color:var(--green); }
+  #status.err{ border-color:var(--red); color:#ff8a8a; }
+  .box{ background:var(--panel); border:3px solid var(--panel-light); box-shadow:0 0 0 2px #000; padding:14px; margin-bottom:14px; }
+  .box h2{ font-size:9px; color:var(--dim); margin:0 0 10px; }
+
+  #words{ display:flex; flex-wrap:wrap; gap:6px; }
+  .chip{ font-size:13px; padding:6px 10px; background:var(--ink); color:var(--text);
+    border:2px solid var(--panel-light); cursor:pointer; }
+  .chip.on{ border-color:var(--gold); color:var(--gold); }
+  .chip .n{ font-size:10px; color:var(--dim); margin-left:4px; }
+  details{ margin-top:10px; font-size:12px; color:var(--dim); }
+  textarea{ width:100%; height:90px; margin-top:6px; background:var(--ink); color:var(--text);
+    border:2px solid var(--panel-light); font:13px/1.5 monospace; padding:6px; }
+
+  #target{ text-align:center; border-color:var(--gold); }
+  #target .label{ font-size:12px; letter-spacing:2px; color:#a9a3d8; margin-bottom:10px; }
+  #target .word{ font-size:clamp(18px,5vw,28px); color:var(--gold); text-shadow:3px 3px 0 #000; word-break:break-all; }
+
+  .modes{ display:flex; gap:6px; flex-wrap:wrap; }
+  .modes label{ flex:1 1 160px; border:2px solid var(--panel-light); padding:8px; cursor:pointer; font-size:13px; background:var(--ink); }
+  .modes input{ margin-right:6px; }
+  .modes label:has(input:checked){ border-color:var(--accent); }
+  .modes small{ display:block; color:var(--dim); font-size:11px; margin-top:4px; }
+
+  #mic{ display:block; width:100%; font-family:'Press Start 2P', monospace; font-size:14px;
+    padding:20px; border:none; cursor:pointer; color:#3a2a00; background:var(--gold);
+    box-shadow: inset -4px -6px 0 var(--gold-dark), inset 4px 4px 0 #fff6d6, 0 6px 0 #6b4e12; }
+  #mic:active{ transform:translateY(3px); }
+  #mic:disabled{ filter:grayscale(1) brightness(.6); cursor:default; }
+  #mic.listening{ background:#ff6b6b; color:#2a0000; box-shadow: inset -4px -6px 0 #b03030, inset 4px 4px 0 #ffd0d0, 0 6px 0 #5a1010; animation:blink 1s ease-in-out infinite; }
+  @keyframes blink{ 50%{ filter:brightness(1.25); } }
+  #meter{ height:8px; background:var(--ink); margin-top:14px; border:1px solid #000; }
+  #meter i{ display:block; height:100%; width:0; background:var(--green); transition:width .08s; }
+  #partial{ min-height:30px; margin-top:10px; font-size:22px; font-weight:700; color:#fff; text-align:center; text-shadow:2px 2px 0 #000; }
+
+  #result{ text-align:center; display:none; padding:22px 14px; }
+  #result.show{ display:block; animation:pop .25s ease-out; }
+  @keyframes pop{ 0%{ transform:scale(.85); opacity:0; } 100%{ transform:scale(1); opacity:1; } }
+  #result .verdict{ font-size:30px; margin-bottom:16px; text-shadow:3px 3px 0 #000; }
+  #result.pass{ border-color:var(--green); background:#10261a; } #result.pass .verdict{ color:var(--green); }
+  #result.fail{ border-color:var(--red); background:#2a1014; }   #result.fail .verdict{ color:#ff8a8a; }
+  #result .sub{ font-size:13px; color:var(--dim); margin-bottom:6px; }
+  #result .heard{ display:inline-block; font-size:clamp(24px,6vw,38px); font-weight:700; color:#fff;
+    background:#000; border:3px solid currentColor; padding:10px 22px; text-shadow:2px 2px 0 #333; word-break:break-all; }
+  #result.pass .heard{ color:var(--green); } #result.fail .heard{ color:#ffb0b0; }
+  #result .conf{ font-size:13px; color:var(--dim); margin-top:12px; }
+
+  #score{ font-size:10px; color:var(--gold); }
+  table{ width:100%; border-collapse:collapse; font-size:12px; }
+  th,td{ text-align:left; padding:5px 6px; border-bottom:1px solid var(--panel-light); }
+  th{ color:var(--dim); font-weight:normal; }
+  td.p{ color:var(--green); } td.f{ color:#ff8a8a; }
+  .row{ display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
+  .row button{ font-size:11px; background:none; color:var(--dim); border:1px solid var(--panel-light); padding:3px 8px; cursor:pointer; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1 class="px">VOICE TEST</h1>
+    <div id="status">음성 모델 불러오는 중...</div>
+  </header>
+
+  <div class="box">
+    <h2 class="px">WORD LIST</h2>
+    <div id="words"></div>
+    <details>
+      <summary>단어 목록 고치기</summary>
+      한 줄에 하나씩. 고친 뒤 바깥을 누르면 바로 적용돼요.
+      <textarea id="word-input"></textarea>
+    </details>
+  </div>
+
+  <div class="box" id="target">
+    <div class="label">주문을 외쳐라</div>
+    <div class="word px" id="target-word">-</div>
+  </div>
+
+  <div class="box">
+    <h2 class="px">MODE</h2>
+    <div class="modes">
+      <label><input type="radio" name="mode" value="easy">너그럽게
+        <small>정답 하나만 넣음. 무슨 말이든 하면 거의 통과</small></label>
+      <label><input type="radio" name="mode" value="normal" checked>보통 (추천)
+        <small>정답 + 다른 단어 4개 중에서 제일 가까운 걸 고름</small></label>
+      <label><input type="radio" name="mode" value="hard">엄격
+        <small>보통 + "모르는 소리". 한국식 발음은 자주 떨어짐</small></label>
+      <label><input type="radio" name="mode" value="free">받아쓰기
+        <small>영어 사전 전체에서 받아 적음 (비교용)</small></label>
+    </div>
+  </div>
+
+  <div class="box">
+    <button id="mic" class="px" disabled>LOADING...</button>
+    <div id="meter"><i></i></div>
+    <div id="partial"></div>
+  </div>
+
+  <div class="box" id="result">
+    <div class="verdict px"></div>
+    <div class="sub"></div>
+    <div class="heard"></div>
+    <div class="conf"></div>
+  </div>
+
+  <div class="box">
+    <div class="row">
+      <h2 class="px" style="margin:0">LOG <span id="score"></span></h2>
+      <button id="clear">지우기</button>
+    </div>
+    <table>
+      <thead><tr><th>목표</th><th>모드</th><th>들은 말</th><th>결과</th></tr></thead>
+      <tbody id="log"></tbody>
+    </table>
+  </div>
+</div>
+
+<script src="lib/vosk.js"></script>
+<script>
+(function(){
+  "use strict";
+
+  const MODEL_URL = new URL('models/vosk-model-small-en-us-0.15.tar.gz', location.href).href;
+  const DEFAULT_WORDS = [
+    'Vertebral','Vertebra','Cervical','Thoracic','Lumbar','Sacrum',
+    'Scapula','Clavicle','Humerus','Femur','Tibia','Fibula','Patella','Pelvis',
+    'Ligament','Tendon','Biceps','Triceps','Quadriceps','Hamstring',
+    'Flexion','Extension','Abduction','Rotation','Anterior','Posterior','Medial','Lateral'
+  ];
+  const LISTEN_LIMIT_MS = 6000;
+  const MODE_NAME = { easy:'너그럽게', normal:'보통', hard:'엄격', free:'받아쓰기' };
+
+  const $ = function(id){ return document.getElementById(id); };
+  const statusEl = $('status'), micBtn = $('mic'), meterBar = $('meter').firstElementChild;
+  const partialEl = $('partial'), resultEl = $('result'), logEl = $('log');
+
+  let words = DEFAULT_WORDS.slice();
+  let target = words[0];
+  let model = null;
+  let audioCtx = null, processor = null, analyser = null;
+  let recognizer = null;
+  let listening = false, finalizing = false, limitTimer = null;
+  let tries = 0, passes = 0;
+  const stats = {};
+
+  // ---------- word list ----------
+  function renderWords(){
+    const box = $('words');
+    box.innerHTML = '';
+    words.forEach(function(w){
+      const b = document.createElement('button');
+      b.className = 'chip' + (w === target ? ' on' : '');
+      b.textContent = w;
+      const s = stats[w];
+      if (s){ const n = document.createElement('span'); n.className = 'n'; n.textContent = s.p + '/' + s.t; b.appendChild(n); }
+      b.onclick = function(){ if (!listening){ target = w; renderWords(); showTarget(); } };
+      box.appendChild(b);
+    });
+  }
+  function showTarget(){ $('target-word').textContent = target; }
+  $('word-input').value = words.join('\n');
+  $('word-input').addEventListener('change', function(){
+    const list = this.value.split('\n').map(function(s){ return s.trim(); }).filter(Boolean);
+    if (!list.length) return;
+    words = list;
+    if (words.indexOf(target) === -1) target = words[0];
+    renderWords(); showTarget();
+  });
+
+  function mode(){ return document.querySelector('input[name=mode]:checked').value; }
+  function norm(s){ return s.toLowerCase().replace(/[^a-z' ]/g, ' ').replace(/\s+/g, ' ').trim(); }
+
+  function buildGrammar(){
+    const m = mode();
+    if (m === 'free') return undefined;
+    const g = [norm(target)];
+    if (m === 'normal' || m === 'hard'){
+      const others = words.filter(function(w){ return w !== target; });
+      for (let i = others.length - 1; i > 0; i--){ const j = Math.floor(Math.random() * (i + 1)); const t = others[i]; others[i] = others[j]; others[j] = t; }
+      others.slice(0, 4).forEach(function(w){ g.push(norm(w)); });
+    }
+    if (m === 'hard') g.push('[unk]');
+    return JSON.stringify(g);
+  }
+
+  // ---------- model ----------
+  function setStatus(text, cls){ statusEl.textContent = text; statusEl.className = cls || ''; }
+
+  if (!window.isSecureContext){
+    setStatus('https 나 localhost 로 열어야 마이크를 쓸 수 있어요', 'err');
+  }
+  if (location.protocol === 'file:'){
+    setStatus('이렇게 열면 안 돼요. 폴더의 "게임 실행" 으로 연 뒤 주소 끝에 voice-test.html 을 붙여 주세요', 'err');
+    micBtn.textContent = 'ERROR';
+  } else Vosk.createModel(MODEL_URL).then(function(m){
+    model = m;
+    setStatus('준비 완료', 'ok');
+    micBtn.disabled = false;
+    micBtn.textContent = 'TAP TO SPEAK';
+  }).catch(function(){
+    setStatus('음성 모델을 못 불러왔어요 (파일을 더블클릭해서 연 건 아닌지 확인)', 'err');
+    micBtn.textContent = 'ERROR';
+  });
+
+  // ---------- mic ----------
+  async function setupAudio(){
+    if (audioCtx) return;
+    const stream = await navigator.mediaDevices.getUserMedia({
+      audio:{ echoCancellation:true, noiseSuppression:true, channelCount:1 }
+    });
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const src = audioCtx.createMediaStreamSource(stream);
+    analyser = audioCtx.createAnalyser();
+    analyser.fftSize = 512;
+    processor = audioCtx.createScriptProcessor(4096, 1, 1);
+    processor.onaudioprocess = function(e){
+      if (listening && recognizer){
+        try { recognizer.acceptWaveform(e.inputBuffer); } catch(err){}
+      }
+    };
+    src.connect(analyser);
+    src.connect(processor);
+    processor.connect(audioCtx.destination);
+    const buf = new Uint8Array(analyser.fftSize);
+    (function tick(){
+      analyser.getByteTimeDomainData(buf);
+      let peak = 0;
+      for (let i = 0; i < buf.length; i++){ peak = Math.max(peak, Math.abs(buf[i] - 128)); }
+      meterBar.style.width = (listening ? Math.min(100, peak / 64 * 100) : 0) + '%';
+      requestAnimationFrame(tick);
+    })();
+  }
+
+  async function startListening(){
+    try {
+      await setupAudio();
+      if (audioCtx.state === 'suspended') await audioCtx.resume();
+    } catch(err){
+      setStatus('마이크 권한이 막혀 있어요. 주소창 왼쪽 자물쇠에서 마이크를 허용해 주세요.', 'err');
+      return;
+    }
+    const grammar = buildGrammar();
+    recognizer = grammar ? new model.KaldiRecognizer(audioCtx.sampleRate, grammar)
+                         : new model.KaldiRecognizer(audioCtx.sampleRate);
+    recognizer.setWords(true);
+    recognizer.on('partialresult', function(msg){
+      const p = msg && msg.result && msg.result.partial;
+      if (p) partialEl.textContent = pretty(p) + ' ...';
+    });
+    recognizer.on('result', function(msg){
+      const r = (msg && msg.result) || {};
+      const text = (r.text || '').trim();
+      if (!text && !finalizing) return;          // silence: keep listening
+      finish(text, r.result || []);
+    });
+
+    listening = true; finalizing = false;
+    micBtn.classList.add('listening');
+    micBtn.textContent = 'LISTENING...';
+    partialEl.textContent = '지금 말하세요';
+    resultEl.className = 'box';
+    limitTimer = setTimeout(stopListening, LISTEN_LIMIT_MS);
+  }
+
+  function stopListening(){
+    if (!listening || finalizing) return;
+    finalizing = true;
+    micBtn.textContent = 'CHECKING...';
+    try { recognizer.retrieveFinalResult(); } catch(e){ finish('', []); }
+  }
+
+  function pretty(t){ return t.replace(/\[unk\]/g, '(모르는 소리)'); }
+
+  function finish(text, wordsInfo){
+    if (!listening) return;
+    listening = false; finalizing = false;
+    clearTimeout(limitTimer);
+    micBtn.classList.remove('listening');
+    micBtn.textContent = 'TAP TO SPEAK';
+    partialEl.textContent = '';
+    const rec = recognizer; recognizer = null;
+    setTimeout(function(){ try { rec.remove(); } catch(e){} }, 300);
+
+    const goal = norm(target);
+    const heard = norm(text.replace(/\[unk\]/g, ' '));
+    const pass = !!heard && (' ' + heard + ' ').indexOf(' ' + goal + ' ') !== -1;
+
+    tries++; if (pass) passes++;
+    stats[target] = stats[target] || { p:0, t:0 };
+    stats[target].t++; if (pass) stats[target].p++;
+
+    resultEl.className = 'box show ' + (pass ? 'pass' : 'fail');
+    resultEl.querySelector('.verdict').textContent = pass ? 'HIT!' : (text ? 'MISS' : '');
+    resultEl.querySelector('.sub').textContent = text ? '이렇게 들렸어요' : '조금 더 크게, 마이크 가까이에서 말해 보세요';
+    resultEl.querySelector('.heard').textContent = text ? pretty(text) : '뭐라구요!? 안들려요';
+    resultEl.querySelector('.conf').textContent = wordsInfo.length
+      ? wordsInfo.map(function(w){ return pretty(w.word) + ' ' + Math.round(w.conf * 100) + '%'; }).join('  ·  ')
+      : '';
+
+    const tr = document.createElement('tr');
+    [target, MODE_NAME[mode()], text ? pretty(text) : '(없음)', pass ? '통과' : '실패'].forEach(function(v, i){
+      const td = document.createElement('td'); td.textContent = v;
+      if (i === 3) td.className = pass ? 'p' : 'f';
+      tr.appendChild(td);
+    });
+    logEl.insertBefore(tr, logEl.firstChild);
+    $('score').textContent = passes + '/' + tries;
+    renderWords();
+  }
+
+  micBtn.addEventListener('click', function(){
+    if (!model) return;
+    if (listening) stopListening(); else startListening();
+  });
+  $('clear').onclick = function(){
+    logEl.innerHTML = ''; tries = passes = 0; $('score').textContent = '';
+    Object.keys(stats).forEach(function(k){ delete stats[k]; });
+    renderWords();
+  };
+
+  renderWords(); showTarget();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,725 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>뭐라구요!? 안들려요</title>
+<style>
+  @font-face{ font-family:'Press Start 2P'; src:url(fonts/PressStart2P-latin.woff2) format('woff2'); font-display:swap; }
+  @font-face{ font-family:'Galmuri11'; src:url(fonts/Galmuri11.woff2) format('woff2'); font-display:swap; }
+  @font-face{ font-family:'Galmuri11'; font-weight:700; src:url(fonts/Galmuri11-Bold.woff2) format('woff2'); font-display:swap; }
+
+  :root{
+    --ink:#0c0c14; --panel:#14122a; --panel-light:#2e2b52;
+    --gold:#ffd75e; --gold-dark:#c9982f;
+    --green:#4ade80; --red:#ef4444; --accent:#7c5cff; --text:#f4f0ff; --dim:#9a93d6;
+  }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; width:100%; height:100%; background:#000; overflow:hidden;
+    color:var(--text); font-family:'Galmuri11', "Malgun Gothic", sans-serif;
+    -webkit-tap-highlight-color:transparent; -webkit-user-select:none; user-select:none; touch-action:manipulation; }
+  .px{ font-family:'Press Start 2P', monospace; letter-spacing:1px; }
+  img{ image-rendering:pixelated; -webkit-user-drag:none; }
+
+  #wrap{ position:fixed; inset:0; display:flex; align-items:center; justify-content:center; }
+  #stage{ position:relative; width:800px; height:600px; flex:none; overflow:hidden; background:#000;
+    transform-origin:center center; box-shadow:0 0 40px rgba(124,92,255,.35); }
+
+  /* ---------- TITLE ---------- */
+  #title{ position:absolute; inset:0; z-index:60; background:#000; transition:opacity 1s ease; }
+  #title.hide{ opacity:0; pointer-events:none; }
+  #title > img{ position:absolute; inset:0; width:100%; height:100%; object-fit:contain; }
+  /* 그림 속 "NEW GAME" 글자 위에 투명 단추 (그림 1376x768 을 800x600 안에 맞춘 위치) */
+  #start-btn{ position:absolute; left:108px; top:452px; width:152px; height:40px; background:transparent; border:none;
+    cursor:pointer; padding:0; z-index:2; }
+  #start-btn::before{ content:''; position:absolute; inset:-4px; border:3px solid var(--gold); opacity:0;
+    box-shadow:0 0 14px rgba(255,215,94,.7), inset 0 0 10px rgba(255,215,94,.4); }
+  #start-btn:not(:disabled)::before{ animation:selBlink 1s steps(2) infinite; }
+  #start-btn:hover::before{ opacity:1; animation:none; }
+  @keyframes selBlink{ 0%{ opacity:1; } 100%{ opacity:.15; } }
+  #start-arrow{ position:absolute; left:84px; top:461px; font-size:18px; color:var(--gold); text-shadow:2px 2px 0 #000;
+    animation:arrow .6s ease-in-out infinite alternate; }
+  #start-btn:disabled ~ #start-arrow{ display:none; }
+  @keyframes arrow{ to{ transform:translateX(6px); } }
+  /* 아직 기능 없는 LOAD GAME / OPTIONS / EXIT 는 어둡게 */
+  #title-cover{ position:absolute; left:262px; right:30px; top:452px; height:40px; background:rgba(6,6,16,.62); }
+  #voice-status{ position:absolute; left:0; right:0; bottom:26px; text-align:center; font-size:14px; color:#cfc9ff; text-shadow:1px 1px 0 #000; }
+  #voice-status.err{ color:#ff8a8a; }
+  #voice-status.ok{ color:var(--gold); animation:blink 1.2s steps(2) infinite; }
+  .btn{ font-family:'Press Start 2P', monospace; font-size:15px; color:#3a2a00; background:var(--gold);
+    border:none; padding:16px 34px; cursor:pointer; letter-spacing:2px;
+    box-shadow: inset -4px -6px 0 var(--gold-dark), inset 4px 4px 0 #fff6d6, 0 6px 0 #6b4e12, 0 10px 14px rgba(0,0,0,.55); }
+  .btn:active{ transform:translateY(4px); box-shadow: inset -4px -6px 0 var(--gold-dark), inset 4px 4px 0 #fff6d6, 0 2px 0 #6b4e12; }
+  .btn:disabled{ filter:grayscale(1) brightness(.6); cursor:default; transform:none; }
+
+  /* ---------- BATTLE ---------- */
+  #battle{ position:absolute; inset:0; }
+  #bg{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; filter:brightness(.85) saturate(1.05); }
+  #battle.shake{ animation:shake .4s linear; }
+  @keyframes shake{ 0%,100%{ transform:translate(0,0); } 20%{ transform:translate(-8px,4px); }
+    40%{ transform:translate(7px,-5px); } 60%{ transform:translate(-5px,3px); } 80%{ transform:translate(4px,-2px); } }
+
+  /* HP bars */
+  .hpbox{ position:absolute; top:12px; width:250px; background:rgba(8,6,20,.88); border:3px solid var(--panel-light);
+    box-shadow:0 0 0 2px #000; padding:7px 10px 8px; z-index:25; }
+  #hp-wiz{ left:12px; } #hp-mon{ right:12px; }
+  .hpbox .top{ display:flex; justify-content:space-between; align-items:baseline; margin-bottom:6px; }
+  .hpbox .name{ font-size:10px; color:var(--gold); }
+  .hpbox .num{ font-size:9px; color:#fff; }
+  .bar{ height:12px; background:#3a0a0a; border:2px solid #000; }
+  .bar i{ display:block; height:100%; width:100%; background:linear-gradient(180deg,#9dffbf,var(--green)); transition:width .5s ease; }
+  .bar i.mid{ background:linear-gradient(180deg,#ffe58a,#f5b942); }
+  .bar i.low{ background:linear-gradient(180deg,#ff9a9a,var(--red)); }
+
+  /* spell card */
+  #card{ position:absolute; top:62px; left:50%; width:330px; margin-left:-165px; z-index:30; text-align:center;
+    background:rgba(8,6,20,.92); border:3px solid var(--gold); box-shadow:0 0 0 2px #000, 0 0 24px rgba(255,215,94,.35);
+    padding:10px 12px 12px; opacity:0; transform:translateY(-12px) scale(.95); transition:opacity .2s, transform .2s; pointer-events:none; }
+  #card.show{ opacity:1; transform:none; }
+  #card .skill{ font-size:9px; color:#a9a3d8; }
+  #card .word{ font-size:24px; color:var(--gold); text-shadow:3px 3px 0 #000; margin:10px 0 8px; word-break:break-all; }
+  #card .mean{ font-size:15px; color:#fff; }
+  #card .listen{ margin-top:10px; font-size:13px; font-weight:700; color:#ff8a8a; }
+  #card.listening .listen{ animation:blink .9s steps(2) infinite; }
+  @keyframes blink{ 50%{ opacity:.35; } }
+  #meter{ height:6px; margin-top:8px; background:#000; border:1px solid #333; }
+  #meter i{ display:block; height:100%; width:0; background:var(--green); transition:width .08s; }
+
+  /* actors */
+  #mon{ position:absolute; right:56px; bottom:205px; width:1px; height:1px; z-index:10; }
+  #mon img{ position:absolute; right:0; bottom:0; filter:drop-shadow(0 14px 10px rgba(0,0,0,.6)); }
+  #mon img.hurt{ animation:hurt .5s ease; }
+  @keyframes hurt{ 0%,100%{ transform:translateX(0); } 10%,40%{ transform:translateX(-14px); filter:brightness(2.4) sepia(1) hue-rotate(-50deg) saturate(6); }
+    25%{ transform:translateX(12px); } 55%{ transform:translateX(8px); } 70%{ transform:translateX(-5px); filter:brightness(1.6) sepia(1) hue-rotate(-50deg) saturate(6); } }
+  #mon.dead img{ animation:die 1.2s ease forwards; }
+  @keyframes die{ 0%{ opacity:1; filter:brightness(3); } 100%{ opacity:0; transform:translateY(30px) scale(.9); filter:brightness(3) blur(2px); } }
+
+  #wiz{ position:absolute; left:120px; bottom:172px; width:1px; height:1px; z-index:12; }
+  #wiz img#wiz-img{ position:absolute; left:0; bottom:0; transform:translateX(-50%); filter:drop-shadow(0 10px 8px rgba(0,0,0,.55)); }
+  #wiz.hit #wiz-img{ animation:wizHit .5s ease; }
+  @keyframes wizHit{ 0%,100%{ transform:translateX(-50%); } 20%,60%{ filter:brightness(2) sepia(1) hue-rotate(-50deg) saturate(5); transform:translateX(calc(-50% - 8px)); } 40%{ transform:translateX(calc(-50% + 6px)); } }
+  #wiz.heal #wiz-img{ animation:wizHeal .9s ease; }
+  @keyframes wizHeal{ 40%{ filter:brightness(1.6) drop-shadow(0 0 18px #7dff9a); } }
+  #shout{ position:absolute; left:78px; bottom:150px; width:118px; transform:translateX(-50%); opacity:0; z-index:14; filter:drop-shadow(2px 3px 0 rgba(0,0,0,.6)); }
+  #shout.show{ animation:shoutPop 1s ease-in-out infinite; }
+  @keyframes shoutPop{ 0%{ opacity:0; transform:translateX(-50%) scale(.5) translateY(10px); } 30%,60%{ opacity:1; transform:translateX(-50%) scale(1.05); } 100%{ opacity:.85; transform:translateX(-50%) scale(1) translateY(-4px); } }
+
+  /* speech bubbles */
+  .bubble{ position:absolute; z-index:40; padding:10px 16px; background:#fff; color:#111;
+    border:3px solid #000; box-shadow:4px 4px 0 rgba(0,0,0,.6); font-size:22px; font-weight:700; line-height:1.25;
+    text-align:center; opacity:0; transform:scale(.6); transition:opacity .15s, transform .18s cubic-bezier(.3,1.6,.6,1); pointer-events:none; white-space:nowrap; }
+  .bubble.show{ opacity:1; transform:scale(1); }
+  .bubble::after{ content:''; position:absolute; width:14px; height:14px; background:inherit; border:3px solid #000;
+    border-top:none; border-left:none; bottom:-10px; transform:rotate(45deg); }
+  .bubble small{ display:block; font-size:12px; font-weight:400; color:#555; margin-bottom:3px; }
+  #bub-wiz{ left:40px; bottom:420px; transform-origin:30% 100%; }
+  #bub-wiz::after{ left:60px; }
+  #bub-wiz.ok{ background:#d9ffe6; } #bub-wiz.bad{ background:#ffe0e0; }
+  #bub-wiz.live{ background:#f1eeff; color:#5b4bb5; font-size:18px; }
+  #bub-mon{ right:236px; top:212px; transform-origin:90% 100%; background:#fff3c4; font-size:24px; }
+  #bub-mon::after{ right:24px; }
+
+  /* fx */
+  #fx{ position:absolute; inset:0; pointer-events:none; z-index:35; }
+  .proj{ position:absolute; width:96px; margin:-34px 0 0 -48px; filter:drop-shadow(0 0 10px rgba(124,170,255,.9)); }
+  .proj.fire{ filter:hue-rotate(185deg) saturate(2.4) brightness(1.15) drop-shadow(0 0 12px rgba(255,140,40,.95)); width:120px; margin:-42px 0 0 -60px; }
+  .proj.slash{ filter:grayscale(1) brightness(1.8) drop-shadow(0 0 8px #fff); width:80px; margin:-28px 0 0 -40px; }
+  .boom{ position:absolute; width:170px; transform:translate(-50%,-50%) scale(.2); opacity:0; animation:boom .55s steps(6) forwards; }
+  @keyframes boom{ 15%{ opacity:1; transform:translate(-50%,-50%) scale(1.15); } 60%{ opacity:1; transform:translate(-50%,-50%) scale(1); } 100%{ opacity:0; transform:translate(-50%,-50%) scale(1.3); } }
+  .flash{ position:absolute; inset:0; background:#fff; animation:flash .2s ease-out forwards; }
+  .flash.red{ background:#ff2a2a; }
+  .flash.green{ background:#7dff9a; }
+  @keyframes flash{ 0%{ opacity:.6; } 100%{ opacity:0; } }
+  .bolt{ position:absolute; top:0; width:120px; overflow:visible; animation:bolt .45s steps(3) forwards; }
+  @keyframes bolt{ 0%,66%{ opacity:1; } 100%{ opacity:0; } }
+  .spark{ position:absolute; width:10px; height:10px; background:#9dffbf; box-shadow:0 0 8px #7dff9a; opacity:0; animation:spark 1s ease-out forwards; }
+  @keyframes spark{ 0%{ opacity:0; transform:translateY(0) scale(.5); } 20%{ opacity:1; } 100%{ opacity:0; transform:translateY(-90px) scale(1); } }
+  .dmg{ position:absolute; font-family:'Press Start 2P', monospace; font-size:26px; color:#fff; z-index:45;
+    text-shadow:3px 3px 0 #000, -2px -2px 0 #000; transform:translate(-50%,-50%); animation:dmg 1s ease-out forwards; }
+  .dmg.to-wiz{ color:#ff6b6b; } .dmg.heal{ color:#7dff9a; } .dmg.crit{ color:var(--gold); font-size:32px; }
+  @keyframes dmg{ 0%{ opacity:0; transform:translate(-50%,-20%) scale(.6); } 20%{ opacity:1; transform:translate(-50%,-60%) scale(1.15); } 100%{ opacity:0; transform:translate(-50%,-170%) scale(1); } }
+
+  /* ---------- BOTTOM UI ---------- */
+  #ui{ position:absolute; left:0; right:0; bottom:0; height:160px; display:flex; z-index:28;
+    background:#0a0918; border-top:4px solid #000; box-shadow:0 -3px 0 var(--panel-light) inset; }
+  #log{ flex:0 0 34%; padding:10px 12px; font-size:12px; line-height:1.65; color:#d8d4ff; overflow-y:auto;
+    border-right:3px solid var(--panel-light); }
+  #log p{ margin:0 0 3px; }
+  #log .sys{ color:var(--dim); } #log .dmg{ color:#ffb454; } #log .fail{ color:#ff7b7b; } #log .ok{ color:#7effa8; }
+  #menu{ flex:1; display:flex; gap:6px; padding:10px 10px 12px; background:linear-gradient(180deg,#1a1838,#100f24); }
+  .skill-btn{ flex:1; position:relative; display:flex; flex-direction:column; align-items:center; justify-content:flex-start;
+    padding:6px 2px 0; background:transparent; border:none; cursor:pointer; color:#fff; font-family:inherit; }
+  .skill-btn .tile{ width:76px; height:76px; border:4px solid #8f95b2; background:#141530; box-shadow:0 0 0 2px #000, inset 0 0 0 2px #000;
+    display:flex; align-items:center; justify-content:center; overflow:hidden; transition:transform .1s; }
+  .skill-btn .tile img{ width:100%; height:100%; object-fit:cover; }
+  .skill-btn .lbl{ margin-top:9px; font-size:9px; white-space:nowrap; text-shadow:2px 2px 0 #000; }
+  .skill-btn .sub{ margin-top:5px; font-size:11px; color:var(--dim); }
+  .skill-btn:hover .tile, .skill-btn.sel .tile{ border-color:var(--gold); box-shadow:0 0 0 2px #000, 0 0 14px rgba(255,215,94,.6); }
+  .skill-btn.sel .lbl{ color:var(--gold); }
+  .skill-btn:active .tile{ transform:scale(.94); }
+  #menu.locked .skill-btn:not(.sel){ opacity:.4; cursor:default; }
+  #menu.locked .skill-btn:not(.sel) .tile{ border-color:#555; box-shadow:0 0 0 2px #000; }
+
+  /* ---------- RESULT ---------- */
+  #result{ position:absolute; inset:0; z-index:70; display:none; align-items:center; justify-content:center;
+    background:rgba(0,0,0,.72); }
+  #result.show{ display:flex; animation:fadeIn .6s ease; }
+  @keyframes fadeIn{ from{ opacity:0; } }
+  #result .panel{ background:var(--panel); border:4px solid var(--gold); box-shadow:0 0 0 3px #000, 0 0 40px rgba(255,215,94,.3);
+    padding:28px 40px; text-align:center; min-width:380px; }
+  #result h2{ font-size:30px; margin:0 0 22px; color:var(--gold); text-shadow:4px 4px 0 #000; }
+  #result.lose h2{ color:#ff6b6b; }
+  #result .stats{ font-size:16px; line-height:2; margin-bottom:22px; }
+  #result .stats b{ color:var(--gold); }
+</style>
+</head>
+<body>
+<div id="wrap"><div id="stage">
+
+  <!-- TITLE -->
+  <div id="title">
+    <img src="images/title.jpg" alt="뭐라고요? 안들려요">
+    <div id="title-cover"></div>
+    <button id="start-btn" disabled aria-label="NEW GAME"></button>
+    <div id="start-arrow" class="px">▶</div>
+    <div id="voice-status">음성 인식 준비 중...</div>
+  </div>
+
+  <!-- BATTLE -->
+  <div id="battle">
+    <img id="bg" src="images/dungeon.jpg" alt="">
+
+    <div class="hpbox" id="hp-wiz"><div class="top"><span class="name px">WIZARD</span><span class="num px" id="hp-wiz-num"></span></div><div class="bar"><i id="hp-wiz-bar"></i></div></div>
+    <div class="hpbox" id="hp-mon"><div class="top"><span class="name px" id="mon-name">DRAGON</span><span class="num px" id="hp-mon-num"></span></div><div class="bar"><i id="hp-mon-bar"></i></div></div>
+
+    <div id="card">
+      <div class="skill px" id="card-skill"></div>
+      <div class="word px" id="card-word"></div>
+      <div class="mean" id="card-mean"></div>
+      <div class="listen" id="card-listen">지금 외쳐라!</div>
+      <div id="meter"><i></i></div>
+    </div>
+
+    <div id="mon"><img id="mon-img" alt=""></div>
+    <div id="wiz"><img id="shout" src="images/shout-icon.png" alt=""><img id="wiz-img" alt=""></div>
+
+    <div class="bubble" id="bub-wiz"></div>
+    <div class="bubble" id="bub-mon"></div>
+    <div id="fx"></div>
+
+    <div id="ui">
+      <div id="log"></div>
+      <div id="menu"></div>
+    </div>
+  </div>
+
+  <!-- RESULT -->
+  <div id="result">
+    <div class="panel">
+      <h2 class="px" id="result-title"></h2>
+      <div class="stats" id="result-stats"></div>
+      <button class="btn" id="again-btn">AGAIN</button>
+    </div>
+  </div>
+
+</div></div>
+
+<audio id="bgm" src="https://cdn.freesound.org/previews/464/464906_6142149-lq.mp3" loop preload="auto"></audio>
+
+<script src="lib/vosk.js"></script>
+<script>
+(function(){
+  "use strict";
+
+  /* =========================================================
+     조절하는 곳 (게임 데이터)
+     ========================================================= */
+  const SKILLS = [
+    { key:'attack',  name:'ATTACK',    sub:'뼈',    icon:'images/icon-attack.png',  kind:'slash',   power:20,
+      words:[['Femur','넙다리뼈'],['Tibia','정강뼈'],['Fibula','종아리뼈'],['Humerus','위팔뼈'],['Patella','무릎뼈'],['Clavicle','빗장뼈'],['Scapula','어깨뼈'],['Pelvis','골반']] },
+    { key:'spell',   name:'SPELL',     sub:'주문',  icon:'images/icon-spell.png',   kind:'bolt',    power:45,
+      words:[['Vertebral','척추의']] },
+    { key:'fire',    name:'FIRE BALL', sub:'척추',  icon:'images/icon-fire.png',    kind:'fire',    power:35,
+      words:[['Cervical','목뼈의 (경추)'],['Thoracic','등뼈의 (흉추)'],['Lumbar','허리의 (요추)'],['Sacrum','엉치뼈'],['Vertebra','척추뼈']] },
+    { key:'thunder', name:'THUNDER',   sub:'근육',  icon:'images/icon-thunder.png', kind:'thunder', power:40,
+      words:[['Biceps','위팔두갈래근'],['Triceps','위팔세갈래근'],['Quadriceps','넙다리네갈래근'],['Hamstring','뒤넙다리근'],['Tendon','힘줄'],['Ligament','인대']] },
+    { key:'cure',    name:'CURE',      sub:'움직임', icon:null,                     kind:'heal',    power:30,
+      words:[['Flexion','굽힘'],['Extension','폄'],['Abduction','벌림'],['Rotation','돌림']] }
+  ];
+  const WIZARD_MAX_HP  = 100;
+  const MONSTER        = { name:'DRAGON', hp:100, atkMin:10, atkMax:16 };
+  const DECOYS         = 4;        // 정답 말고 같이 넣는 오답 단어 수 (많을수록 엄격)
+  const LISTEN_MS      = 6000;     // 최대 듣는 시간
+  const WIZ_SCALE      = 0.72;     // 마법사 그림 크기
+  const MON_SCALE      = 1.1;      // 몬스터 그림 크기
+  const NO_VOICE_LINES = ['뭐라구요!? 안들려요', '뭐라구요!? 안들려요~', '크게 말해 봐!'];
+  const WRONG_LINES    = ['뭐라구요!? 안들려요', '그게 주문이냐?', '크하하! 틀렸다!'];
+  const MODEL_URL      = new URL('models/vosk-model-small-en-us-0.15.tar.gz', location.href).href;
+  const TEST_MODE      = /[?&]test\b/.test(location.search);   // 마이크 없이 소리 파일로 시험할 때
+
+  /* ========================================================= */
+  const $ = function(id){ return document.getElementById(id); };
+  const stage = $('stage'), battle = $('battle'), menu = $('menu'), logEl = $('log'), fx = $('fx');
+  const wizImg = $('wiz-img'), monImg = $('mon-img'), wizEl = $('wiz'), monEl = $('mon');
+  const card = $('card'), meterBar = $('meter').firstElementChild;
+  const bubWiz = $('bub-wiz'), bubMon = $('bub-mon'), shout = $('shout');
+  const bgm = $('bgm');
+
+  const IMG = {
+    wizIdle:'images/wizard-idle.png', wizCast:'images/wizard-cast.png', wizAttack:'images/wizard-attack.png',
+    monIdle:'images/monster-idle.png', monAttack:'images/monster-attack.png', monHurt:'images/monster-hurt.png',
+    proj:'images/projectile.png', boom:'images/explosion.png'
+  };
+  // 그림 미리 불러 두기 + 원래 크기 기억 (포즈가 바뀌어도 같은 비율로 보이게)
+  const natural = {};
+  Object.keys(IMG).forEach(function(k){
+    const im = new Image();
+    im.onload = function(){
+      natural[IMG[k]] = [im.naturalWidth, im.naturalHeight];
+      if (k === 'wizIdle' && !wizImg.getAttribute('src')) setWiz(IMG.wizIdle);
+      if (k === 'monIdle' && !monImg.getAttribute('src')) setMon(IMG.monIdle);
+    };
+    im.src = IMG[k];
+  });
+  function sized(img, src, scale){
+    img.src = src;
+    const n = natural[src];
+    if (n){ img.style.width = Math.round(n[0] * scale) + 'px'; img.style.height = Math.round(n[1] * scale) + 'px'; }
+  }
+  function setWiz(src){ sized(wizImg, src, WIZ_SCALE); }
+  function setMon(src){ sized(monImg, src, MON_SCALE); }
+
+  /* ---------- 화면 크기 맞추기 (800x600 을 통째로 확대/축소) ---------- */
+  let fit = 1;
+  function resize(){
+    fit = Math.min(window.innerWidth / 800, window.innerHeight / 600);
+    stage.style.transform = 'scale(' + fit + ')';
+  }
+  window.addEventListener('resize', resize); resize();
+
+  /* ---------- 터치/클릭 ---------- */
+  function bindTap(el, handler){
+    let last = 0;
+    function run(e){ const now = Date.now(); if (now - last < 500) return; last = now; handler(e); }
+    el.addEventListener('touchstart', function(e){ e.preventDefault(); run(e); }, { passive:false });
+    el.addEventListener('click', run);
+  }
+
+  /* ---------- 효과음 (직접 합성, 외부 파일 없음) ---------- */
+  let actx = null;
+  function ac(){ if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)(); return actx; }
+  function tone(f0, f1, dur, type, vol, delay){
+    const c = ac(), t = c.currentTime + (delay || 0);
+    const o = c.createOscillator(), g = c.createGain();
+    o.type = type || 'square'; o.frequency.setValueAtTime(f0, t);
+    if (f1) o.frequency.exponentialRampToValueAtTime(f1, t + dur);
+    g.gain.setValueAtTime(vol || .12, t); g.gain.exponentialRampToValueAtTime(.0001, t + dur);
+    o.connect(g); g.connect(c.destination); o.start(t); o.stop(t + dur + .02);
+  }
+  function noise(dur, vol, delay){
+    const c = ac(), t = c.currentTime + (delay || 0);
+    const b = c.createBuffer(1, Math.floor(c.sampleRate * dur), c.sampleRate), d = b.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / d.length);
+    const s = c.createBufferSource(), g = c.createGain(); s.buffer = b; g.gain.value = vol || .2;
+    s.connect(g); g.connect(c.destination); s.start(t);
+  }
+  const SFX = {
+    listen: function(){ tone(660, 990, .12, 'square', .08); },
+    cast:   function(){ tone(300, 1200, .35, 'sawtooth', .07); },
+    hit:    function(){ noise(.35, .35); tone(160, 40, .3, 'square', .15); },
+    thunder:function(){ noise(.6, .45); tone(90, 30, .5, 'sawtooth', .18); },
+    heal:   function(){ [523, 659, 784, 1046].forEach(function(f, i){ tone(f, 0, .18, 'triangle', .12, i * .08); }); },
+    miss:   function(){ tone(300, 120, .35, 'square', .1); },
+    roar:   function(){ noise(.5, .3); tone(120, 60, .5, 'sawtooth', .16); },
+    win:    function(){ [523, 659, 784, 1046, 784, 1046].forEach(function(f, i){ tone(f, 0, .2, 'square', .1, i * .13); }); },
+    lose:   function(){ [392, 330, 262, 196].forEach(function(f, i){ tone(f, 0, .3, 'triangle', .14, i * .22); }); }
+  };
+
+  /* ---------- 로그 / 말풍선 / 숫자 ---------- */
+  function log(text, cls){
+    const p = document.createElement('p'); if (cls) p.className = cls; p.textContent = text;
+    logEl.appendChild(p); logEl.scrollTop = logEl.scrollHeight;
+  }
+  const bubTimers = {};
+  function bubble(el, html, cls, ms){
+    clearTimeout(bubTimers[el.id]);
+    el.innerHTML = html; el.className = 'bubble show ' + (cls || '');
+    if (ms) bubTimers[el.id] = setTimeout(function(){ el.classList.remove('show'); }, ms);
+  }
+  function hideBubble(el){ clearTimeout(bubTimers[el.id]); el.classList.remove('show'); }
+  function esc(s){ return String(s).replace(/[&<>"]/g, function(c){ return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]; }); }
+  function center(el, fx_, fy_){
+    const r = el.getBoundingClientRect(), s = stage.getBoundingClientRect();
+    return { x:(r.left - s.left + r.width * fx_) / fit, y:(r.top - s.top + r.height * fy_) / fit };
+  }
+  function popNumber(text, p, cls){
+    const d = document.createElement('div'); d.className = 'dmg ' + (cls || ''); d.textContent = text;
+    d.style.left = p.x + 'px'; d.style.top = p.y + 'px'; fx.appendChild(d);
+    setTimeout(function(){ d.remove(); }, 1000);
+  }
+  function flash(cls){ const f = document.createElement('div'); f.className = 'flash ' + (cls || ''); fx.appendChild(f); setTimeout(function(){ f.remove(); }, 220); }
+  function shake(){ battle.classList.remove('shake'); void battle.offsetWidth; battle.classList.add('shake'); }
+
+  /* ---------- 상태 ---------- */
+  let state = 'title';          // title | player | listening | busy | end
+  let wizHP = WIZARD_MAX_HP, monHP = MONSTER.hp, cur = null;
+  const lastWord = {};
+  let stats = { tries:0, hits:0, wrong:0, silent:0 };
+
+  function setHP(){
+    function upd(bar, num, hp, max){
+      const r = hp / max; bar.style.width = (r * 100) + '%';
+      bar.className = r <= .3 ? 'low' : (r <= .6 ? 'mid' : '');
+      num.textContent = hp + '/' + max;
+    }
+    upd($('hp-wiz-bar'), $('hp-wiz-num'), wizHP, WIZARD_MAX_HP);
+    upd($('hp-mon-bar'), $('hp-mon-num'), monHP, MONSTER.hp);
+  }
+
+  /* ---------- 메뉴 만들기 ---------- */
+  SKILLS.forEach(function(sk){
+    const b = document.createElement('button');
+    b.className = 'skill-btn'; b.dataset.key = sk.key;
+    const icon = sk.icon ? '<img src="' + sk.icon + '" alt="">'
+      : '<svg viewBox="0 0 12 12" width="58" height="58" shape-rendering="crispEdges"><path fill="#000" d="M4 1h4v3h3v4H8v3H4V8H1V4h3z"/><path fill="#2fa84f" d="M5 2h2v3h3v2H7v3H5V7H2V5h3z"/><path fill="#7dff9a" d="M5 2h1v3H5zM2 5h3v1H2z"/></svg>';
+    b.innerHTML = '<div class="tile">' + icon + '</div><div class="lbl px">' + sk.name + '</div><div class="sub">' + sk.sub + '</div>';
+    bindTap(b, function(){ onSkill(sk); });
+    menu.appendChild(b);
+  });
+  function selectBtn(key){
+    menu.querySelectorAll('.skill-btn').forEach(function(b){ b.classList.toggle('sel', b.dataset.key === key); });
+    menu.classList.toggle('locked', !!key);
+  }
+
+  /* ---------- 음성 인식 (Vosk) ---------- */
+  let model = null, procNode = null, analyser = null, rec = null;
+  let listening = false, finalizing = false, limitTimer = null, safetyTimer = null;
+  const ALL_WORDS = [];
+  SKILLS.forEach(function(sk){ sk.words.forEach(function(w){ ALL_WORDS.push(w[0]); }); });
+  function norm(s){ return s.toLowerCase().replace(/[^a-z' ]/g, ' ').replace(/\s+/g, ' ').trim(); }
+
+  const statusEl = $('voice-status'), startBtn = $('start-btn');
+  if (location.protocol === 'file:'){
+    // 더블클릭으로 열면 브라우저가 음성 모델 파일을 못 읽음 → 실행 파일로 열도록 안내
+    statusEl.textContent = '이렇게 열면 음성 인식이 안 돼요. 폴더의 "게임 실행" 을 더블클릭해 주세요';
+    statusEl.className = 'err';
+  }
+  const slowTimer = setTimeout(function(){
+    if (!model && location.protocol !== 'file:') statusEl.textContent = '음성 인식 준비 중... (처음엔 1분쯤 걸릴 수 있어요)';
+  }, 12000);
+  if (location.protocol !== 'file:') Vosk.createModel(MODEL_URL).then(function(m){
+    clearTimeout(slowTimer);
+    model = m;
+    statusEl.textContent = 'NEW GAME 을 누르고 마이크를 허용해 주세요';
+    statusEl.className = 'ok';
+    startBtn.disabled = false;
+  }).catch(function(){
+    clearTimeout(slowTimer);
+    statusEl.textContent = '음성 모델을 못 불러왔어요. 창을 닫고 "게임 실행" 으로 다시 열어 주세요';
+    statusEl.className = 'err';
+    startBtn.disabled = false;
+  });
+  document.addEventListener('keydown', function(e){ if (e.key === 'Enter' && state === 'title' && !startBtn.disabled) startGame(); });
+
+  async function setupMic(){
+    if (procNode || TEST_MODE) return true;
+    if (!window.isSecureContext || !navigator.mediaDevices) return false;
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio:{ echoCancellation:true, noiseSuppression:true, channelCount:1 } });
+      const c = ac();
+      const src = c.createMediaStreamSource(stream);
+      analyser = c.createAnalyser(); analyser.fftSize = 512;
+      procNode = c.createScriptProcessor(4096, 1, 1);
+      procNode.onaudioprocess = function(e){ if (listening && rec){ try { rec.acceptWaveform(e.inputBuffer); } catch(err){} } };
+      const mute = c.createGain(); mute.gain.value = 0;
+      src.connect(analyser); src.connect(procNode); procNode.connect(mute); mute.connect(c.destination);
+      const buf = new Uint8Array(analyser.fftSize);
+      (function tick(){
+        analyser.getByteTimeDomainData(buf);
+        let peak = 0; for (let i = 0; i < buf.length; i++) peak = Math.max(peak, Math.abs(buf[i] - 128));
+        meterBar.style.width = (listening ? Math.min(100, peak / 60 * 100) : 0) + '%';
+        requestAnimationFrame(tick);
+      })();
+      return true;
+    } catch(e){ return false; }
+  }
+
+  function startListening(word){
+    const others = ALL_WORDS.filter(function(w){ return norm(w) !== norm(word); });
+    for (let i = others.length - 1; i > 0; i--){ const j = Math.floor(Math.random() * (i + 1)); const t = others[i]; others[i] = others[j]; others[j] = t; }
+    const grammar = [norm(word)].concat(others.slice(0, DECOYS).map(norm));
+    const rate = TEST_MODE ? 16000 : ac().sampleRate;
+    rec = new model.KaldiRecognizer(rate, JSON.stringify(grammar));
+    rec.on('partialresult', function(msg){
+      const p = msg && msg.result && msg.result.partial;
+      if (p && listening) bubble(bubWiz, '<small>듣는 중...</small>' + esc(p), 'live');
+    });
+    rec.on('result', function(msg){
+      const t = ((msg && msg.result && msg.result.text) || '').trim();
+      if (!t && !finalizing) return;          // 조용한 구간: 계속 듣기
+      endListening(t);
+    });
+    listening = true; finalizing = false;
+    limitTimer = setTimeout(stopListening, LISTEN_MS);
+  }
+  function stopListening(){
+    if (!listening || finalizing) return;
+    finalizing = true;
+    $('card-listen').textContent = '확인 중...';
+    try { rec.retrieveFinalResult(); } catch(e){ endListening(''); return; }
+    safetyTimer = setTimeout(function(){ if (listening) endListening(''); }, 2500);
+  }
+  function endListening(text){
+    if (!listening) return;
+    listening = false; finalizing = false; clearTimeout(limitTimer); clearTimeout(safetyTimer);
+    const r = rec; rec = null; setTimeout(function(){ try { r.remove(); } catch(e){} }, 300);
+    shout.classList.remove('show'); card.classList.remove('listening'); meterBar.style.width = '0';
+    judge(text);
+  }
+
+  /* ---------- 턴 진행 ---------- */
+  function pickWord(sk){
+    const list = sk.words;
+    if (list.length === 1) return list[0];
+    let w; do { w = list[Math.floor(Math.random() * list.length)]; } while (w[0] === lastWord[sk.key]);
+    lastWord[sk.key] = w[0]; return w;
+  }
+
+  async function onSkill(sk){
+    if (state === 'listening'){ stopListening(); return; }
+    if (state !== 'player') return;
+    if (!model){ log('음성 인식이 아직 준비 안 됐어요.', 'fail'); return; }
+    state = 'busy';
+    const ok = await setupMic();
+    if (!ok){ state = 'player'; log('마이크를 쓸 수 없어요. 주소창 자물쇠에서 마이크를 허용해 주세요.', 'fail'); return; }
+    if (actx && actx.state === 'suspended') actx.resume();
+
+    const w = pickWord(sk);
+    cur = { skill:sk, word:w[0], mean:w[1] };
+    state = 'listening';
+    selectBtn(sk.key);
+    $('card-skill').textContent = sk.name;
+    $('card-word').textContent = w[0];
+    $('card-mean').textContent = w[1];
+    $('card-listen').textContent = '지금 외쳐라!';
+    card.className = 'show listening';
+    shout.classList.add('show');
+    hideBubble(bubMon);
+    bubble(bubWiz, '<small>듣는 중...</small>🎤', 'live');
+    log('외쳐라! [' + w[0] + '] ' + w[1], 'sys');
+    SFX.listen();
+    stats.tries++;
+    startListening(w[0]);
+  }
+
+  function pick(a){ return a[Math.floor(Math.random() * a.length)]; }
+
+  function judge(text){
+    state = 'busy';
+    const heard = norm(text);
+    const pass = !!heard && (' ' + heard + ' ').indexOf(' ' + norm(cur.word) + ' ') !== -1;
+    if (!heard){
+      stats.silent++;
+      hideBubble(bubWiz); card.className = '';
+      bubble(bubMon, esc(pick(NO_VOICE_LINES)), '', 2200);
+      log('아무 소리도 못 들었다. 다시 외쳐 보자!', 'fail');
+      SFX.miss();
+      setTimeout(function(){ card.className = ''; selectBtn(null); state = 'player'; }, 900);
+      return;
+    }
+    if (pass){
+      stats.hits++;
+      bubble(bubWiz, esc(cur.word) + '!', 'ok', 1600);
+      log('"' + text + '" 주문 성공!', 'ok');
+      setTimeout(function(){ card.className = ''; }, 500);
+      doSkill(cur.skill, afterPlayer);
+    } else {
+      stats.wrong++;
+      bubble(bubWiz, esc(text) + '?', 'bad', 1800);
+      setTimeout(function(){ bubble(bubMon, esc(pick(WRONG_LINES)), '', 2000); }, 450);
+      log('"' + text + '"(으)로 들렸다... 주문이 꼬였다!', 'fail');
+      SFX.miss();
+      setTimeout(function(){ card.className = ''; afterPlayer(); }, 1300);
+    }
+  }
+
+  function afterPlayer(){
+    selectBtn(null);
+    if (monHP <= 0){ win(); return; }
+    setTimeout(monsterTurn, 650);
+  }
+
+  /* ---------- 마법사 기술 ---------- */
+  function doSkill(sk, done){
+    if (sk.kind === 'heal'){
+      setWiz(IMG.wizCast); SFX.heal();
+      wizEl.classList.remove('heal'); void wizEl.offsetWidth; wizEl.classList.add('heal');
+      flash('green');
+      const c = center(wizImg, .5, .5);
+      for (let i = 0; i < 14; i++){
+        const s = document.createElement('div'); s.className = 'spark';
+        s.style.left = (c.x - 60 + Math.random() * 120) + 'px'; s.style.top = (c.y - 40 + Math.random() * 110) + 'px';
+        s.style.animationDelay = (Math.random() * .4) + 's'; fx.appendChild(s);
+        setTimeout(function(){ s.remove(); }, 1500);
+      }
+      const before = wizHP; wizHP = Math.min(WIZARD_MAX_HP, wizHP + sk.power); setHP();
+      popNumber('+' + (wizHP - before), center(wizImg, .5, .2), 'heal');
+      log('WIZARD의 HP가 ' + (wizHP - before) + ' 회복되었다!', 'ok');
+      setTimeout(function(){ setWiz(IMG.wizIdle); wizEl.classList.remove('heal'); done(); }, 1100);
+      return;
+    }
+    setWiz(IMG.wizCast); SFX.cast();
+    setTimeout(function(){
+      setWiz(IMG.wizAttack);
+      if (sk.kind === 'thunder') thunder(sk, done);
+      else shoot(sk, done);
+    }, 380);
+  }
+  function shoot(sk, done){
+    const a = center(wizImg, .8, .15), b = center(monImg, .45, .55);
+    const p = document.createElement('img'); p.src = IMG.proj;
+    p.className = 'proj ' + (sk.kind === 'fire' ? 'fire' : (sk.kind === 'slash' ? 'slash' : ''));
+    fx.appendChild(p);
+    const ang = Math.atan2(b.y - a.y, b.x - a.x) * 180 / Math.PI + 33;   // 그림이 원래 오른쪽 위를 보고 있어서 보정
+    const dur = sk.kind === 'slash' ? 300 : 430, t0 = performance.now();
+    let landed = false;
+    function land(){ if (landed) return; landed = true; p.remove(); impact(sk, b, done); }
+    setTimeout(land, dur + 250);   // 화면이 가려져 애니메이션이 멈춰도 게임은 계속 진행
+    (function step(now){
+      if (landed) return;
+      const t = Math.min(1, Math.max(0, (now - t0) / dur)), e = t * (2 - t);
+      p.style.left = (a.x + (b.x - a.x) * e) + 'px'; p.style.top = (a.y + (b.y - a.y) * e) + 'px';
+      p.style.transform = 'rotate(' + ang + 'deg)';
+      if (t < 1) requestAnimationFrame(step); else land();
+    })(t0);
+  }
+  function thunder(sk, done){
+    const b = center(monImg, .5, .5);
+    const s = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    s.setAttribute('class', 'bolt'); s.setAttribute('viewBox', '0 0 120 600'); s.setAttribute('preserveAspectRatio', 'none');
+    s.style.left = (b.x - 60) + 'px'; s.style.height = b.y + 'px';
+    let d = 'M60 0';
+    for (let y = 60; y <= 600; y += 60){ d += ' L' + (30 + Math.random() * 60).toFixed(0) + ' ' + y; }
+    s.innerHTML = '<path d="' + d + '" stroke="#7fe8ff" stroke-width="18" fill="none" opacity=".6"/><path d="' + d + '" stroke="#fffbd0" stroke-width="7" fill="none"/>';
+    fx.appendChild(s); flash(); SFX.thunder();
+    setTimeout(function(){ s.remove(); }, 480);
+    setTimeout(function(){ impact(sk, b, done); }, 120);
+  }
+  function impact(sk, at, done){
+    if (sk.kind !== 'thunder') SFX.hit();
+    flash(); shake();
+    const boom = document.createElement('img'); boom.src = IMG.boom; boom.className = 'boom';
+    boom.style.left = at.x + 'px'; boom.style.top = at.y + 'px'; fx.appendChild(boom);
+    setTimeout(function(){ boom.remove(); }, 600);
+    setMon(IMG.monHurt);
+    monImg.classList.remove('hurt'); void monImg.offsetWidth; monImg.classList.add('hurt');
+    const dmg = sk.power;
+    monHP = Math.max(0, monHP - dmg); setHP();
+    popNumber(dmg, { x:at.x, y:at.y - 60 }, dmg >= 40 ? 'crit' : '');
+    log('WIZARD의 ' + sk.name + '! ' + MONSTER.name + '에게 ' + dmg + ' 데미지!', 'dmg');
+    setTimeout(function(){
+      setWiz(IMG.wizIdle); monImg.classList.remove('hurt');
+      if (monHP > 0) setMon(IMG.monIdle);
+      done();
+    }, 1000);
+  }
+
+  /* ---------- 몬스터 차례 ---------- */
+  function monsterTurn(){
+    if (state === 'end') return;
+    setMon(IMG.monAttack); SFX.roar();
+    log(MONSTER.name + '의 불꽃 브레스!', 'sys');
+    setTimeout(function(){
+      const dmg = MONSTER.atkMin + Math.floor(Math.random() * (MONSTER.atkMax - MONSTER.atkMin + 1));
+      wizHP = Math.max(0, wizHP - dmg); setHP();
+      flash('red'); shake(); SFX.hit();
+      wizEl.classList.remove('hit'); void wizEl.offsetWidth; wizEl.classList.add('hit');
+      popNumber(dmg, center(wizImg, .5, .2), 'to-wiz');
+      log('WIZARD는 ' + dmg + ' 데미지를 입었다!', 'fail');
+    }, 450);
+    setTimeout(function(){
+      setMon(IMG.monIdle); wizEl.classList.remove('hit');
+      if (wizHP <= 0){ lose(); return; }
+      state = 'player';
+      log('무엇을 할까? 기술을 골라 주문을 외쳐라!', 'sys');
+    }, 1300);
+  }
+
+  /* ---------- 끝 ---------- */
+  function showResult(title, isWin){
+    state = 'end';
+    $('result-title').textContent = title;
+    $('result-stats').innerHTML =
+      '외친 주문 <b>' + stats.tries + '</b>번<br>' +
+      '성공 <b>' + stats.hits + '</b> · 꼬임 <b>' + stats.wrong + '</b> · 안들림 <b>' + stats.silent + '</b>';
+    $('result').className = 'show ' + (isWin ? 'win' : 'lose');
+  }
+  function win(){
+    state = 'end'; monEl.classList.add('dead'); SFX.win();
+    log(MONSTER.name + '를 쓰러뜨렸다!', 'ok');
+    setTimeout(function(){ showResult('VICTORY!', true); }, 1400);
+  }
+  function lose(){
+    state = 'end'; SFX.lose();
+    log('WIZARD는 쓰러졌다...', 'fail');
+    setTimeout(function(){ showResult('GAME OVER', false); }, 1200);
+  }
+
+  function resetBattle(){
+    wizHP = WIZARD_MAX_HP; monHP = MONSTER.hp; stats = { tries:0, hits:0, wrong:0, silent:0 };
+    $('mon-name').textContent = MONSTER.name;
+    monEl.classList.remove('dead'); setMon(IMG.monIdle); setWiz(IMG.wizIdle);
+    setHP(); logEl.innerHTML = ''; selectBtn(null); card.className = '';
+    hideBubble(bubWiz); hideBubble(bubMon);
+    $('result').className = '';
+    log('던전에 들어섰다...', 'sys');
+    log(MONSTER.name + '가 나타났다!', 'sys');
+    log('기술을 누르고, 나오는 주문을 소리 내어 외쳐라!', 'sys');
+    state = 'player';
+  }
+  setHP();
+
+  async function startGame(){
+    if (state !== 'title') return;
+    state = 'busy';
+    ac(); if (actx.state === 'suspended') actx.resume();
+    bgm.volume = .45; bgm.play().catch(function(){});
+    const ok = await setupMic();
+    $('title').classList.add('hide');
+    resetBattle();
+    if (!ok) log('마이크를 쓸 수 없어요. 마이크를 허용한 뒤 기술을 다시 눌러 주세요.', 'fail');
+  }
+  bindTap(startBtn, startGame);
+  bindTap($('again-btn'), resetBattle);
+
+  /* ---------- 시험용 (주소 끝에 ?test) ---------- */
+  if (TEST_MODE){
+    window.VW = {
+      state: function(){ return state; },
+      hp: function(){ return { wiz:wizHP, mon:monHP }; },
+      word: function(){ return cur && cur.word; },
+      stats: function(){ return stats; },
+      start: function(){ return startGame(); },
+      skill: function(key){ return onSkill(SKILLS.filter(function(s){ return s.key === key; })[0]); },
+      feed: function(samples){ if (rec) rec.acceptWaveformFloat(samples, 16000); },
+      stop: stopListening,
+      modelReady: function(){ return !!model; }
+    };
+    // ?test&demo : 화면 확인용 (자동으로 시작해서 주문 카드와 말풍선을 띄움)
+    if (/[?&]demo\b/.test(location.search)){
+      startGame().then(function(){
+        state = 'busy';
+        selectBtn('fire');
+        $('card-skill').textContent = 'FIRE BALL'; $('card-word').textContent = 'Cervical'; $('card-mean').textContent = '목뼈의 (경추)';
+        card.className = 'show listening'; shout.classList.add('show'); meterBar.style.width = '55%';
+        bubble(bubWiz, '<small>듣는 중...</small>cervical', 'live');
+        bubble(bubMon, esc(NO_VOICE_LINES[0]), '');
+        setTimeout(function(){ document.querySelectorAll('.dmg').forEach(function(d){ d.style.animation = 'none'; }); }, 50);
+        popNumber(35, center(monImg, .45, .3), '');
+      });
+    }
+  }
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+vosk.js
+- 출처: vosk-browser 0.0.8 (https://github.com/ccoreilly/vosk-browser), npm 패키지 dist/vosk.js
+- 라이선스: Apache-2.0 (무료로 쓰고 고치고 배포 가능, 이 출처 표시는 남겨 둘 것)
+
+models/vosk-model-small-en-us-0.15.tar.gz
+- 출처: Alpha Cephei Vosk 영어 작은 모델 (https://alphacephei.com/vosk/models), vosk-browser 데모 사이트에서 받은 tar.gz 판
+- 라이선스: Apache-2.0
+- "단어 목록 중에서만 고르기"(grammar) 기능 지원 (graph/HCLr.fst + Gr.fst 있음)
+- 확인한 단어: vertebral, vertebra, lumbar, cervical, thoracic, scapula, femur, humerus,
+  tibia, fibula, clavicle, sacrum, patella, ligament, tendon, biceps, quadriceps, hamstring,
+  pelvis, flexion, extension, abduction, rotation 등은 들어 있음
+- 없는 단어: adduction  → 이런 단어는 비슷한 소리 단어 묶음으로 대신 처리해야 함

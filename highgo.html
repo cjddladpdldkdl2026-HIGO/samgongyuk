@@ -1,0 +1,666 @@
+<!doctype html>
+<html lang="ko" translate="no">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="google" content="notranslate">
+<title>PT AI LAB</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Orbitron:wght@700;900&family=Chakra+Petch:wght@400;600;700&family=IBM+Plex+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  /* HIGO(NEONSHOT) 공식 사이트와 같은 신스웨이브 디자인:
+     보라 밤하늘 + 네온 태양 + 움직이는 분홍 격자 바닥 + 청록 네온 버튼 */
+  :root {
+    --bg-0: #07010f;
+    --bg-1: #11042a;
+    --bg-2: #1d0742;
+    --ink: #f4ecff;
+    --ink-dim: #b9a7d8;
+    --ink-faint: #7c6a9c;
+    --pink: #ff2e88;
+    --cyan: #2de2e6;
+    --cyan-soft: #7af7fb;
+    --violet: #9b5cff;
+    --gold: #fde74c;
+    --glow-cyan: 0 0 6px rgba(45,226,230,.8), 0 0 18px rgba(45,226,230,.4);
+    --glow-pink: 0 0 6px rgba(255,46,136,.8), 0 0 18px rgba(255,46,136,.4);
+    --line: rgba(149,92,255,.28);
+    --radius: 14px;
+    --font-display: 'Orbitron', 'IBM Plex Sans KR', sans-serif;
+    --font-ui: 'Chakra Petch', 'IBM Plex Sans KR', 'Segoe UI', sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    min-height: 100vh; overflow-x: hidden; color: var(--ink);
+    font-family: var(--font-ui); line-height: 1.6; word-break: keep-all; -webkit-font-smoothing: antialiased;
+    background:
+      radial-gradient(1200px 600px at 70% -10%, rgba(155,92,255,.22), transparent 60%),
+      radial-gradient(900px 500px at 0% 30%, rgba(255,46,136,.12), transparent 60%),
+      var(--bg-0);
+  }
+  a { color: inherit; text-decoration: none; }
+  button { font: inherit; color: inherit; cursor: pointer; }
+
+  /* 화면 전체에 옅은 브라운관 주사선 */
+  body::after {
+    content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 200; opacity: .35;
+    background: repeating-linear-gradient(to bottom, transparent 0 2px, rgba(0,0,0,.25) 3px, transparent 4px);
+    mix-blend-mode: multiply;
+  }
+
+  /* ── 상단 바 ── */
+  header {
+    position: sticky; top: 0; z-index: 50; height: 62px;
+    display: flex; align-items: center; gap: 28px; padding: 0 4vw;
+    background: rgba(7,1,15,.82); backdrop-filter: blur(10px); border-bottom: 1px solid var(--line);
+  }
+  .logo {
+    font-family: 'Orbitron', sans-serif; font-weight: 900; font-size: 20px; letter-spacing: .08em; white-space: nowrap;
+    color: var(--cyan-soft); text-shadow: var(--glow-cyan);
+  }
+  .logo span { color: var(--pink); text-shadow: var(--glow-pink); }
+  nav { display: flex; gap: 4px; }
+  nav a { padding: 8px 12px; border-radius: 8px; color: var(--ink-dim); font-size: 15px; white-space: nowrap; }
+  nav a:hover, nav a.active { color: var(--ink); background: rgba(155,92,255,.16); }
+  .search {
+    margin-left: auto; width: 220px; padding: 9px 14px;
+    background: rgba(17,4,42,.7); border: 1px solid var(--line); border-radius: 10px;
+    color: var(--ink); font: 15px var(--font-ui);
+  }
+  .search::placeholder { color: var(--ink-faint); }
+  .search:focus { outline: none; border-color: var(--cyan); box-shadow: 0 0 12px rgba(45,226,230,.35); }
+
+  /* ── 메인 배너: 네온 태양 + 움직이는 격자 바닥 ── */
+  .hero { position: relative; overflow: hidden; min-height: calc(92vh - 62px); display: flex; align-items: center; }
+  .hero::before { /* 지평선 아래로 흘러가는 분홍 격자 */
+    content: ""; position: absolute; left: 50%; bottom: 0; width: 220%; height: 48%;
+    transform: translateX(-50%) perspective(340px) rotateX(68deg);
+    background-image:
+      linear-gradient(var(--pink) 1px, transparent 1px),
+      linear-gradient(90deg, var(--pink) 1px, transparent 1px);
+    background-size: 44px 44px; opacity: .45;
+    -webkit-mask-image: linear-gradient(to top, #000 5%, transparent 85%);
+            mask-image: linear-gradient(to top, #000 5%, transparent 85%);
+    animation: grid-scroll 3.5s linear infinite; pointer-events: none;
+  }
+  @keyframes grid-scroll { to { background-position-y: 44px; } }
+  /* 슬라이더 */
+  .slides { position: relative; z-index: 1; display: flex; width: 100%; transition: transform .6s cubic-bezier(.22,.8,.2,1); touch-action: pan-y; cursor: grab; }
+  .slides.drag { transition: none; cursor: grabbing; user-select: none; }
+  .slide { flex: 0 0 100%; min-width: 0; opacity: .35; transition: opacity .6s; }
+  .slide.on { opacity: 1; }
+  .slide .sun { background: linear-gradient(180deg, var(--gold) 0%, #ff8a3d 40%, var(--c) 75%, var(--violet) 100%); }
+  .slide .screen { border-color: var(--c); box-shadow: 0 0 6px var(--c), 0 0 24px var(--c), 0 30px 60px rgba(0,0,0,.6); }
+  .nav-arrow {
+    position: absolute; top: 50%; z-index: 3; width: 48px; height: 48px; margin-top: -24px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center; font-size: 30px; line-height: 1; padding-bottom: 4px;
+    color: var(--ink); background: rgba(17,4,42,.7); border: 1px solid var(--line); backdrop-filter: blur(6px);
+    transition: border-color .15s, box-shadow .15s, transform .15s;
+  }
+  .nav-arrow:hover { border-color: var(--cyan); box-shadow: var(--glow-cyan); transform: scale(1.08); }
+  .nav-arrow.prev { left: 1.2vw; } .nav-arrow.next { right: 1.2vw; }
+  .dots { position: absolute; left: 0; right: 0; bottom: 6vh; z-index: 3; display: flex; justify-content: center; gap: 6px; }
+  .dots button { padding: 10px 2px; background: none; border: 0; }
+  .dots i { display: block; width: 26px; height: 4px; border-radius: 2px; background: rgba(244,236,255,.25); transition: width .3s, background .3s, box-shadow .3s; }
+  .dots button.on i { width: 52px; background: var(--cyan); box-shadow: var(--glow-cyan); }
+
+  /* 캐릭터 배너: 네온 테두리 액자 + 번갈아 바뀌는 그림 */
+  .hero-art.char { width: min(560px, 100%); }
+  .hero-art.char .sun { inset: -2% -4% 18% 18%; opacity: .75; }
+  .frame {
+    position: absolute; inset: 0; overflow: hidden; border-radius: 22px;
+    border: 2px solid var(--c); transform: rotate(3deg);
+    box-shadow: 0 0 8px var(--c), 0 0 40px color-mix(in srgb, var(--c) 55%, transparent), 0 30px 70px rgba(0,0,0,.6);
+  }
+  .frame img {
+    position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; user-select: none;
+    opacity: 0; transform: scale(1.12); transition: opacity 1s ease, transform 4.5s ease-out;
+  }
+  .frame img.on { opacity: 1; transform: scale(1.02); }
+  .frame::after { /* 아래쪽을 살짝 어둡게 해서 글씨가 잘 보이게 */
+    content: ""; position: absolute; inset: 0; pointer-events: none;
+    background: linear-gradient(180deg, transparent 55%, rgba(7,1,15,.55));
+  }
+
+  /* 입체(돌출) 글씨: 그림자를 겹겹이 쌓아 기둥처럼 튀어나오게 */
+  .shout {
+    position: absolute; left: -16%; bottom: -7%; z-index: 3; pointer-events: none;
+    display: flex; flex-direction: column; align-items: flex-start; gap: 0;
+    transform: rotate(-8deg); transform-origin: left bottom;
+  }
+  .shout span {
+    --side: #b8005f; --edge: #0d0d0f;
+    display: block; font-family: 'Black Han Sans', sans-serif; font-weight: 400; line-height: 1.02; white-space: nowrap;
+    font-size: clamp(40px, 5.2vw, 78px); letter-spacing: -.01em; color: #fff;
+    -webkit-text-stroke: 3px var(--edge); paint-order: stroke fill;
+    text-shadow:
+      1px 1px 0 var(--side), 2px 2px 0 var(--side), 3px 3px 0 var(--side), 4px 4px 0 var(--side),
+      5px 5px 0 var(--side), 6px 6px 0 var(--side), 7px 7px 0 var(--side), 8px 8px 0 var(--side),
+      9px 9px 0 var(--side), 10px 10px 0 var(--side), 11px 11px 0 var(--side),
+      12px 12px 0 var(--edge), 13px 13px 0 var(--edge), 14px 14px 0 var(--edge),
+      18px 22px 26px rgba(0,0,0,.55);
+    opacity: 0;
+  }
+  .shout span:nth-child(1) { color: #fff; --side: #ff2e88; }
+  .shout span:nth-child(2) { color: var(--gold); --side: #d1006b; margin-left: 18%; }
+  .shout span:nth-child(3) { color: var(--cyan-soft); --side: #6a2bff; margin-left: 6%; font-size: clamp(46px, 6.2vw, 96px); }
+  .slide.on .shout span { animation: slam-in .55s cubic-bezier(.2,1.7,.4,1) both; }
+  .slide.on .shout span:nth-child(2) { animation-delay: .35s; }
+  .slide.on .shout span:nth-child(3) { animation: slam-in .55s cubic-bezier(.2,1.7,.4,1) .8s both, shake .5s ease-in-out 1.5s 2; }
+  @keyframes slam-in {
+    from { opacity: 0; transform: translateY(-40px) scale(2.2) rotate(-6deg); }
+    to   { opacity: 1; transform: none; }
+  }
+  @keyframes shake {
+    0%, 100% { transform: none; } 20% { transform: translate(-4px, 2px) rotate(-2deg); }
+    40% { transform: translate(4px, -2px) rotate(2deg); } 60% { transform: translate(-3px, 1px) rotate(-1deg); } 80% { transform: translate(2px, -1px); }
+  }
+  .hero-inner {
+    position: relative; z-index: 1; width: 100%; padding: 40px calc(4vw + 48px) 18vh;
+    display: grid; grid-template-columns: 1.1fr 1fr; align-items: center; gap: 32px;
+  }
+  .eyebrow { font-size: 13px; letter-spacing: .3em; color: var(--pink); text-transform: uppercase; }
+  .hero h1 {
+    font-family: var(--font-display); font-weight: 900; line-height: 1.1;
+    font-size: clamp(40px, 6vw, 76px); margin: 12px 0 16px;
+    background: linear-gradient(180deg, #fff, var(--cyan-soft) 60%, var(--violet));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    filter: drop-shadow(0 0 18px rgba(45,226,230,.35));
+  }
+  .lead { font-size: 18px; color: var(--ink-dim); max-width: 32em; }
+  .facts { display: flex; gap: 28px; margin-top: 30px; color: var(--ink-dim); font-size: 14px; }
+  .facts b { display: block; font-family: 'Orbitron', sans-serif; font-size: 26px; color: var(--ink); }
+  .hero-art {
+    position: relative; justify-self: center; width: min(420px, 90%); aspect-ratio: 1;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .sun { /* 줄무늬가 들어간 신스웨이브 태양 */
+    position: absolute; inset: 8%; border-radius: 50%;
+    background: linear-gradient(180deg, var(--gold) 0%, #ff8a3d 40%, var(--pink) 75%, var(--violet) 100%);
+    box-shadow: 0 0 60px rgba(255,46,136,.55), 0 0 140px rgba(155,92,255,.4);
+    --m: linear-gradient(180deg, #000 0 54%, transparent 54% 58%, #000 58% 65%, transparent 65% 70%,
+         #000 70% 76%, transparent 76% 82%, #000 82% 87%, transparent 87% 94%, #000 94%);
+    -webkit-mask-image: var(--m); mask-image: var(--m);
+    opacity: .92;
+  }
+  .hero-art .emoji {
+    position: relative; font-size: clamp(110px, 15vw, 180px);
+    filter: drop-shadow(0 0 24px rgba(45,226,230,.55)) drop-shadow(0 14px 0 rgba(7,1,15,.5));
+  }
+  .screen { /* 태양 앞에 떠 있는 실제 게임 화면 */
+    position: relative; width: 112%; margin-top: 22%; aspect-ratio: 16 / 9; border-radius: 12px; overflow: hidden;
+    border: 1px solid var(--cyan); background: var(--bg-1) center / cover no-repeat;
+    box-shadow: var(--glow-cyan), 0 0 50px rgba(45,226,230,.25), 0 30px 60px rgba(0,0,0,.6);
+    transform: perspective(900px) rotateY(-12deg) rotateX(4deg);
+    animation: float 5s ease-in-out infinite;
+  }
+  .screen::after { /* 화면 위 반사광 */
+    content: ""; position: absolute; inset: 0;
+    background: linear-gradient(115deg, rgba(255,255,255,.14), transparent 40%);
+  }
+  .screen .bar {
+    position: absolute; left: 0; right: 0; top: 0; z-index: 1; padding: 5px 10px;
+    display: flex; gap: 5px; background: rgba(7,1,15,.75);
+  }
+  .screen .bar i { width: 7px; height: 7px; border-radius: 50%; background: var(--pink); }
+  .screen .bar i:nth-child(2) { background: var(--gold); } .screen .bar i:nth-child(3) { background: var(--cyan); }
+  @keyframes float {
+    0%, 100% { transform: perspective(900px) rotateY(-12deg) rotateX(4deg) translateY(0); }
+    50% { transform: perspective(900px) rotateY(-12deg) rotateX(4deg) translateY(-10px); }
+  }
+
+  .btns { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 28px; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px; cursor: pointer;
+    font: 700 16px var(--font-ui); letter-spacing: .04em; padding: 14px 26px; border-radius: 12px;
+    border: 1px solid transparent; transition: background .15s, border-color .15s, box-shadow .15s, transform .15s;
+  }
+  .btn:hover { transform: translateY(-2px); }
+  .btn:disabled { opacity: .5; cursor: default; transform: none; }
+  .btn-play { background: var(--cyan); color: #0a0420; box-shadow: 0 0 22px rgba(45,226,230,.55); }
+  .btn-play:hover { background: var(--cyan-soft); box-shadow: 0 0 32px rgba(45,226,230,.75); }
+  .btn-info { color: var(--ink); border-color: var(--line); background: rgba(255,255,255,.04); }
+  .btn-info:hover { border-color: var(--violet); background: rgba(155,92,255,.12); }
+
+  /* ── 가로 줄 ── */
+  main { position: relative; z-index: 1; padding: 0 0 40px; }
+  .row { padding-top: 34px; }
+  .row-head { padding: 0 4vw; }
+  .row-head .eyebrow { font-size: 12px; }
+  .row-head h2 { font-size: clamp(22px, 2.6vw, 30px); font-weight: 700; line-height: 1.3; }
+  .row-track {
+    display: flex; gap: 16px; overflow-x: auto; scroll-behavior: smooth;
+    padding: 16px 4vw 22px; scrollbar-width: none;
+  }
+  .row-track::-webkit-scrollbar { display: none; }
+
+  .card {
+    flex: 0 0 auto; width: 300px; position: relative; overflow: hidden; cursor: pointer; text-align: left;
+    color: var(--ink); border: 1px solid var(--line); border-radius: var(--radius);
+    background: linear-gradient(160deg, rgba(29,7,66,.9), rgba(17,4,42,.6));
+    transition: border-color .15s, transform .2s, box-shadow .2s;
+  }
+  .card:hover { border-color: var(--cyan); transform: translateY(-4px) scale(1.03); box-shadow: 0 0 24px rgba(45,226,230,.3); z-index: 2; }
+  .card .art {
+    position: relative; aspect-ratio: 16 / 9; display: flex; align-items: center; justify-content: center;
+    font-size: 64px; overflow: hidden; border-bottom: 1px solid var(--line);
+  }
+  .card .art::before { /* 카드 안 작은 격자 바닥 */
+    content: ""; position: absolute; left: 50%; bottom: 0; width: 260%; height: 60%;
+    transform: translateX(-50%) perspective(160px) rotateX(64deg);
+    background-image: linear-gradient(var(--c, var(--pink)) 1px, transparent 1px), linear-gradient(90deg, var(--c, var(--pink)) 1px, transparent 1px);
+    background-size: 22px 22px; opacity: .45;
+    -webkit-mask-image: linear-gradient(to top, #000, transparent 90%); mask-image: linear-gradient(to top, #000, transparent 90%);
+  }
+  .card .art span.e { position: relative; filter: drop-shadow(0 0 14px var(--c, var(--pink))); }
+  /* 썸네일(실제 게임 화면)이 있는 카드 */
+  .card .art.shot { background: var(--bg-1) center / cover no-repeat; transition: background-size .4s; }
+  .card .art.shot::before { display: none; }
+  .card .art.shot::after { /* 아래쪽 네온 그라데이션 + 작은 아이콘 자리 */
+    content: ""; position: absolute; inset: 0;
+    background: linear-gradient(180deg, transparent 45%, rgba(17,4,42,.85)),
+                linear-gradient(0deg, color-mix(in srgb, var(--c) 25%, transparent), transparent 40%);
+  }
+  .card .art.shot span.e {
+    position: absolute; left: 12px; bottom: 8px; z-index: 1; font-size: 30px;
+  }
+  .card .play-ico { /* 마우스를 올리면 나타나는 재생 버튼 */
+    position: absolute; right: 12px; bottom: 10px; z-index: 1; width: 40px; height: 40px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center; font-size: 15px; color: #0a0420;
+    background: var(--cyan); box-shadow: var(--glow-cyan); opacity: 0; transform: scale(.7); transition: .2s;
+  }
+  .card:hover .play-ico { opacity: 1; transform: scale(1); }
+  .card .bar { position: absolute; left: 0; right: 0; bottom: 0; height: 3px; z-index: 1; background: var(--c); box-shadow: 0 0 10px var(--c); }
+  .card .tag {
+    position: absolute; left: 10px; top: 10px; z-index: 1; padding: 2px 9px; border-radius: 999px;
+    font-size: 11px; font-weight: 700; letter-spacing: .1em; color: #0a0420; background: var(--gold);
+    box-shadow: 0 0 12px rgba(253,231,76,.5);
+  }
+  .card .info { padding: 14px 16px 16px; }
+  .card .num { font-size: 11px; letter-spacing: .2em; color: var(--pink); }
+  .card .title { font-size: 19px; font-weight: 700; line-height: 1.3; margin-top: 2px; }
+  .card .sub {
+    margin-top: 4px; font-size: 13px; color: var(--ink-dim);
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  }
+  .card.soon { background: rgba(17,4,42,.45); }
+  .card.soon .art { filter: grayscale(.8) brightness(.6); }
+  .card.soon .num { color: var(--ink-faint); }
+  .card.soon:hover { border-color: var(--violet); box-shadow: none; }
+  .empty { color: var(--ink-faint); padding: 30px 0; }
+
+  /* ── 상세 팝업 ── */
+  .modal-bg {
+    position: fixed; inset: 0; z-index: 100; background: rgba(7,1,15,.78); backdrop-filter: blur(4px);
+    display: none; align-items: center; justify-content: center; padding: 16px;
+  }
+  .modal-bg.open { display: flex; }
+  .modal {
+    position: relative; width: 100%; max-width: 560px; overflow: hidden;
+    background: linear-gradient(160deg, rgba(29,7,66,.96), rgba(11,4,30,.98));
+    border: 1px solid var(--line); border-radius: 18px;
+    box-shadow: 0 0 40px rgba(155,92,255,.35), 0 30px 60px rgba(0,0,0,.6);
+    animation: pop .25s ease-out;
+  }
+  @keyframes pop { from { transform: translateY(12px) scale(.97); opacity: 0; } }
+  .modal-close {
+    position: absolute; top: 12px; right: 12px; z-index: 2; width: 34px; height: 34px; border-radius: 10px;
+    border: 1px solid var(--line); background: rgba(7,1,15,.6); color: var(--ink);
+  }
+  .modal-close:hover { border-color: var(--cyan); }
+  .modal-top { position: relative; height: 200px; display: flex; align-items: center; justify-content: center; overflow: hidden; border-bottom: 1px solid var(--line); }
+  .modal-top::before {
+    content: ""; position: absolute; left: 50%; bottom: 0; width: 240%; height: 60%;
+    transform: translateX(-50%) perspective(220px) rotateX(64deg);
+    background-image: linear-gradient(var(--c, var(--pink)) 1px, transparent 1px), linear-gradient(90deg, var(--c, var(--pink)) 1px, transparent 1px);
+    background-size: 30px 30px; opacity: .4; animation: grid-scroll-s 2.5s linear infinite;
+    -webkit-mask-image: linear-gradient(to top, #000, transparent 90%); mask-image: linear-gradient(to top, #000, transparent 90%);
+  }
+  @keyframes grid-scroll-s { to { background-position-y: 30px; } }
+  .modal-top .emoji { position: relative; font-size: 96px; filter: drop-shadow(0 0 22px var(--c, var(--pink))); }
+  .modal-body { padding: 20px 24px 26px; }
+  .modal-body .eyebrow { font-size: 12px; }
+  .modal-body h3 { font-size: 28px; font-weight: 700; line-height: 1.25; margin: 4px 0 10px; }
+  .meta { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+  .meta span { padding: 3px 10px; border-radius: 999px; border: 1px solid var(--line); font-size: 13px; color: var(--ink-dim); }
+  .modal-body p { color: var(--ink-dim); line-height: 1.7; }
+
+  footer { border-top: 1px solid var(--line); padding: 28px 4vw 44px; color: var(--ink-faint); font-size: 13px; }
+  footer .credit { margin-top: 6px; font-size: 12px; }
+
+  @media (max-width: 820px) {
+    nav { display: none; }
+    .search { width: 150px; }
+    .hero { min-height: 0; }
+    .hero-inner { grid-template-columns: 1fr; padding: 32px 4vw 12vh; }
+    .nav-arrow { display: none; }   /* 휴대폰은 손가락으로 밀어서 넘기기 */
+    .hero-art.char { width: min(340px, 86%); }
+    .shout { left: -6%; bottom: -10%; }
+    .shout span { font-size: 34px; -webkit-text-stroke-width: 2px; }
+    .shout span:nth-child(3) { font-size: 42px; }
+    .dots { bottom: 4vh; }
+    .hero-art { order: -1; width: min(280px, 75%); }
+    .facts { gap: 18px; }
+    .card { width: 240px; }
+    .card .art { font-size: 52px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">PT AI <span>LAB</span></div>
+  <nav>
+    <a href="#" class="active">홈</a>
+    <a href="#row-game">게임</a>
+    <a href="#row-tool">학습 도구</a>
+    <a href="#row-soon">공개 예정</a>
+  </nav>
+  <input class="search" id="search" placeholder="🔍 검색">
+</header>
+
+<section class="hero" id="hero"></section>
+
+<main id="rows"></main>
+
+<footer>
+  ○○대학교 물리치료과 AI 동아리 · 우리가 만든 게임과 학습 도구 모음
+  <div class="credit">3D 모델: BodyParts3D © 2008 DBCLS (CC BY-SA 2.1 JP) · 게임 코드 원본: LUCASDREYER/aim-trainer-game (MIT)</div>
+</footer>
+
+<div class="modal-bg" id="modalBg">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="mTitle">
+    <button class="modal-close" id="mClose" aria-label="닫기">✕</button>
+    <div class="modal-top" id="mTop"><div class="emoji" id="mEmoji"></div></div>
+    <div class="modal-body">
+      <div class="eyebrow" id="mKit"></div>
+      <h3 id="mTitle"></h3>
+      <div class="meta" id="mMeta"></div>
+      <p id="mDesc"></p>
+      <div class="btns" id="mBtns"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   ✏️ 여기만 고치면 됩니다!
+   새 게임/앱을 만들면 아래 목록에 { ... } 하나를 추가하세요.
+   - category : "game" | "tool" | "soon"
+   - url      : 실행할 주소 (같은 폴더의 html 파일이면 "games/근육퀴즈.html" 처럼)
+   - glow     : 카드의 네온 색 (예: "#ff2e88" 분홍, "#2de2e6" 청록, "#9b5cff" 보라, "#fde74c" 노랑)
+   - thumb    : 카드·배너에 보일 게임 화면 사진 (thumbs 폴더에 넣고 경로 적기, 없으면 이모지로 표시)
+   - featured : true 로 하면 맨 위 큰 배너 슬라이드에 들어가요 (여러 개 가능, 옆으로 넘겨 봐요)
+   - hero     : 큰 배너에 보일 사진 (없으면 thumb 사진 사용)
+   - chars    : 큰 배너에 크게 보일 캐릭터 그림들 (여러 장이면 번갈아 나옴, 있으면 hero 대신 사용)
+   - needsServer : true 면 'PT AI LAB 실행.bat'으로 열었을 때만 실행 (마이크·음성 모델 쓰는 게임)
+   - shout    : 캐릭터 위에 올라가는 입체 글씨, 한 줄씩 ["닿아라", "아..쫌..!!!"]
+   ============================================================ */
+const APPS = [
+  {
+    title: "너에게 닿기를",
+    emoji: "💪",
+    category: "game",
+    tag: "NEW",
+    year: "2026",
+    who: "1학년 AI 동아리",
+    desc: "근육의 이는곳에서 닿는곳까지! 3D 뼈 위에서 부착점을 쏴서 맞히는 퀴즈와 근육 도감. 지금은 어깨·위팔 근육 8개를 플레이할 수 있어요.",
+    url: "너에게닿기를.html",
+    glow: "#ff2e88",
+    thumb: "thumbs/neoege-play.jpg",   // 카드에 보일 게임 화면 사진
+    hero: "thumbs/neoege-title.jpg",   // 큰 배너에 보일 사진 (없으면 thumb 사용)
+    chars: ["thumbs/char-3.jpg", "thumbs/char-2.jpg", "thumbs/char-1.jpg"],   // 배너 캐릭터 그림 (번갈아 나와요)
+    shout: ["닿아라", "닿아라", "아..쫌..!!!"],   // 배너 입체 글씨 (한 줄씩)
+    facts: [["8", "근육"], ["3", "난이도"], ["3D", "뼈 모델"]],
+    featured: true
+  },
+  {
+    title: "HIGO 뼈 게임",
+    emoji: "🦴",
+    category: "game",
+    tag: "공개",
+    year: "2026",
+    who: "1학년 AI 동아리",
+    desc: "3D 뼈 랜드마크를 조준해서 맞히는 해부학 에임 트레이너 NEONSHOT (5단계). 공개 사이트 버전이에요.",
+    url: "HIGO_뼈게임_사이트판.html",
+    glow: "#2de2e6",
+    thumb: "thumbs/higo-play.jpg",
+    hero: "thumbs/higo-title.jpg",
+    facts: [["5", "스테이지"], ["2P", "대결"], ["3D", "뼈 모델"]],
+    featured: true
+  },
+  {
+    title: "뭐라구요!? 안들려요",
+    emoji: "🧙",
+    category: "game",
+    tag: "음성",
+    year: "2026",
+    who: "1학년 AI 동아리",
+    desc: "마법사가 되어 해부학 영어 단어를 마이크에 크게 외치면 주문이 발사돼요! 정확히 외칠수록 몬스터에게 큰 데미지. (Vertebral Wizard)",
+    url: "games/Vertebral_Wizard/index.html",
+    glow: "#fde74c",
+    thumb: "games/Vertebral_Wizard/images/title.jpg",
+    hero: "games/Vertebral_Wizard/images/title.jpg",
+    facts: [["🎤", "음성 인식"], ["PIXEL", "도트 RPG"], ["EN", "해부학 단어"]],
+    needsServer: true,   // 마이크·음성 모델 때문에 'PT AI LAB 실행.bat'으로 열어야 해요
+    featured: true
+  },
+  {
+    title: "HIGO 공식 사이트",
+    emoji: "🌐",
+    category: "tool",
+    desc: "HIGO 홈·뼈 도감·소개 페이지가 있는 공개 웹사이트 (인터넷 필요)",
+    url: "https://higo-rho.vercel.app",
+    glow: "#9b5cff",
+    thumb: "thumbs/higo-title.jpg"
+  },
+  {
+    title: "너에게 닿기를 — 아래팔·다리",
+    emoji: "🦵",
+    category: "soon",
+    desc: "아래팔, 엉덩이·넙다리, 종아리·발 부위 근육 추가 예정"
+  },
+  {
+    title: "ROM 측정 연습",
+    emoji: "📐",
+    category: "soon",
+    desc: "관절가동범위 정상 각도를 외우는 연습 도구 (아이디어 예시)"
+  },
+  {
+    title: "AI 해부학 질문봇",
+    emoji: "🤖",
+    category: "soon",
+    desc: "해부학·운동학 질문에 답해주는 AI 도우미 (아이디어 예시)"
+  },
+  {
+    title: "시험 플래시카드",
+    emoji: "🗂️",
+    category: "soon",
+    desc: "시험 범위 핵심 개념 암기 카드 (아이디어 예시)"
+  }
+];
+
+const ROWS = [
+  { id: "row-game", key: "game", eyebrow: "01 · Games", title: "우리가 만든 게임" },
+  { id: "row-tool", key: "tool", eyebrow: "02 · Tools", title: "학습 도구" },
+  { id: "row-soon", key: "soon", eyebrow: "03 · Coming soon", title: "공개 예정" }
+];
+const CAT_KO = { game: "게임", tool: "학습 도구", soon: "공개 예정" };
+
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const glow = (a) => a.glow || "#7c6a9c";
+
+function launch(a) {
+  if (!a.url) { alert("아직 실행 주소(url)가 없어요. APPS 목록에 url을 넣어주세요!"); return; }
+  if (a.needsServer && location.protocol === "file:") {
+    alert("이 게임은 마이크와 음성 인식을 써서 그냥 더블클릭으로는 안 열려요.\n\nhighgo 폴더의 'PT AI LAB 실행.bat'을 더블클릭해서 허브를 연 다음 다시 눌러 주세요!\n(검은 창은 게임하는 동안 켜 두세요)");
+    return;
+  }
+  window.open(a.url, "_blank");
+}
+
+/* ── 대표 게임 슬라이더: featured: true 인 것들이 옆으로 넘어가요 ── */
+const AUTO_MS = 7000;   // 자동으로 다음 장으로 넘어가는 시간 (0이면 자동 넘김 끔)
+let slide = 0, slideCount = 0, autoTimer = null;
+
+function renderHero() {
+  let list = APPS.filter(x => x.featured);
+  if (!list.length) list = [APPS[0]];
+  slideCount = list.length;
+  const slides = list.map((a, i) => {
+    const facts = (a.facts || []).map(([n, l]) => `<div><b>${esc(n)}</b>${esc(l)}</div>`).join("");
+    const pic = a.hero || a.thumb;
+    return `
+    <div class="slide" style="--c:${glow(a)}" aria-roledescription="slide" aria-label="${i + 1} / ${list.length}">
+      <div class="hero-inner">
+        <div>
+          <p class="eyebrow">동아리 추천 ${String(i + 1).padStart(2, "0")} · ${esc(a.year || "")}</p>
+          <h1>${esc(a.title)}</h1>
+          <p class="lead">${esc(a.desc)}</p>
+          <div class="btns">
+            <button class="btn btn-play" data-play="${i}">▶ 플레이</button>
+            <button class="btn btn-info" data-info="${i}">상세 정보</button>
+          </div>
+          ${facts ? `<div class="facts">${facts}</div>` : ""}
+        </div>
+        ${a.chars ? `
+        <div class="hero-art char"><div class="sun"></div>
+          <div class="frame">${a.chars.map((src, k) => `<img src="${src}" alt="" draggable="false"${k === 0 ? ' class="on"' : ""}>`).join("")}</div>
+          ${a.shout ? `<div class="shout" aria-label="${esc(a.shout.join(" "))}">${a.shout.map(t => `<span>${esc(t)}</span>`).join("")}</div>` : ""}
+        </div>` : `
+        <div class="hero-art"><div class="sun"></div>${pic
+          ? `<div class="screen" style="background-image:url('${pic}')"><div class="bar"><i></i><i></i><i></i></div></div>`
+          : `<span class="emoji">${a.emoji}</span>`}</div>`}
+      </div>
+    </div>`;
+  }).join("");
+  const many = list.length > 1;
+  $("hero").innerHTML = `
+    <div class="slides" id="slides">${slides}</div>
+    ${many ? `
+      <button class="nav-arrow prev" id="prev" aria-label="이전">‹</button>
+      <button class="nav-arrow next" id="next" aria-label="다음">›</button>
+      <div class="dots" id="dots">${list.map((_, i) => `<button aria-label="${i + 1}번째" data-dot="${i}"><i></i></button>`).join("")}</div>` : ""}`;
+
+  // 캐릭터 그림이 여러 장이면 천천히 번갈아 보여주기
+  clearInterval(window.__charTimer);
+  window.__charTimer = setInterval(() => {
+    $("hero").querySelectorAll(".frame").forEach(f => {
+      const imgs = [...f.querySelectorAll("img")];
+      if (imgs.length < 2) return;
+      const k = imgs.findIndex(im => im.classList.contains("on"));
+      imgs[k].classList.remove("on");
+      imgs[(k + 1) % imgs.length].classList.add("on");
+    });
+  }, 3200);
+
+  $("hero").querySelectorAll("[data-play]").forEach(b => b.onclick = () => launch(list[b.dataset.play]));
+  $("hero").querySelectorAll("[data-info]").forEach(b => b.onclick = () => openModal(list[b.dataset.info], `Featured ${+b.dataset.info + 1}`));
+  if (!many) return;
+  $("prev").onclick = () => go(slide - 1, true);
+  $("next").onclick = () => go(slide + 1, true);
+  $("dots").querySelectorAll("[data-dot]").forEach(b => b.onclick = () => go(+b.dataset.dot, true));
+  enableSwipe();
+  $("hero").addEventListener("mouseenter", stopAuto);
+  $("hero").addEventListener("mouseleave", startAuto);
+  go(0);
+  startAuto();
+}
+
+function go(i, byUser) {
+  slide = (i + slideCount) % slideCount;
+  $("slides").style.transform = `translateX(${-slide * 100}%)`;
+  $("hero").querySelectorAll(".slide").forEach((s, k) => s.classList.toggle("on", k === slide));
+  $("dots").querySelectorAll("button").forEach((d, k) => d.classList.toggle("on", k === slide));
+  if (byUser) { stopAuto(); startAuto(); }
+}
+function startAuto() { stopAuto(); if (AUTO_MS && slideCount > 1) autoTimer = setInterval(() => go(slide + 1), AUTO_MS); }
+function stopAuto() { clearInterval(autoTimer); }
+
+/* 손가락/마우스로 밀어서 넘기기 */
+function enableSwipe() {
+  const box = $("slides");
+  let x0 = null, dx = 0;
+  box.addEventListener("pointerdown", e => {
+    if (e.target.closest("button")) return;
+    x0 = e.clientX; dx = 0; box.classList.add("drag"); box.setPointerCapture(e.pointerId); stopAuto();
+  });
+  box.addEventListener("pointermove", e => {
+    if (x0 === null) return;
+    dx = e.clientX - x0;
+    box.style.transform = `translateX(calc(${-slide * 100}% + ${dx}px))`;
+  });
+  const end = () => {
+    if (x0 === null) return;
+    box.classList.remove("drag");
+    const w = box.clientWidth;
+    go(Math.abs(dx) > w * 0.15 ? slide - Math.sign(dx) : slide, true);
+    x0 = null;
+  };
+  box.addEventListener("pointerup", end);
+  box.addEventListener("pointercancel", end);
+  document.addEventListener("keydown", e => {
+    if ($("modalBg").classList.contains("open") || e.target.tagName === "INPUT") return;
+    if (e.key === "ArrowLeft") go(slide - 1, true);
+    if (e.key === "ArrowRight") go(slide + 1, true);
+  });
+}
+
+function renderRows(filter = "") {
+  const q = filter.trim().toLowerCase();
+  $("rows").innerHTML = "";
+  ROWS.forEach(r => {
+    const items = APPS.filter(a => a.category === r.key &&
+      (!q || (a.title + a.desc).toLowerCase().includes(q)));
+    if (q && !items.length) return;
+    const sec = document.createElement("section");
+    sec.className = "row"; sec.id = r.id;
+    sec.innerHTML = `<div class="row-head"><p class="eyebrow">${r.eyebrow}</p><h2>${r.title}</h2></div>`;
+    const track = document.createElement("div");
+    track.className = "row-track";
+    if (!items.length) track.innerHTML = `<div class="empty">아직 없어요. 곧 추가될 예정!</div>`;
+    items.forEach((a, i) => {
+      const c = document.createElement("button");
+      const num = `${r.key === "soon" ? "Soon" : "Stage"} ${String(i + 1).padStart(2, "0")}`;
+      c.className = "card" + (a.category === "soon" ? " soon" : "");
+      c.style.setProperty("--c", glow(a));
+      c.innerHTML = `
+        <div class="art${a.thumb ? " shot" : ""}"${a.thumb ? ` style="background-image:url('${a.thumb}')"` : ""}>
+          ${a.tag ? `<span class="tag">${esc(a.tag)}</span>` : ""}<span class="e">${a.emoji}</span>
+          ${a.category !== "soon" ? `<span class="play-ico">▶</span><span class="bar"></span>` : ""}
+        </div>
+        <div class="info"><div class="num">${num}</div><div class="title">${esc(a.title)}</div><div class="sub">${esc(a.desc)}</div></div>`;
+      c.onclick = () => openModal(a, `${r.eyebrow} · ${num}`);
+      track.appendChild(c);
+    });
+    sec.appendChild(track);
+    $("rows").appendChild(sec);
+  });
+}
+
+function openModal(a, kit) {
+  $("mTop").style.setProperty("--c", glow(a));
+  $("mEmoji").textContent = a.emoji;
+  $("mKit").textContent = kit;
+  $("mTitle").textContent = a.title;
+  $("mMeta").innerHTML = `<span>${CAT_KO[a.category]}</span>${a.year ? `<span>${esc(a.year)}</span>` : ""}${a.who ? `<span>제작: ${esc(a.who)}</span>` : ""}`;
+  $("mDesc").textContent = a.desc;
+  $("mBtns").innerHTML = a.category === "soon"
+    ? `<button class="btn btn-info" disabled>준비 중이에요</button>`
+    : `<button class="btn btn-play" id="mPlay">▶ 플레이</button>`;
+  if ($("mPlay")) $("mPlay").onclick = () => launch(a);
+  $("modalBg").classList.add("open");
+}
+
+$("mClose").onclick = () => $("modalBg").classList.remove("open");
+$("modalBg").onclick = (e) => { if (e.target.id === "modalBg") $("modalBg").classList.remove("open"); };
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") $("modalBg").classList.remove("open"); });
+$("search").oninput = (e) => renderRows(e.target.value);
+
+renderHero();
+renderRows();
+</script>
+</body>
+</html>
