@@ -42,7 +42,42 @@
   #start-btn:disabled ~ #start-arrow{ display:none; }
   @keyframes arrow{ to{ transform:translateX(6px); } }
   /* 아직 기능 없는 LOAD GAME / OPTIONS / EXIT 는 어둡게 */
-  #title-cover{ position:absolute; left:262px; right:30px; top:452px; height:40px; background:rgba(6,6,16,.62); }
+  .title-cover{ position:absolute; top:452px; height:40px; background:rgba(6,6,16,.62); }
+  #cover-load{ left:262px; width:186px; } #cover-exit{ left:598px; right:30px; }
+  /* 그림 속 "OPTIONS" 글자 위 투명 단추 */
+  #opt-title-btn{ position:absolute; left:455px; top:452px; width:136px; height:40px; background:transparent; border:none; cursor:pointer; padding:0; z-index:2; }
+  #opt-title-btn::before{ content:''; position:absolute; inset:-4px; border:3px solid var(--gold); opacity:0;
+    box-shadow:0 0 14px rgba(255,215,94,.7), inset 0 0 10px rgba(255,215,94,.4); }
+  #opt-title-btn:hover::before{ opacity:1; }
+
+  /* ---------- OPTIONS ---------- */
+  #gear{ position:absolute; top:14px; left:50%; margin-left:-22px; width:44px; height:44px; z-index:26; cursor:pointer;
+    background:rgba(8,6,20,.88); border:3px solid var(--panel-light); box-shadow:0 0 0 2px #000; padding:0;
+    display:flex; align-items:center; justify-content:center; }
+  #gear:hover{ border-color:var(--gold); }
+  #opt{ position:absolute; inset:0; z-index:80; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,.72); }
+  #opt.show{ display:flex; animation:fadeIn .25s ease; }
+  #opt .panel{ width:520px; background:var(--panel); border:4px solid var(--gold); box-shadow:0 0 0 3px #000, 0 0 40px rgba(255,215,94,.3); padding:22px 28px 24px; }
+  #opt h2{ margin:0 0 18px; font-size:22px; color:var(--gold); text-align:center; text-shadow:3px 3px 0 #000; }
+  .orow{ display:flex; align-items:center; gap:12px; margin-bottom:14px; }
+  .orow .ol{ flex:0 0 112px; font-size:15px; font-weight:700; color:#fff; }
+  .orow .oc{ flex:1; display:flex; align-items:center; gap:6px; }
+  .orow .ov{ flex:0 0 66px; text-align:right; font-family:'Press Start 2P', monospace; font-size:11px; color:var(--gold); }
+  .seg{ flex:1; font-family:inherit; font-size:14px; font-weight:700; padding:8px 4px; cursor:pointer; color:#cfc9ff;
+    background:#141530; border:3px solid #4a4f72; box-shadow:0 0 0 2px #000; }
+  .seg.on{ color:#3a2a00; background:var(--gold); border-color:#fff6d6; }
+  .step{ width:34px; height:34px; font-family:'Press Start 2P', monospace; font-size:14px; cursor:pointer; color:#fff;
+    background:#141530; border:3px solid #4a4f72; box-shadow:0 0 0 2px #000; padding:0; }
+  .step:active{ transform:scale(.92); }
+  .blocks{ flex:1; display:flex; gap:3px; height:22px; }
+  .blocks i{ flex:1; background:#22233f; border:2px solid #000; }
+  .blocks i.on{ background:linear-gradient(180deg,#9dffbf,var(--green)); }
+  #opt .hint{ font-size:12px; color:var(--dim); margin:-6px 0 12px 124px; }
+  #opt-mic{ height:10px; margin:-4px 0 14px 124px; background:#000; border:2px solid #333; }
+  #opt-mic i{ display:block; height:100%; width:0; background:var(--green); transition:width .08s; }
+  #opt .btns{ display:flex; gap:12px; justify-content:center; margin-top:20px; }
+  #opt .btn{ font-family:inherit; font-size:16px; font-weight:700; letter-spacing:0; padding:11px 20px; }
+  #opt .btn.gray{ background:#8f95b2; color:#111; box-shadow: inset -4px -6px 0 #5d6283, inset 4px 4px 0 #d6dbf2, 0 6px 0 #33364a; }
   #voice-status{ position:absolute; left:0; right:0; bottom:26px; text-align:center; font-size:14px; color:#cfc9ff; text-shadow:1px 1px 0 #000; }
   #voice-status.err{ color:#ff8a8a; }
   #voice-status.ok{ color:var(--gold); animation:blink 1.2s steps(2) infinite; }
@@ -179,7 +214,9 @@
   <!-- TITLE -->
   <div id="title">
     <img src="images/title.jpg" alt="뭐라고요? 안들려요">
-    <div id="title-cover"></div>
+    <div class="title-cover" id="cover-load"></div>
+    <div class="title-cover" id="cover-exit"></div>
+    <button id="opt-title-btn" aria-label="OPTIONS"></button>
     <button id="start-btn" disabled aria-label="NEW GAME"></button>
     <div id="start-arrow" class="px">▶</div>
     <div id="voice-status">음성 인식 준비 중...</div>
@@ -190,6 +227,7 @@
     <img id="bg" src="images/dungeon.jpg" alt="">
 
     <div class="hpbox" id="hp-wiz"><div class="top"><span class="name px">WIZARD</span><span class="num px" id="hp-wiz-num"></span></div><div class="bar"><i id="hp-wiz-bar"></i></div></div>
+    <button id="gear" aria-label="옵션"><svg viewBox="0 0 12 12" width="26" height="26" shape-rendering="crispEdges"><path fill="#000" d="M5 0h2v2h1V1h2v2H9v1h3v4H9v1h1v2H8v-1H7v2H5v-2H4v1H2V9h1V8H0V4h3V3H2V1h2v1h1z"/><path fill="#cfc9ff" d="M5 1h2v2h2v2h2v2H9v2H7v2H5V9H3V7H1V5h2V3h2z"/><path fill="#000" d="M5 5h2v2H5z"/></svg></button>
     <div class="hpbox" id="hp-mon"><div class="top"><span class="name px" id="mon-name">DRAGON</span><span class="num px" id="hp-mon-num"></span></div><div class="bar"><i id="hp-mon-bar"></i></div></div>
 
     <div id="card">
@@ -222,6 +260,26 @@
     </div>
   </div>
 
+  <!-- OPTIONS -->
+  <div id="opt">
+    <div class="panel">
+      <h2 class="px">OPTIONS</h2>
+      <div class="orow"><div class="ol">효과음</div><div class="oc"><button class="step" data-k="sfx" data-d="-1">-</button><div class="blocks" id="b-sfx"></div><button class="step" data-k="sfx" data-d="1">+</button></div></div>
+      <div class="orow"><div class="ol">배경음악</div><div class="oc"><button class="step" data-k="bgm" data-d="-1">-</button><div class="blocks" id="b-bgm"></div><button class="step" data-k="bgm" data-d="1">+</button></div></div>
+      <div class="orow"><div class="ol">마이크 감도</div><div class="oc"><button class="step" data-k="mic" data-d="-1">-</button><div class="blocks" id="b-mic"></div><button class="step" data-k="mic" data-d="1">+</button></div></div>
+      <div id="opt-mic"><i></i></div>
+      <div class="orow"><div class="ol">듣는 시간</div><div class="oc" data-seg="listen"><button class="seg" data-v="4">4초</button><button class="seg" data-v="6">6초</button><button class="seg" data-v="8">8초</button><button class="seg" data-v="10">10초</button></div></div>
+      <div class="orow"><div class="ol">난이도</div><div class="oc" data-seg="diff"><button class="seg" data-v="easy">쉬움</button><button class="seg" data-v="normal">보통</button><button class="seg" data-v="hard">어려움</button></div></div>
+      <div class="hint" id="diff-hint"></div>
+      <div class="orow"><div class="ol">한글 뜻</div><div class="oc" data-seg="mean"><button class="seg" data-v="on">보이기</button><button class="seg" data-v="off">숨기기</button></div></div>
+      <div class="btns">
+        <button class="btn gray" id="opt-reset">기본값</button>
+        <button class="btn gray" id="opt-quit">타이틀로</button>
+        <button class="btn" id="opt-close">계속하기</button>
+      </div>
+    </div>
+  </div>
+
 </div></div>
 
 <audio id="bgm" src="https://cdn.freesound.org/previews/464/464906_6142149-lq.mp3" loop preload="auto"></audio>
@@ -248,8 +306,13 @@
   ];
   const WIZARD_MAX_HP  = 100;
   const MONSTER        = { name:'DRAGON', hp:100, atkMin:10, atkMax:16 };
-  const DECOYS         = 4;        // 정답 말고 같이 넣는 오답 단어 수 (많을수록 엄격)
-  const LISTEN_MS      = 6000;     // 최대 듣는 시간
+  // 난이도: decoys = 정답 말고 같이 넣는 오답 단어 수 (많을수록 엄격), atk = 몬스터 공격력 배율
+  const DIFFICULTY     = {
+    easy:   { name:'쉬움',   decoys:2, atk:.6, hint:'발음이 서툴러도 잘 통과 · 몬스터 약함' },
+    normal: { name:'보통',   decoys:4, atk:1,  hint:'기본' },
+    hard:   { name:'어려움', decoys:7, atk:1.35, hint:'비슷한 단어와 헷갈리기 쉬움 · 몬스터 셈' }
+  };
+  const OPT_DEFAULT    = { sfx:7, bgm:5, mic:5, listen:6, diff:'normal', mean:'on' };   // 소리·감도는 0~10 칸
   const WIZ_SCALE      = 0.72;     // 마법사 그림 크기
   const MON_SCALE      = 1.1;      // 몬스터 그림 크기
   const NO_VOICE_LINES = ['뭐라구요!? 안들려요', '뭐라구요!? 안들려요~', '크게 말해 봐!'];
@@ -264,6 +327,13 @@
   const card = $('card'), meterBar = $('meter').firstElementChild;
   const bubWiz = $('bub-wiz'), bubMon = $('bub-mon'), shout = $('shout');
   const bgm = $('bgm');
+
+  /* ---------- 옵션 (이 기기에 저장) ---------- */
+  const opt = Object.assign({}, OPT_DEFAULT);
+  try { Object.assign(opt, JSON.parse(localStorage.getItem('vw-options') || '{}')); } catch(e){}
+  function saveOpt(){ try { localStorage.setItem('vw-options', JSON.stringify(opt)); } catch(e){} }
+  function diff(){ return DIFFICULTY[opt.diff] || DIFFICULTY.normal; }
+  let micGain = null;  // 마이크 감도 (작게 들리는 마이크 키우기)
 
   const IMG = {
     wizIdle:'images/wizard-idle.png', wizCast:'images/wizard-cast.png', wizAttack:'images/wizard-attack.png',
@@ -307,21 +377,33 @@
 
   /* ---------- 효과음 (직접 합성, 외부 파일 없음) ---------- */
   let actx = null;
-  function ac(){ if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)(); return actx; }
+  let sfxOut = null;   // 효과음 전체 크기
+  function ac(){
+    if (!actx){
+      actx = new (window.AudioContext || window.webkitAudioContext)();
+      sfxOut = actx.createGain(); sfxOut.connect(actx.destination); applyVolume();
+    }
+    return actx;
+  }
+  function applyVolume(){
+    if (sfxOut) sfxOut.gain.value = opt.sfx / 7;        // 7칸 = 원래 크기
+    bgm.volume = Math.min(1, opt.bgm / 10 * .9);
+    if (micGain) micGain.gain.value = Math.pow(2, (opt.mic - 5) / 2.5);   // 5칸 = 그대로, 10칸 = 4배
+  }
   function tone(f0, f1, dur, type, vol, delay){
     const c = ac(), t = c.currentTime + (delay || 0);
     const o = c.createOscillator(), g = c.createGain();
     o.type = type || 'square'; o.frequency.setValueAtTime(f0, t);
     if (f1) o.frequency.exponentialRampToValueAtTime(f1, t + dur);
     g.gain.setValueAtTime(vol || .12, t); g.gain.exponentialRampToValueAtTime(.0001, t + dur);
-    o.connect(g); g.connect(c.destination); o.start(t); o.stop(t + dur + .02);
+    o.connect(g); g.connect(sfxOut); o.start(t); o.stop(t + dur + .02);
   }
   function noise(dur, vol, delay){
     const c = ac(), t = c.currentTime + (delay || 0);
     const b = c.createBuffer(1, Math.floor(c.sampleRate * dur), c.sampleRate), d = b.getChannelData(0);
     for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / d.length);
     const s = c.createBufferSource(), g = c.createGain(); s.buffer = b; g.gain.value = vol || .2;
-    s.connect(g); g.connect(c.destination); s.start(t);
+    s.connect(g); g.connect(sfxOut); s.start(t);
   }
   const SFX = {
     listen: function(){ tone(660, 990, .12, 'square', .08); },
@@ -419,7 +501,7 @@
     statusEl.className = 'err';
     startBtn.disabled = false;
   });
-  document.addEventListener('keydown', function(e){ if (e.key === 'Enter' && state === 'title' && !startBtn.disabled) startGame(); });
+  document.addEventListener('keydown', function(e){ if (e.key === 'Enter' && state === 'title' && !startBtn.disabled && !optEl.classList.contains('show')) startGame(); });
 
   async function setupMic(){
     if (procNode || TEST_MODE) return true;
@@ -432,12 +514,15 @@
       procNode = c.createScriptProcessor(4096, 1, 1);
       procNode.onaudioprocess = function(e){ if (listening && rec){ try { rec.acceptWaveform(e.inputBuffer); } catch(err){} } };
       const mute = c.createGain(); mute.gain.value = 0;
-      src.connect(analyser); src.connect(procNode); procNode.connect(mute); mute.connect(c.destination);
+      micGain = c.createGain(); applyVolume();
+      src.connect(micGain); micGain.connect(analyser); micGain.connect(procNode); procNode.connect(mute); mute.connect(c.destination);
       const buf = new Uint8Array(analyser.fftSize);
       (function tick(){
         analyser.getByteTimeDomainData(buf);
         let peak = 0; for (let i = 0; i < buf.length; i++) peak = Math.max(peak, Math.abs(buf[i] - 128));
-        meterBar.style.width = (listening ? Math.min(100, peak / 60 * 100) : 0) + '%';
+        const lvl = Math.min(100, peak / 60 * 100);
+        meterBar.style.width = (listening ? lvl : 0) + '%';
+        if (optEl.classList.contains('show')) optMicBar.style.width = lvl + '%';
         requestAnimationFrame(tick);
       })();
       return true;
@@ -447,7 +532,7 @@
   function startListening(word){
     const others = ALL_WORDS.filter(function(w){ return norm(w) !== norm(word); });
     for (let i = others.length - 1; i > 0; i--){ const j = Math.floor(Math.random() * (i + 1)); const t = others[i]; others[i] = others[j]; others[j] = t; }
-    const grammar = [norm(word)].concat(others.slice(0, DECOYS).map(norm));
+    const grammar = [norm(word)].concat(others.slice(0, diff().decoys).map(norm));
     const rate = TEST_MODE ? 16000 : ac().sampleRate;
     rec = new model.KaldiRecognizer(rate, JSON.stringify(grammar));
     rec.on('partialresult', function(msg){
@@ -460,7 +545,7 @@
       endListening(t);
     });
     listening = true; finalizing = false;
-    limitTimer = setTimeout(stopListening, LISTEN_MS);
+    limitTimer = setTimeout(stopListening, opt.listen * 1000);
   }
   function stopListening(){
     if (!listening || finalizing) return;
@@ -486,6 +571,7 @@
   }
 
   async function onSkill(sk){
+    if (optEl.classList.contains('show')) return;
     if (state === 'listening'){ stopListening(); return; }
     if (state !== 'player') return;
     if (!model){ log('음성 인식이 아직 준비 안 됐어요.', 'fail'); return; }
@@ -500,13 +586,13 @@
     selectBtn(sk.key);
     $('card-skill').textContent = sk.name;
     $('card-word').textContent = w[0];
-    $('card-mean').textContent = w[1];
+    $('card-mean').textContent = opt.mean === 'off' ? '' : w[1];
     $('card-listen').textContent = '지금 외쳐라!';
     card.className = 'show listening';
     shout.classList.add('show');
     hideBubble(bubMon);
     bubble(bubWiz, '<small>듣는 중...</small>🎤', 'live');
-    log('외쳐라! [' + w[0] + '] ' + w[1], 'sys');
+    log('외쳐라! [' + w[0] + ']' + (opt.mean === 'off' ? '' : ' ' + w[1]), 'sys');
     SFX.listen();
     stats.tries++;
     startListening(w[0]);
@@ -630,7 +716,7 @@
     setMon(IMG.monAttack); SFX.roar();
     log(MONSTER.name + '의 불꽃 브레스!', 'sys');
     setTimeout(function(){
-      const dmg = MONSTER.atkMin + Math.floor(Math.random() * (MONSTER.atkMax - MONSTER.atkMin + 1));
+      const dmg = Math.max(1, Math.round((MONSTER.atkMin + Math.floor(Math.random() * (MONSTER.atkMax - MONSTER.atkMin + 1))) * diff().atk));
       wizHP = Math.max(0, wizHP - dmg); setHP();
       flash('red'); shake(); SFX.hit();
       wizEl.classList.remove('hit'); void wizEl.offsetWidth; wizEl.classList.add('hit');
@@ -683,7 +769,7 @@
     if (state !== 'title') return;
     state = 'busy';
     ac(); if (actx.state === 'suspended') actx.resume();
-    bgm.volume = .45; bgm.play().catch(function(){});
+    applyVolume(); bgm.play().catch(function(){});
     const ok = await setupMic();
     $('title').classList.add('hide');
     resetBattle();
@@ -691,6 +777,78 @@
   }
   bindTap(startBtn, startGame);
   bindTap($('again-btn'), resetBattle);
+
+  /* ---------- 옵션 화면 ---------- */
+  const optEl = $('opt'), optMicBar = $('opt-mic').firstElementChild;
+  let waitOpen = null;
+  function drawOpt(){
+    ['sfx', 'bgm', 'mic'].forEach(function(k){
+      let h = ''; for (let i = 1; i <= 10; i++) h += '<i class="' + (i <= opt[k] ? 'on' : '') + '"></i>';
+      $('b-' + k).innerHTML = h;
+    });
+    optEl.querySelectorAll('[data-seg]').forEach(function(g){
+      g.querySelectorAll('.seg').forEach(function(b){ b.classList.toggle('on', String(opt[g.dataset.seg]) === b.dataset.v); });
+    });
+    $('diff-hint').textContent = diff().hint;
+    $('opt-mic').style.display = analyser ? '' : 'none';
+    applyVolume();
+  }
+  optEl.querySelectorAll('.step').forEach(function(b){
+    bindTap(b, function(){
+      const k = b.dataset.k;
+      opt[k] = Math.max(0, Math.min(10, opt[k] + Number(b.dataset.d)));
+      saveOpt(); drawOpt();
+      if (k === 'sfx'){ ac(); SFX.listen(); }
+    });
+  });
+  optEl.querySelectorAll('[data-seg]').forEach(function(g){
+    g.querySelectorAll('.seg').forEach(function(b){
+      bindTap(b, function(){
+        const v = b.dataset.v;
+        opt[g.dataset.seg] = g.dataset.seg === 'listen' ? Number(v) : v;
+        saveOpt(); drawOpt();
+      });
+    });
+  });
+  function cancelListening(){      // 옵션을 열면 듣던 주문은 없던 일로
+    if (!listening) return;
+    listening = false; finalizing = false; clearTimeout(limitTimer); clearTimeout(safetyTimer);
+    const r = rec; rec = null; setTimeout(function(){ try { r.remove(); } catch(e){} }, 300);
+    shout.classList.remove('show'); card.className = ''; meterBar.style.width = '0';
+    hideBubble(bubWiz); selectBtn(null); stats.tries--;
+    state = 'player';
+  }
+  function openOpt(){
+    if (optEl.classList.contains('show')) return;
+    if (state === 'busy'){           // 공격 연출 중이면 끝나고 열기
+      if (!waitOpen) waitOpen = setInterval(function(){ if (state !== 'busy'){ clearInterval(waitOpen); waitOpen = null; openOpt(); } }, 100);
+      return;
+    }
+    if (state === 'listening') cancelListening();
+    const inGame = state !== 'title';
+    $('opt-quit').style.display = inGame ? '' : 'none';
+    $('opt-close').textContent = inGame ? '계속하기' : '닫기';
+    drawOpt();
+    optEl.classList.add('show');
+    if (inGame) bgm.pause();
+  }
+  function closeOpt(){
+    optEl.classList.remove('show');
+    if (state !== 'title') bgm.play().catch(function(){});
+  }
+  function quitToTitle(){
+    optEl.classList.remove('show');
+    bgm.pause(); bgm.currentTime = 0;
+    $('result').className = '';
+    $('title').classList.remove('hide');
+    state = 'title';
+  }
+  bindTap($('opt-title-btn'), openOpt);
+  bindTap($('gear'), openOpt);
+  bindTap($('opt-close'), closeOpt);
+  bindTap($('opt-quit'), quitToTitle);
+  bindTap($('opt-reset'), function(){ Object.assign(opt, OPT_DEFAULT); saveOpt(); drawOpt(); });
+  document.addEventListener('keydown', function(e){ if (e.key === 'Escape' && optEl.classList.contains('show')) closeOpt(); });
 
   /* ---------- 시험용 (주소 끝에 ?test) ---------- */
   if (TEST_MODE){
