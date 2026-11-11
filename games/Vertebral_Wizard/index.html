@@ -112,7 +112,7 @@
     padding:10px 12px 12px; opacity:0; transform:translateY(-12px) scale(.95); transition:opacity .2s, transform .2s; pointer-events:none; }
   #card.show{ opacity:1; transform:none; }
   #card .skill{ font-size:9px; color:#a9a3d8; }
-  #card .word{ font-size:24px; color:var(--gold); text-shadow:3px 3px 0 #000; margin:10px 0 8px; word-break:break-all; }
+  #card .word{ font-size:24px; color:var(--gold); text-shadow:3px 3px 0 #000; margin:10px 0 8px; line-height:1.5; }
   #card .mean{ font-size:15px; color:#fff; }
   #card .listen{ margin-top:10px; font-size:13px; font-weight:700; color:#ff8a8a; }
   #card.listening .listen{ animation:blink .9s steps(2) infinite; }
@@ -237,7 +237,7 @@
   #card.choose #choices{ display:flex; }
   #card.choose #meter, #card.choose .word{ display:none; }
   #card.choose .mean{ font-size:22px; font-weight:700; color:var(--gold); margin:10px 0 4px; }
-  #choices button{ flex:1; font-family:'Press Start 2P', monospace; font-size:9px; padding:12px 2px; cursor:pointer; color:#fff;
+  #choices button{ flex:1; font-family:'Press Start 2P', monospace; font-size:8px; line-height:1.5; padding:12px 2px; cursor:pointer; color:#fff;
     background:#141530; border:3px solid #8f95b2; box-shadow:0 0 0 2px #000; }
   #choices button:hover{ border-color:var(--gold); }
 
@@ -414,34 +414,42 @@
   /* =========================================================
      조절하는 곳 (게임 데이터)
      ========================================================= */
-  // 용어 출처: 수업 자료 "3장 뼈대계통", "3. 근육생리" (음성 모델이 아는 단어만)
-  // words: [영어, 한글 뜻, 나오기 시작하는 단계]  → 단계 1 = 튜토리얼·스테이지1, 2 = 스테이지2 ... 5 = 보스(전부)
+  // 용어 출처: 수업 자료 "3장 뼈대계통", "5장 근육계통", "3. 근육생리"
+  // words: [화면에 나오는 이름, 한글 뜻, 나오기 시작하는 단계, (듣는 소리)]
+  //   단계 1 = 튜토리얼·스테이지1 (쉬움) ... 5 = 보스 (발음 어려움)
+  //   듣는 소리: 음성 모델 사전에 없는 전문 용어는 소리가 비슷한 쉬운 단어 조합으로 알아들음 (없으면 이름 그대로)
   // mp = 쓸 때 드는 MP
   const SKILLS = [
-    { key:'attack',  name:'ATTACK',    sub:'팔다리뼈', icon:'images/icon-attack.png',  kind:'slash',   power:20, mp:0,
-      words:[['Femur','넙다리뼈',1],['Tibia','정강뼈',1],['Humerus','위팔뼈',1],['Patella','무릎뼈',1],
-             ['Fibula','종아리뼈',2],['Radius','노뼈',2],['Clavicle','빗장뼈',2],
-             ['Scapula','어깨뼈',3],['Pelvis','골반',3],
-             ['Phalanx','손가락뼈 · 발가락뼈',4],['Metacarpal','손허리뼈',4],['Metatarsal','발허리뼈',4]] },
-    { key:'fire',    name:'FIRE BALL', sub:'척주',    icon:'images/icon-fire.png',    kind:'fire',    power:35, mp:8,
-      words:[['Cervical','목뼈의',1],['Lumbar','허리뼈의',1],['Rib','갈비뼈',1],
-             ['Thoracic','등뼈의',2],['Sacrum','엉치뼈',2],['Sternum','복장뼈',2],
-             ['Vertebra','척추뼈',3],['Atlas','고리뼈 (첫째목뼈)',3],['Axis','중쇠뼈 (둘째목뼈)',3]] },
-    { key:'thunder', name:'THUNDER',   sub:'근육',    icon:'images/icon-thunder.png', kind:'thunder', power:40, mp:10,
-      words:[['Tendon','힘줄',1],['Actin','액틴',1],['Myosin','미오신',1],
-             ['Fascia','근막',2],['Troponin','트로포닌',2],['Agonist','주동근',2],['Antagonist','대항근',2],
-             ['Isometric','등척성',3],['Isotonic','등장성',3],
-             ['Concentric','단축성 (수축)',4],['Eccentric','신장성 (수축)',4]] },
-    { key:'spell',   name:'SPELL',     sub:'머리뼈',  icon:'images/icon-spell.png',   kind:'bolt',    power:55, mp:15,
-      words:[['Vertebral','척추의',1],
-             ['Skull','머리뼈',3],['Mandible','아래턱뼈',3],['Maxilla','위턱뼈',3],
-             ['Frontal','이마뼈의',4],['Parietal','마루뼈의',4],['Occipital','뒤통수뼈의',4],['Temporal','관자뼈의',4],
-             ['Zygomatic','광대뼈의',5],['Hyoid','목뿔뼈',5]] },
-    { key:'cure',    name:'CURE',      sub:'근수축',  icon:null,                     kind:'heal',    power:30, mp:6,
-      words:[['Twitch','연축',1],['Tetanus','강축',1],['Atrophy','위축',1],
-             ['Hypertrophy','비대',2],['Rigor','강직',2],['Paralysis','마비',2],
-             ['Elasticity','탄력성',3],['Extensibility','신장성',3],
-             ['Excitability','흥분성',4],['Conductivity','전도성',4]] }
+    { key:'attack',  name:'ATTACK',    sub:'뼈',      icon:'images/icon-attack.png',  kind:'slash',   power:20, mp:0,
+      words:[['Femur','넙다리뼈',1],['Tibia','정강뼈',1],['Rib','갈비뼈',1],['Sternum','복장뼈',1],
+             ['Humerus','위팔뼈',2],['Radius','노뼈',2],['Patella','무릎뼈',2],['Pelvis','골반',2],['Vertebra','척추뼈',2],
+             ['Clavicle','빗장뼈',3],['Scapula','어깨뼈',3],['Sacrum','엉치뼈',3],['Fibula','종아리뼈',3],['Atlas','고리뼈',3],['Axis','중쇠뼈',3],
+             ['Ulna','자뼈',4,'ulnar|all nah|ole nah'],['Coccyx','꼬리뼈',4,'cock six|cox six|cocks'],['Phalanx','손가락뼈 · 발가락뼈',4],['Metacarpal','손허리뼈',4],['Metatarsal','발허리뼈',4],['Talus','목말뼈',4],
+             ['Ilium','엉덩뼈',5,'ill e um'],['Ischium','궁둥뼈',5,'is key um'],['Pubis','두덩뼈',5,'pew biss'],['Calcaneus','발꿈치뼈',5,'cal kay knee us|cal cane e us'],['Navicular','발배뼈',5,'nah vick you lar'],['Cuneiform','쐐기뼈',5]] },
+    { key:'fire',    name:'FIRE BALL', sub:'랜드마크', icon:'images/icon-fire.png', kind:'fire',    power:35, mp:8,
+      words:[['Dens','치아돌기',1],['Promontory','엉치뼈곶',1],['Iliac crest','엉덩뼈능선',1,'ill e ack crest'],['Acromion','봉우리',1,'a crow me on'],
+             ['Olecranon','팔꿈치머리',2,'oh wreck ran on'],['Spinous process','가시돌기',2,'spy nus process'],['Transverse process','가로돌기',2],['Greater trochanter','큰돌기',2,'greater trow canter'],
+             ['Glenoid cavity','접시오목',3,'glee annoyed cavity'],['Coracoid process','부리돌기',3,'core a void process'],['Xiphoid process','칼돌기',3,'sigh void process'],['Medial malleolus','안쪽복사',3,'medial mal lee oh less'],['Lateral malleolus','가쪽복사',3,'lateral mal lee oh less'],
+             ['Acetabulum','절구',4,'ass e tab you lum'],['Manubrium','복장뼈자루',4,'ma new bree um'],['Styloid process','붓돌기',4,'sty loyd process'],['Medial epicondyle','안쪽위관절융기',4,'medial epic on dial'],['Tibial tuberosity','정강뼈거친면',4,'tibia al tube er ross it e'],
+             ['Ischial tuberosity','궁둥뼈결절',5,'is key al tube er ross it e'],['Linea aspera','거친선',5,'linea ass pera'],['Obturator foramen','폐쇄구멍',5,'ob tour ray tor foramen'],['Intertubercular groove','결절사이고랑',5,'inter tube er cue lar groove'],['Pubic symphysis','두덩결합',5,'pubic sim fa sis']] },
+    { key:'thunder', name:'THUNDER',   sub:'몸통 근육', icon:'images/icon-thunder.png', kind:'thunder', power:40, mp:10,
+      words:[['Diaphragm','가로막',1],['External oblique','배바깥빗근',1],['Pectoralis major','큰가슴근',1,'peck toe ray lis major'],['Trapezius','등세모근',1,'tra pee zee us'],
+             ['Rhomboid','마름근',2,'rom boyd'],['Latissimus dorsi','넓은등근',2,'la tissue mus dorsi'],['Rectus abdominis','배곧은근',2,'wrecked us ab dom in is'],['Pyramidalis','배세모근',2,'pyramid alice'],
+             ['Erector spinae','척추세움근',3,'erector spy nee'],['External intercostal','바깥갈비사이근',3,'external inter coast al'],['Internal intercostal','속갈비사이근',3,'internal inter coast al'],['Levator scapulae','어깨올림근',3,'la vater scapula e'],
+             ['Splenius','널판근',4,'spleen e us'],['Multifidus','뭇갈래근',4,'multi fi does'],['Semispinalis','반가시근',4,'semi spy nail is'],['Serratus posterior','뒤톱니근',4,'sir rate us posterior'],
+             ['Levator ani','항문올림근',5,'la vater ani'],['Coccygeus','꼬리근',5,'cock sid gee us'],['Transversus thoracis','가슴가로근',5,'trans verse us thoracic'],['Interspinales','가시사이근',5,'inter spy nail ease']] },
+    { key:'spell',   name:'SPELL',     sub:'팔다리 근육', icon:'images/icon-spell.png', kind:'bolt',    power:55, mp:15,
+      words:[['Deltoid','어깨세모근',1],['Biceps brachii','위팔두갈래근',1,'biceps bray key eye'],['Triceps brachii','위팔세갈래근',1,'triceps bray key eye'],['Gluteus maximus','큰볼기근',1,'glue tea us maximus'],
+             ['Quadriceps femoris','넙다리네갈래근',2,'quadriceps femur is'],['Gastrocnemius','장딴지근',2,'gastro knee me us'],['Soleus','가자미근',2],['Brachialis','위팔근',2,'bray key al is'],
+             ['Brachioradialis','위팔노근',3,'bray key oh ray dee al is'],['Supinator','손뒤침근',3,'sue pin ate or'],['Pronator teres','원엎침근',3,'pro nate or tear ease'],['Gluteus medius','중간볼기근',3,'glue tea us me dee us'],['Biceps femoris','넙다리두갈래근',3,'biceps femur is'],
+             ['Adductor magnus','큰모음근',4],['Adductor longus','긴모음근',4,'adductor long us'],['Iliopsoas','엉덩허리근',4,'ill e oh so ass'],['Coracobrachialis','부리위팔근',4,'core a co bray key al is'],['Palmaris longus','긴손바닥근',4,'palm air is long us'],
+             ['Flexor carpi radialis','노쪽손목굽힘근',5,'flexor car pie ray dee al is'],['Extensor digitorum','손가락폄근',5,'ex tense or dig it or um'],['Opponens pollicis','엄지맞섬근',5,'a pony ends polly sis'],['Flexor digitorum profundus','깊은손가락굽힘근',5,'flexor dig it or um pro fun does'],['Lumbricals','벌레근',5,'lum brick als']] },
+    { key:'cure',    name:'CURE',      sub:'뇌신경',  icon:null,                     kind:'heal',    power:30, mp:6,
+      words:[['Optic nerve','시각신경 (2번)',1],['Facial nerve','얼굴신경 (7번)',1],['Vagus nerve','미주신경 (10번)',1],
+             ['Olfactory nerve','후각신경 (1번)',2],['Accessory nerve','더부신경 (11번)',2],
+             ['Oculomotor nerve','눈돌림신경 (3번)',3,'ok you low motor nerve'],['Trochlear nerve','도르래신경 (4번)',3,'truck lee are nerve'],['Abducens nerve','갓돌림신경 (6번)',3,'ab due sens nerve'],
+             ['Trigeminal nerve','삼차신경 (5번)',4,'try gem in al nerve'],['Hypoglossal nerve','혀밑신경 (12번)',4,'high po gloss al nerve'],
+             ['Vestibulocochlear nerve','속귀신경 (8번)',5,'vest ib you low cock lee are nerve'],['Glossopharyngeal nerve','혀인두신경 (9번)',5,'gloss oh fa rin gee al nerve']] }
   ];
   function wordTier(i){ return Math.max(1, Math.min(5, i)); }   // 스테이지 번호 → 용어 단계 (튜토리얼은 1)
   function wordsAt(sk, i){ return sk.words.filter(function(w){ return w[2] <= wordTier(i); }); }
@@ -661,7 +669,7 @@
     bindTap(b, function(){ onSkill(sk); });
     menu.appendChild(b);
   });
-  function skillLocked(sk){ return !!MON.tutorial && sk.key !== 'attack'; }   // 튜토리얼만 ATTACK 하나
+  function skillLocked(sk){ return false; }   // 기술은 처음부터 다 씀 (용어는 스테이지마다 늘어남)
   function updateMenu(){
     menu.querySelectorAll('.skill-btn').forEach(function(b){
       const sk = SKILLS.filter(function(s){ return s.key === b.dataset.key; })[0];
@@ -678,9 +686,11 @@
   /* ---------- 음성 인식 (Vosk) ---------- */
   let model = null, modelFailed = false, procNode = null, analyser = null, rec = null;
   let listening = false, finalizing = false, limitTimer = null, safetyTimer = null;
-  const ALL_WORDS = [];
-  SKILLS.forEach(function(sk){ sk.words.forEach(function(w){ ALL_WORDS.push(w[0]); }); });
   function norm(s){ return s.toLowerCase().replace(/[^a-z' ]/g, ' ').replace(/\s+/g, ' ').trim(); }
+  function sayOf(w){ return (w[3] || w[0]).split('|').map(norm); }   // 발음 후보 여러 개는 | 로 나눔
+  const ALL_WORDS = [], SAY2NAME = {}, NAME2SAY = {};   // 이름 <-> 듣는 소리
+  SKILLS.forEach(function(sk){ sk.words.forEach(function(w){ ALL_WORDS.push(w[0]); NAME2SAY[w[0]] = sayOf(w); sayOf(w).forEach(function(s){ SAY2NAME[s] = w[0]; }); }); });
+  function pretty(text){ const n = norm(text); return SAY2NAME[n] || text; }   // 들린 소리 -> 용어 이름
 
   const statusEl = $('voice-status'), startBtn = $('start-btn'), loadBtn = $('load-btn');
   function readyTitle(msg, cls){ statusEl.textContent = msg; statusEl.className = cls || ''; startBtn.disabled = false; }
@@ -734,14 +744,15 @@
   }
 
   function startListening(word){
-    const others = ALL_WORDS.filter(function(w){ return norm(w) !== norm(word); });
-    shuffle(others);
-    const grammar = [norm(word)].concat(others.slice(0, diff().decoys).map(norm));
+    const others = shuffle(ALL_WORDS.filter(function(w){ return w !== word; })).slice(0, diff().decoys);
+    const grammar = NAME2SAY[word].slice();
+    others.forEach(function(w){ NAME2SAY[w].forEach(function(s){ grammar.push(s); }); });
+    curGrammar = grammar;
     const rate = TEST_MODE ? 16000 : ac().sampleRate;
     rec = new model.KaldiRecognizer(rate, JSON.stringify(grammar));
     rec.on('partialresult', function(msg){
       const p = msg && msg.result && msg.result.partial;
-      if (p && listening) bubble(bubWiz, '<small>듣는 중...</small>' + esc(p), 'live');
+      if (p && listening) bubble(bubWiz, '<small>듣는 중...</small>' + esc(pretty(p)), 'live');
     });
     rec.on('result', function(msg){
       const t = ((msg && msg.result && msg.result.text) || '').trim();
@@ -807,6 +818,7 @@
     selectBtn(sk.key); pulse(null);
     $('card-skill').textContent = sk.name;
     $('card-word').textContent = w[0];
+    $('card-word').style.fontSize = w[0].length > 20 ? '13px' : (w[0].length > 13 ? '17px' : '');
     hideBubble(bubMon);
     SFX.listen();
     stats.tries++;
@@ -820,7 +832,7 @@
       const others = shuffle(ALL_WORDS.filter(function(x){ return x !== w[0]; })).slice(0, 2);
       shuffle([w[0]].concat(others)).forEach(function(word){
         const b = document.createElement('button'); b.textContent = word;
-        bindTap(b, function(){ if (state !== 'listening') return; card.className = 'show'; judge(word); });
+        bindTap(b, function(){ if (state !== 'listening') return; card.className = 'show'; judge(NAME2SAY[word][0]); });
         ch.appendChild(b);
       });
       card.className = 'show choose';
@@ -840,10 +852,42 @@
     startListening(w[0]);
   }
 
+  // 들린 말이 후보(정답 + 오답) 중 정답과 가장 가까우면 성공 ("a crow me in" → "a crow me on")
+  let curGrammar = [];
+  function wordDist(a, b){
+    a = a.split(' '); b = b.split(' ');
+    const d = []; for (let i = 0; i <= a.length; i++){ d[i] = [i]; }
+    for (let j = 1; j <= b.length; j++) d[0][j] = j;
+    for (let i = 1; i <= a.length; i++) for (let j = 1; j <= b.length; j++)
+      d[i][j] = Math.min(d[i-1][j] + 1, d[i][j-1] + 1, d[i-1][j-1] + (a[i-1] === b[j-1] ? 0 : 1));
+    return d[a.length][b.length];
+  }
+  function lcs(a, b){        // 순서대로 겹치는 낱말 수
+    a = a.split(' '); b = b.split(' ');
+    const d = []; for (let i = 0; i <= a.length; i++){ d[i] = []; for (let j = 0; j <= b.length; j++) d[i][j] = 0; }
+    for (let i = 1; i <= a.length; i++) for (let j = 1; j <= b.length; j++)
+      d[i][j] = a[i-1] === b[j-1] ? d[i-1][j-1] + 1 : Math.max(d[i-1][j], d[i][j-1]);
+    return d[a.length][b.length];
+  }
+  function closest(heard){
+    let best = null, br = -1, bd = 1e9;
+    curGrammar.forEach(function(g){
+      const r = lcs(heard, g) / g.split(' ').length, dd = wordDist(heard, g);
+      if (r > br || (r === br && dd < bd)){ br = r; bd = dd; best = g; }
+    });
+    return { say:best, ok:br >= .6 };
+  }
   function judge(text){
     state = 'busy';
-    const heard = norm(text);
-    const pass = !!heard && (' ' + heard + ' ').indexOf(' ' + norm(cur.word) + ' ') !== -1;
+    const heard = norm(text), targets = NAME2SAY[cur.word];
+    let pass = !!heard && targets.some(function(s){ return (' ' + heard + ' ').indexOf(' ' + s + ' ') !== -1; });
+    if (heard && !pass && curGrammar.length){
+      const c = closest(heard);
+      if (SAY2NAME[c.say] === cur.word && c.ok){ pass = true; text = c.say; }
+      else if (c.ok) text = c.say;
+    }
+    curGrammar = [];
+    text = pretty(text);
     if (!heard){
       stats.silent++;
       hideBubble(bubWiz); card.className = '';
@@ -1218,6 +1262,7 @@
       feed: function(samples){ if (rec) rec.acceptWaveformFloat(samples, 16000); },
       stop: stopListening,
       killMon: function(){ monHP = 1; },
+      terms: function(){ return { all:ALL_WORDS, say:NAME2SAY }; },
       modelReady: function(){ return !!model; }
     };
     // ?test&demo : 화면 확인용 (자동으로 시작해서 주문 카드와 말풍선을 띄움)
