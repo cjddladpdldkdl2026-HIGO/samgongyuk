@@ -306,6 +306,36 @@ input[type="range"]::-moz-range-thumb {
   color: var(--pink-soft); text-shadow: var(--glow-pink); font-size: 14px;
 }
 
+
+/* ── Online ranking (Supabase) ─────────────────────────────────────────────── */
+.panel { max-height: 100%; overflow-y: auto; }
+.rank { display: flex; flex-direction: column; gap: 10px; padding: 14px 16px;
+  border: 1px solid var(--line); border-radius: 14px; background: rgba(7,1,15,.45); }
+.rank-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.rank-head b { font-family: var(--font-display); letter-spacing: 3px; font-size: 13px; color: #2de2e6;
+  text-shadow: 0 0 10px rgba(45,226,230,.5); }
+.rank-head span { font-size: 12px; color: var(--ink-faint); }
+.rank-me { text-align: center; font-size: 14px; color: #fff; }
+.rank-me strong { font-family: var(--font-display); color: var(--gold); font-size: 20px; }
+.rank-form { display: flex; gap: 8px; }
+.rank-form input { flex: 1; min-width: 0; padding: 9px 12px; border-radius: 10px; font: inherit; font-size: 14px;
+  color: #fff; background: rgba(255,255,255,.06); border: 1px solid var(--line); outline: none; }
+.rank-form input:focus { border-color: #2de2e6; }
+.rank-form button { padding: 9px 14px; border-radius: 10px; border: 0; font: inherit; font-weight: 700;
+  font-size: 13px; background: #2de2e6; color: #12052a; cursor: pointer; white-space: nowrap; }
+.rank-form button:disabled { opacity: .5; cursor: default; }
+.rank-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 3px; }
+.rank-list li { display: grid; grid-template-columns: 34px 1fr auto; gap: 8px; align-items: center;
+  padding: 5px 10px; border-radius: 8px; font-size: 13px; color: #e9ddff; }
+.rank-list li:nth-child(-n+3) .no { color: var(--gold); }
+.rank-list .no { font-family: var(--font-display); font-size: 13px; color: var(--ink-faint); }
+.rank-list .sc { font-family: var(--font-display); color: #fff; }
+.rank-list li.mine { background: rgba(45,226,230,.14); outline: 1px solid rgba(45,226,230,.5); }
+.rank-list li.gap { display: block; text-align: center; padding: 0; color: var(--ink-faint); }
+.rank-note { font-size: 11px; color: var(--ink-faint); text-align: center; }
+.rank-change { background: none; border: 0; padding: 0; color: var(--ink-faint); font: inherit; font-size: 11px;
+  text-decoration: underline; cursor: pointer; }
+
 /* ── Modal ─────────────────────────────────────────────────────────────────── */
 .modal {
   position: absolute; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center;
@@ -3397,6 +3427,118 @@ if (touchMode) {
   ui.el.start.textContent = 'Game Start';
 }
 
+// ── Online ranking ─────────────────────────────────────────────────────────────
+/* After a 1P run the score goes to a shared Supabase table and the top 10 for
+ * that difficulty (each nickname's best run) shows under the results. The key
+ * below is Supabase's publishable key: it is meant to sit in web pages, and the
+ * table's row-level security only lets visitors read scores and add new ones. */
+const Ranking = (() => {
+  const URL_ = 'https://suqndhxtsmvtwkggsbpx.supabase.co/rest/v1';
+  const KEY_ = 'sb_publishable_9QwH5S7HRMQ0O7_lBqamag_PMsGo75x';
+  const NICK = 'landmark-nickname';
+  const LABEL = { easy: '쉬움', medium: '보통', hard: '어려움' };
+  const fmt = (n) => Number(n).toLocaleString('en-US');
+  const H = { apikey: KEY_, 'Content-Type': 'application/json' };
+  const esc = (t) => String(t).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const getNick = () => { try { return localStorage.getItem(NICK) || ''; } catch { return ''; } };
+  const setNick = (n) => { try { localStorage.setItem(NICK, n); } catch { /* private mode */ } };
+
+  async function api(path, opts = {}) {
+    const res = await fetch(`${URL_}/${path}`, { ...opts, headers: { ...H, ...(opts.headers || {}) } });
+    if (!res.ok) throw new Error(`ranking ${res.status}`);
+    return res;
+  }
+  const top = (d) => api(`landmark_best?select=nickname,score,accuracy&difficulty=eq.${d}&order=score.desc,created_at.asc&limit=10`).then(r => r.json());
+  const countAbove = async (d, score) => {
+    const r = await api(`landmark_best?select=nickname&difficulty=eq.${d}&score=gt.${score}`, { method: 'HEAD', headers: { Prefer: 'count=exact' } });
+    return +(r.headers.get('content-range') || '*/0').split('/')[1] || 0;
+  };
+  const total = async (d) => {
+    const r = await api(`landmark_best?select=nickname&difficulty=eq.${d}`, { method: 'HEAD', headers: { Prefer: 'count=exact' } });
+    return +(r.headers.get('content-range') || '*/0').split('/')[1] || 0;
+  };
+  const submit = (nickname, run) => api('landmark_scores', {
+    method: 'POST', headers: { Prefer: 'return=minimal' },
+    body: JSON.stringify({
+      nickname, difficulty: run.difficulty, score: run.score, hits: run.hits,
+      accuracy: run.accuracy, stages: run.stages,
+    }),
+  });
+
+  function list(rows, nick, myRank, myBest) {
+    const li = (i, r) => `<li class="${r.nickname === nick ? 'mine' : ''}"><span class="no">${i}</span>
+      <span>${esc(r.nickname)}</span><span class="sc">${fmt(r.score)}</span></li>`;
+    let html = rows.map((r, i) => li(i + 1, r)).join('');
+    if (nick && myRank > rows.length && myBest != null) {
+      html += `<li class="gap">⋯</li>` + li(myRank, { nickname: nick, score: myBest });
+    }
+    return rows.length ? `<ol class="rank-list">${html}</ol>` : `<p class="rank-note">아직 기록이 없어요. 첫 번째 주인공이 되어 보세요!</p>`;
+  }
+
+  /** Render into `box` for a finished 1P run (run.hits === 0 → view only). */
+  async function show(box, run) {
+    const d = run.difficulty;
+    const head = `<div class="rank-head"><b>RANKING</b><span>${LABEL[d] || d} · TOP 10</span></div>`;
+    const canPost = run.hits > 0;
+    let nick = getNick();
+    let posted = false;
+
+    const render = async (msg = '') => {
+      box.innerHTML = head + `<p class="rank-note">랭킹 불러오는 중…</p>`;
+      try {
+        const rows = await top(d);
+        let me = '';
+        let myRank = 0, myBest = null;
+        if (posted) {
+          const mine = await api(`landmark_best?select=score&difficulty=eq.${d}&nickname=eq.${encodeURIComponent(nick)}`).then(r => r.json());
+          myBest = mine[0]?.score ?? run.score;
+          const [above, all] = await Promise.all([countAbove(d, myBest), total(d)]);
+          myRank = above + 1;
+          me = `<p class="rank-me">이번 점수 <strong>${fmt(run.score)}</strong> · 내 순위 <strong>${myRank}위</strong> / ${all}명</p>`;
+        }
+        const form = canPost && !posted ? `
+          <form class="rank-form"><input maxlength="12" placeholder="닉네임 (12자까지)" value="${esc(nick)}" aria-label="닉네임">
+          <button type="submit">랭킹 등록</button></form>` : '';
+        const change = posted ? `<p class="rank-note">${esc(nick)} 이름으로 등록했어요 · <button class="rank-change" type="button">닉네임 바꾸기</button></p>` : '';
+        box.innerHTML = head + me + form + (msg ? `<p class="rank-note">${msg}</p>` : '') + list(rows, posted ? nick : '', myRank, myBest) + change;
+        wire();
+      } catch {
+        box.innerHTML = head + `<p class="rank-note">랭킹을 불러오지 못했어요. 인터넷 연결을 확인해 주세요.</p>`;
+      }
+    };
+
+    const post = async (name) => {
+      name = name.trim().slice(0, 12);
+      if (!name) return render('닉네임을 입력해 주세요.');
+      nick = name; setNick(name);
+      try { await submit(name, run); posted = true; await render(); }
+      catch { await render('등록하지 못했어요. 잠시 후 다시 시도해 주세요.'); }
+    };
+
+    function wire() {
+      const form = box.querySelector('.rank-form');
+      if (form) {
+        const input = form.querySelector('input');
+        input.addEventListener('keydown', (e) => e.stopPropagation());
+        form.addEventListener('submit', (e) => {
+          e.preventDefault();
+          form.querySelector('button').disabled = true;
+          post(input.value);
+        });
+      }
+      box.querySelector('.rank-change')?.addEventListener('click', () => {
+        try { localStorage.removeItem(NICK); } catch { /* ignore */ }
+        nick = ''; posted = false; render('새 닉네임은 다음 판부터 쓰여요.');
+      });
+    }
+
+    // A returning player with a saved nickname is entered automatically.
+    if (canPost && nick) await post(nick); else await render();
+  }
+
+  return { show };
+})();
+
 // ── Game lifecycle ─────────────────────────────────────────────────────────────
 /* The 3D bone stages run in their own overlay with their own loop; the FPS
  * world just idles behind them until the run ends. */
@@ -3411,6 +3553,10 @@ bone3d.onEnd = ({ players, difficulty, scores, stagesCleared, completed }) => {
     const { records } = Storage.recordRun(run);
     ui.showResults(run, records);
     ui.refreshBest(state.scenario, state.difficulty);
+    const box = document.createElement('div');
+    box.className = 'rank';
+    ui.el.results.querySelector('.results')?.appendChild(box);
+    Ranking.show(box, { ...run, stages: stagesCleared });
   }
   ui.el.sub.textContent = progress;
   ui.el.start.textContent = 'Game Start';
