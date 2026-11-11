@@ -1,0 +1,16 @@
+{
+  "name": "삼공육 — 청암대 물리치료과 AI 동아리",
+  "short_name": "삼공육",
+  "description": "해부학 게임과 학습 도구 모음",
+  "lang": "ko",
+  "start_url": "./highgo.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#07010f",
+  "theme_color": "#07010f",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
