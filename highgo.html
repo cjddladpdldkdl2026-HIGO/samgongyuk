@@ -540,6 +540,7 @@ const APPS = [
     glow: "#2de2e6",
     thumb: "thumbs/higo-play.jpg",
     hero: "thumbs/higo-title.jpg",
+    detail: "thumbs/landmark-detail.jpg",   // 상세 창 그림
     facts: [["5", "스테이지"], ["2P", "대결"], ["3D", "뼈 모델"]],
     featured: true
   },
@@ -770,7 +771,7 @@ function openModal(a, kit) {
   top.style.setProperty("--c", glow(a));
   modal.style.setProperty("--c", glow(a));
   modal.classList.toggle("popout", !!a.pop);
-  const pic = a.hero || a.thumb;
+  const pic = a.detail || a.hero || a.thumb;   // detail: 상세 창 전용 그림(없으면 배너 그림)
   if (a.pop) {
     // 배경은 상세 창 안에, 캐릭터(윤곽선 안쪽)만 창 위로 튀어나오게
     modal.style.setProperty("--pop-img", `url('${a.pop.img}')`);
@@ -814,7 +815,7 @@ function collectScores() {
   for (const [k, v] of Object.entries(higo)) {
     const [, diff] = k.split(":");
     const score = typeof v === "number" ? v : v && v.score;
-    if (typeof score === "number") rows.push({ game: "HIGO 뼈 게임", detail: `${DIFF_KO[diff] || diff}${v && v.accuracy != null ? ` · 정확도 ${Math.round(v.accuracy)}%` : ""}`, score });
+    if (typeof score === "number") rows.push({ game: "LandMark", detail: `${DIFF_KO[diff] || diff}${v && v.accuracy != null ? ` · 정확도 ${Math.round(v.accuracy)}%` : ""}`, score });
   }
   return rows.sort((a, b) => b.score - a.score);
 }
