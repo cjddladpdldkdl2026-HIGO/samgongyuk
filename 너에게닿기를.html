@@ -337,6 +337,15 @@ button { font: inherit; color: inherit; cursor: pointer; }
   box-shadow: 10px 10px 0 var(--yellow), 10px 10px 0 3px var(--black);
 }
 .q-stage { cursor: none; }
+/* Small landmark names under each target (KMA 6th-edition terms) */
+.t-labels { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.t-label {
+  position: absolute; left: 0; top: 0; display: none;
+  font: 600 12px/1.3 var(--font-body); letter-spacing: -.01em; white-space: nowrap;
+  color: #fff; background: rgba(13,13,15,.72); padding: 2px 7px; border-radius: 4px;
+}
+.t-label.right { background: #ffdd00; color: #0d0d0f; }
+.t-label.out { background: rgba(255,51,85,.85); }
 .q-stage::before, .a-stage::before {   /* "LIVE" sticker in the corner */
   content: '● LIVE'; position: absolute; left: 14px; top: 12px; z-index: 1; pointer-events: none;
   padding: 2px 10px 0; background: var(--pink); color: var(--paper); border: 2px solid var(--paper);
@@ -604,12 +613,12 @@ __mods['src/data.js'] = (() => {
 const pt = (name, ko, p, face) => ({ name, ko, p, face });
 
 const ARM_POINTS = {
-  supraglenoid:  pt('Supraglenoid tubercle',  '관절위결절',               [-142.3, -61.7, 1336.0], [-1, -0.4, 0.3]),
+  supraglenoid:  pt('Supraglenoid tubercle',  '접시위결절',               [-142.3, -61.7, 1336.0], [-1, -0.4, 0.3]),
   coracoid:      pt('Coracoid process',       '부리돌기',                 [-131.9, -99.1, 1334.0], [-0.3, -1, 0.3]),
   infraglenoid:  pt('Infraglenoid tubercle',  '접시아래결절',             [-143.8, -52.9, 1298.0], [-1, 0.3, -0.15]),
   supraspFossa:  pt('Supraspinous fossa',     '가시위오목',               [-86.6, -24.5, 1331.3],  [0, 1, 0.6]),
   infraspFossa:  pt('Infraspinous fossa',     '가시아래오목',             [-90.2, -5.5, 1271.2],   [0, 1, 0]),
-  subscapFossa:  pt('Subscapular fossa',      '어깨뼈밑오목',             [-99.2, -16.3, 1278.8],  [0, -1, 0]),
+  subscapFossa:  pt('Subscapular fossa',      '어깨밑오목',             [-99.2, -16.3, 1278.8],  [0, -1, 0]),
   latBorder:     pt('Lateral border of scapula', '어깨뼈 가쪽모서리',     [-129.1, -36.6, 1275.9], [-0.6, 1, 0]),
   gtSup:         pt('Greater tubercle, superior facet', '큰결절 위면',    [-179.5, -77.9, 1345.3], [-0.5, -0.2, 1]),
   gtMid:         pt('Greater tubercle, middle facet',   '큰결절 중간면',  [-183.5, -62.8, 1311.4], [-0.7, 0.7, 0.1]),
@@ -629,7 +638,7 @@ const ARM_POINTS = {
 const BONE_LANDMARKS = [
   { name: 'Acromion',              ko: '어깨뼈봉우리',       p: [-168.5, -54.9, 1355.6], face: [-0.6, 0.5, 0.6] },
   { name: 'Coracoid process',      ko: '부리돌기',    p: [-131.9, -99.1, 1334.0], face: [-0.3, -1, 0.3] },
-  { name: 'Glenoid cavity',        ko: '관절오목',     p: [-151.9, -53.4, 1312.3], face: [-1, -0.25, 0] },
+  { name: 'Glenoid cavity',        ko: '접시오목',     p: [-151.9, -53.4, 1312.3], face: [-1, -0.25, 0] },
   { name: 'Infraglenoid tubercle', ko: '접시아래결절', p: [-143.8, -52.9, 1298.0], face: [-1, 0.3, -0.15] },
   { name: 'Suprascapular notch',   ko: '어깨뼈패임',  p: [-105.7, -41.8, 1330.1], face: [0.1, -0.5, 1] },
   { name: 'Superior angle',        ko: '위각',         p: [-80.8, -23.3, 1352.1],  face: [0.3, 1, 0.35] },
@@ -640,7 +649,7 @@ const BONE_LANDMARKS = [
   { name: 'Root of spine',         ko: '어깨뼈가시뿌리',  p: [-63.8, 1.1, 1308.2],    face: [0.25, 1, 0] },
   { name: 'Supraspinous fossa',    ko: '가시위오목',   p: [-86.6, -24.5, 1331.3],  face: [0, 1, 0.6] },
   { name: 'Infraspinous fossa',    ko: '가시아래오목', p: [-90.2, -5.5, 1271.2],   face: [0, 1, 0] },
-  { name: 'Subscapular fossa',     ko: '어깨뼈밑오목',  p: [-99.2, -16.3, 1278.8],  face: [0, -1, 0] },
+  { name: 'Subscapular fossa',     ko: '어깨밑오목',  p: [-99.2, -16.3, 1278.8],  face: [0, -1, 0] },
   { name: 'Head of humerus',          ko: '위팔뼈머리',     p: [-148.1, -64.8, 1339.6], face: [0.6, 0.3, 0.6] },
   { name: 'Greater tubercle',         ko: '큰결절',         p: [-190.1, -77.3, 1302.1], face: [-1, -0.4, 0.2] },
   { name: 'Lesser tubercle',          ko: '작은결절',       p: [-164.2, -95.7, 1319.9], face: [0.1, -1, 0.2] },
@@ -970,6 +979,11 @@ class Viewer {
     this.fx = new THREE.Group();          // pins and muscle bands, turn with the bone
     this.bone.add(this.fx);
     this.targets = [];
+    this.labelBox = document.createElement('div');   // landmark names under the targets
+    this.labelBox.className = 't-labels';
+    canvas.after(this.labelBox);
+    this._up = new THREE.Vector3();
+    this._lp = new THREE.Vector3();
     this.hitfx = new HitFx(this.scene);   // neon hit bursts (world space)
     this.center = new THREE.Vector3();
 
@@ -1050,6 +1064,11 @@ class Viewer {
       for (const m of parts) { m.renderOrder = 10; g.add(m); }
       g.add(makeGlow(COLORS.target, 3.4, 0.45));   // soft neon halo (last child: mark() recolours it too)
       g.userData.point = p;
+      const label = document.createElement('span');
+      label.className = 't-label';
+      label.textContent = p.ko;
+      this.labelBox.appendChild(label);
+      g.userData.label = label;
       g.visible = false;
       this.scene.add(g);
       this.targets.push(g);
@@ -1090,6 +1109,7 @@ class Viewer {
 
   clearTargets() {
     for (const t of this.targets) {
+      t.userData.label?.remove();
       this.scene.remove(t);
       t.traverse(m => {
         if (m.isMesh) { m.geometry.dispose(); m.material.dispose(); }
@@ -1207,8 +1227,28 @@ class Viewer {
       t.visible = pop > 0 && !t.userData.hidden;
       t.scale.setScalar(radius * pop * (t.userData.grow || pulse));
     }
+    this._placeLabels();
     this.hitfx.update(dt, this.camera);
     if (this.bone.geometry) this.renderer.render(this.scene, this.camera);
+  }
+
+  /** Keep each landmark name just below its ring on screen. */
+  _placeLabels() {
+    if (!this.targets.length) return;
+    const r = this.rect, c = this.canvas;
+    this._up.set(0, 1, 0).applyQuaternion(this.camera.quaternion);
+    for (const t of this.targets) {
+      const el = t.userData.label;
+      if (!el) continue;
+      if (!t.visible) { el.style.display = 'none'; continue; }
+      const v = this._lp.copy(t.position).addScaledVector(this._up, -t.scale.x).project(this.camera);
+      const x = c.offsetLeft + (v.x + 1) / 2 * r.width;
+      const y = c.offsetTop + (1 - v.y) / 2 * r.height;
+      el.style.display = 'block';
+      el.style.transform = `translate(${x}px, ${y}px) translate(-50%, 6px)`;
+      el.classList.toggle('right', !!t.userData.grow);
+      el.classList.toggle('out', !!t.userData.out && !t.userData.grow);
+    }
   }
 
   dispose() {
