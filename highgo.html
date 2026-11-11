@@ -447,6 +447,18 @@
     .card .art { font-size: 52px; }
   }
 
+  /* ── upgrade 4: game loading bar ── */
+  .loader { position: fixed; inset: 0; z-index: 300; display: none; place-items: center; background: rgba(7,1,15,.86); backdrop-filter: blur(8px); }
+  .loader.open { display: grid; }
+  .loader-card { width: min(420px, calc(100vw - 32px)); padding: 26px; border: 1px solid var(--line); border-radius: 16px;
+    background: linear-gradient(160deg, rgba(29,7,66,.95), rgba(11,4,30,.97)); display: flex; flex-direction: column; gap: 10px; }
+  .loader-kicker { font: 700 11px var(--font-display); letter-spacing: .3em; color: var(--pink); }
+  .loader-card strong { font-size: 22px; }
+  .loader-track { height: 10px; border-radius: 99px; background: rgba(155,92,255,.18); overflow: hidden; }
+  .loader-track i { display: block; height: 100%; width: 0; border-radius: 99px; transition: width .15s;
+    background: linear-gradient(90deg, var(--cyan), var(--violet), var(--pink)); box-shadow: var(--glow-cyan); }
+  #loaderTxt { font: 600 13px var(--font-ui); color: var(--ink-dim); }
+
   /* ── 배경음악: 오른쪽 옆에 붙은 세로 탭 + 펼쳐지는 패널 ── */
   .bgm {
     position: fixed; right: 0; top: 50%; z-index: 120; display: flex; align-items: center;
@@ -541,6 +553,16 @@
       <p id="mDesc"></p>
       <div class="btns" id="mBtns"></div>
     </div>
+  </div>
+</div>
+
+<!-- upgrade 4: loading bar while a big game downloads -->
+<div class="loader" id="loader" role="status" aria-live="polite">
+  <div class="loader-card">
+    <p class="loader-kicker">LOADING</p>
+    <strong id="loaderTitle"></strong>
+    <div class="loader-track"><i id="loaderBar"></i></div>
+    <span id="loaderTxt"></span>
   </div>
 </div>
 
@@ -699,10 +721,40 @@ function launch(a) {
   if (/^https?:\/\//.test(a.url)) {
     const w = window.open(a.url, "_blank", "noopener");
     if (!w) location.href = a.url;
+  } else if (location.protocol.startsWith("http") && /\.html$/i.test(a.url)) {
+    preloadThenGo(a);
   } else {
     location.href = a.url;
   }
 }
+
+/* upgrade 4: big single-file games (5–10 MB) download behind a progress bar,
+   then open instantly from the cache instead of showing a blank page. */
+async function preloadThenGo(a) {
+  const box = $("loader"), bar = $("loaderBar"), txt = $("loaderTxt");
+  $("loaderTitle").textContent = a.title;
+  bar.style.width = "0%"; txt.textContent = "불러오는 중…";
+  box.classList.add("open");
+  const go = () => { location.href = a.url; };
+  try {
+    const res = await fetch(a.url);
+    const total = +res.headers.get("content-length") || 0;
+    if (!res.ok || !res.body) return go();
+    const reader = res.body.getReader();
+    let got = 0;
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      got += value.length;
+      const mb = (got / 1048576).toFixed(1);
+      if (total) { const p = Math.min(99, Math.round(got / total * 100)); bar.style.width = p + "%"; txt.textContent = `${p}% · ${mb} MB`; }
+      else { bar.style.width = Math.min(95, got / 104857.6) + "%"; txt.textContent = `${mb} MB`; }
+    }
+    bar.style.width = "100%"; txt.textContent = "시작!";
+  } catch {}
+  go();
+}
+addEventListener("pageshow", () => $("loader")?.classList.remove("open"));   // back button: hide it again
 
 /* ── 대표 게임 슬라이더: featured: true 인 것들이 옆으로 넘어가요 ── */
 const AUTO_MS = 7000;   // 자동으로 다음 장으로 넘어가는 시간 (0이면 자동 넘김 끔)
