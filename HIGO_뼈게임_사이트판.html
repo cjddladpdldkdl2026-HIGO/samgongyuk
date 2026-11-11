@@ -11,6 +11,8 @@
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/galmuri@2.40.3/dist/galmuri.css" />
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Chakra+Petch:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <style>
 /* ============================================================================
@@ -43,7 +45,7 @@
 
   /* Type */
   --font-display: 'Orbitron', sans-serif;
-  --font-ui: 'Chakra Petch', 'Segoe UI', sans-serif;
+  --font-ui: 'Chakra Petch', 'Pretendard Variable', 'Segoe UI', sans-serif;   /* upgrade 2 */
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -642,6 +644,8 @@ body.cursor-aim #canvas { cursor: none; }
 /* Recoil on every shot (upgrade 1). `scale` stacks on the positioning transform. */
 .v-cross.kick { animation: lm-kick .2s ease-out; }
 @keyframes lm-kick { from { scale: 1.45; } to { scale: 1; } }
+/* Upgrade 2: retro pixel font (Galmuri) for the pop-up hit/score notes */
+.v-note, .arena-note, .ap-sub, .best-badge-label { font-family: 'Galmuri11', var(--font-ui); letter-spacing: .02em; }
 </style>
 
   <!-- Three.js is vendored locally (no external CDN at runtime → fully
