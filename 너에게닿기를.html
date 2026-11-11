@@ -360,6 +360,9 @@ button { font: inherit; color: inherit; cursor: pointer; }
     linear-gradient(var(--paper), var(--paper)) left center / 10px 3px no-repeat,
     linear-gradient(var(--paper), var(--paper)) right center / 10px 3px no-repeat;
 }
+/* Recoil on every shot (upgrade 1). `scale` stacks on the centring transform. */
+.crosshair.kick { animation: crosshair-kick .2s ease-out; }
+@keyframes crosshair-kick { from { scale: 1.45; } to { scale: 1; } }
 .crosshair i {
   position: absolute; top: 50%; left: 50%; width: 8px; height: 8px; border-radius: 50%;
   background: var(--yellow); transform: translate(-50%, -50%); box-shadow: 0 0 0 2px var(--black);
@@ -840,6 +843,108 @@ function muscleMaterial() {
   return mat;
 }
 
+/* ── Neon hit effects (upgrade 1, 2026-11-11) ────────────────────────────────
+ * Light enough for phones: no post-processing pass. A soft glow sprite sits
+ * behind every target; a hit throws a shock ring, a flash and a spray of
+ * sparks, all additive so they read as neon light. */
+let glowTex = null;
+function glowTexture() {
+  if (glowTex) return glowTex;
+  const c = document.createElement('canvas');
+  c.width = c.height = 128;
+  const g = c.getContext('2d'), r = g.createRadialGradient(64, 64, 0, 64, 64, 64);
+  r.addColorStop(0, 'rgba(255,255,255,1)');
+  r.addColorStop(0.22, 'rgba(255,255,255,.6)');
+  r.addColorStop(1, 'rgba(255,255,255,0)');
+  g.fillStyle = r;
+  g.fillRect(0, 0, 128, 128);
+  glowTex = new THREE.CanvasTexture(c);
+  return glowTex;
+}
+
+/** Additive glow sprite; `size` is in the parent's units. */
+function makeGlow(color, size, opacity = 0.5) {
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({
+    map: glowTexture(), color, transparent: true, opacity,
+    depthTest: false, depthWrite: false, blending: THREE.AdditiveBlending,
+  }));
+  s.scale.setScalar(size);
+  s.renderOrder = 9;
+  return s;
+}
+
+const HIT_COLORS = ['#fde74c', '#2de2e6', '#ff2e88', '#ffffff'];
+
+class HitFx {
+  constructor(scene) { this.scene = scene; this.items = []; }
+
+  /** Burst at a world position; `size` ≈ target radius (mm), `scale` shrinks a miss. */
+  burst(pos, size, colors = HIT_COLORS, scale = 1) {
+    const add = (obj, kind, life, extra = {}) => {
+      obj.position.copy(pos);
+      obj.renderOrder = 12;
+      this.scene.add(obj);
+      this.items.push({ obj, kind, life, t: 0, size: size * scale, ...extra });
+    };
+    const blend = { transparent: true, depthTest: false, depthWrite: false, blending: THREE.AdditiveBlending };
+    add(new THREE.Mesh(new THREE.RingGeometry(0.82, 1, 48),
+      new THREE.MeshBasicMaterial({ color: colors[0], side: THREE.DoubleSide, ...blend })), 'ring', 0.5);
+    add(makeGlow(colors[0], size * 3.5, 1), 'flash', 0.4);
+
+    const n = scale < 1 ? 14 : 38;
+    const p = new Float32Array(n * 3), col = new Float32Array(n * 3), vel = [];
+    const c = new THREE.Color();
+    for (let i = 0; i < n; i++) {
+      c.set(colors[i % colors.length]);
+      col.set([c.r, c.g, c.b], i * 3);
+      const a = Math.random() * Math.PI * 2, z = Math.random() * 2 - 1, k = Math.sqrt(1 - z * z);
+      const speed = size * scale * (4 + Math.random() * 7);
+      vel.push(new THREE.Vector3(Math.cos(a) * k, Math.sin(a) * k, z).multiplyScalar(speed));
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(p, 3));   // offsets from pos
+    geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+    add(new THREE.Points(geo, new THREE.PointsMaterial({
+      size: size * 1.6 * scale, map: glowTexture(), vertexColors: true, ...blend,
+    })), 'sparks', 0.7, { vel });
+  }
+
+  update(dt, camera) {
+    for (let i = this.items.length - 1; i >= 0; i--) {
+      const it = this.items[i], o = it.obj;
+      it.t += dt;
+      const k = Math.min(1, it.t / it.life);
+      if (it.kind === 'ring') {
+        o.quaternion.copy(camera.quaternion);
+        o.scale.setScalar(it.size * (1 + 3.2 * (1 - (1 - k) * (1 - k))));
+        o.material.opacity = 1 - k;
+      } else if (it.kind === 'flash') {
+        o.material.opacity = 0.9 * (1 - k);
+        o.scale.setScalar(it.size * (3 + 2.5 * k));
+      } else {
+        const a = o.geometry.attributes.position.array;
+        for (let j = 0; j < it.vel.length; j++) {
+          a[j * 3] += it.vel[j].x * dt; a[j * 3 + 1] += it.vel[j].y * dt; a[j * 3 + 2] += it.vel[j].z * dt;
+          it.vel[j].multiplyScalar(1 - Math.min(1, dt * 2.8));
+        }
+        o.geometry.attributes.position.needsUpdate = true;
+        o.material.opacity = 1 - k * k;
+      }
+      if (k >= 1) this._drop(i);
+    }
+  }
+
+  _drop(i) {
+    const o = this.items[i].obj;
+    this.scene.remove(o);
+    if (!o.isSprite) o.geometry.dispose();   // sprites share one geometry
+    o.material.dispose();
+    this.items.splice(i, 1);
+  }
+
+  clear() { while (this.items.length) this._drop(this.items.length - 1); }
+}
+
 const ease = (t) => t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
 
 class Viewer {
@@ -864,6 +969,7 @@ class Viewer {
     this.fx = new THREE.Group();          // pins and muscle bands, turn with the bone
     this.bone.add(this.fx);
     this.targets = [];
+    this.hitfx = new HitFx(this.scene);   // neon hit bursts (world space)
     this.center = new THREE.Vector3();
 
     this.yaw = 0; this.pitch = 0;
@@ -941,6 +1047,7 @@ class Viewer {
         new THREE.Mesh(new THREE.CircleGeometry(0.14, 20), mat(0.95)),
       ];
       for (const m of parts) { m.renderOrder = 10; g.add(m); }
+      g.add(makeGlow(COLORS.target, 3.4, 0.45));   // soft neon halo (last child: mark() recolours it too)
       g.userData.point = p;
       g.visible = false;
       this.scene.add(g);
@@ -983,9 +1090,19 @@ class Viewer {
   clearTargets() {
     for (const t of this.targets) {
       this.scene.remove(t);
-      t.traverse(m => { if (m.isMesh) { m.geometry.dispose(); m.material.dispose(); } });
+      t.traverse(m => {
+        if (m.isMesh) { m.geometry.dispose(); m.material.dispose(); }
+        else if (m.isSprite) m.material.dispose();
+      });
     }
     this.targets = [];
+  }
+
+  /** Neon burst on a target: sparks for a hit, a small red pop for a miss. */
+  burst(point, ok) {
+    const t = this.targets.find(t => t.userData.point === point);
+    if (!t) return;
+    this.hitfx.burst(t.position.clone(), t.userData.radius || 1, ok ? HIT_COLORS : [COLORS.wrong, '#ff8aa0'], ok ? 1 : 0.55);
   }
 
   /* ── pins & muscle bands (quiz + atlas) ───────────────────────────────── */
@@ -1089,10 +1206,12 @@ class Viewer {
       t.visible = pop > 0 && !t.userData.hidden;
       t.scale.setScalar(radius * pop * (t.userData.grow || pulse));
     }
+    this.hitfx.update(dt, this.camera);
     if (this.bone.geometry) this.renderer.render(this.scene, this.camera);
   }
 
   dispose() {
+    this.hitfx.clear();
     this.clearTargets();
     this.clearFx();
     this.renderer.dispose();
@@ -1386,11 +1505,14 @@ class Quiz {
   shoot() {
     if (!this.running || this.revealUntil || performance.now() < this.born) return;
     Sfx.shot();
+    const ch = $('crosshair');   // recoil kick on every trigger pull
+    ch.classList.remove('kick'); void ch.offsetWidth; ch.classList.add('kick');
     const picked = this.viewer.pick();
     if (!picked) { this.combo = 0; this._stats(); this._pop('빗나갔어!', ''); return; }
     this.shots++;
     if (picked === this.answer) {
       Sfx.hit();
+      this.viewer.burst(this.answer, true);
       const rt = performance.now() - this.born;
       const pts = Math.round(Math.max(50, 500000 / Math.max(rt, 250)) * this.d.mult);
       this.combo++; this.bestCombo = Math.max(this.bestCombo, this.combo);
@@ -1401,6 +1523,7 @@ class Quiz {
       this._settle(true);
     } else {
       Sfx.wrong();
+      this.viewer.burst(picked, false);
       const pen = Math.round(WRONG_PENALTY * this.d.mult);
       this.score -= pen; this.combo = 0; this.missed = true;
       this.viewer.mark(picked, COLORS.wrong);
