@@ -437,6 +437,50 @@
     .card { width: 240px; }
     .card .art { font-size: 52px; }
   }
+
+  /* ── 배경음악: 오른쪽 옆에 붙은 세로 탭 + 펼쳐지는 패널 ── */
+  .bgm {
+    position: fixed; right: 0; top: 50%; z-index: 120; display: flex; align-items: center;
+    transform: translate(calc(100% - 46px), -50%); transition: transform .28s ease;
+  }
+  .bgm.open { transform: translate(0, -50%); }
+  .bgm-tab {
+    width: 46px; padding: 14px 0; border: 1px solid var(--line); border-right: 0; border-radius: 14px 0 0 14px;
+    background: rgba(17,4,42,.9); color: var(--ink-dim); display: flex; flex-direction: column; align-items: center; gap: 8px;
+    font: 700 11px var(--font-display); letter-spacing: .12em; backdrop-filter: blur(8px);
+  }
+  .bgm-tab:hover { color: var(--ink); }
+  .bgm-tab-txt { writing-mode: vertical-rl; }
+  .bgm.playing .bgm-tab { color: var(--cyan-soft); border-color: var(--cyan); box-shadow: var(--glow-cyan); }
+  .bgm-eq { display: flex; align-items: flex-end; gap: 2px; height: 14px; }
+  .bgm-eq i { width: 3px; height: 4px; background: currentColor; border-radius: 1px; }
+  .bgm.playing .bgm-eq i { animation: bgm-eq .9s ease-in-out infinite; }
+  .bgm.playing .bgm-eq i:nth-child(2) { animation-delay: -.3s; }
+  .bgm.playing .bgm-eq i:nth-child(3) { animation-delay: -.6s; }
+  @keyframes bgm-eq { 0%,100% { height: 4px; } 50% { height: 14px; } }
+  .bgm-panel {
+    width: 250px; padding: 16px; display: flex; flex-direction: column; gap: 6px;
+    background: linear-gradient(160deg, rgba(29,7,66,.95), rgba(11,4,30,.97));
+    border: 1px solid var(--line); border-right: 0; border-radius: 14px 0 0 14px; backdrop-filter: blur(10px);
+  }
+  .bgm-kicker { font: 700 10px var(--font-display); letter-spacing: .2em; color: var(--pink); }
+  .bgm-title { font-size: 15px; line-height: 1.3; }
+  .bgm-artist { font-size: 12px; color: var(--ink-dim); min-height: 1em; }
+  .bgm-ctrl { display: flex; align-items: center; justify-content: center; gap: 10px; margin: 6px 0; }
+  .bgm-ctrl button { width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--line); background: rgba(155,92,255,.15); }
+  .bgm-ctrl button:hover { border-color: var(--cyan); }
+  .bgm-ctrl .bgm-play { width: 46px; height: 46px; font-size: 17px; color: #0a0118; border: 0; background: linear-gradient(180deg, var(--cyan-soft), var(--cyan)); box-shadow: var(--glow-cyan); }
+  .bgm-vol { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+  .bgm-vol input { flex: 1; accent-color: var(--cyan); }
+  .bgm-list { list-style: none; margin-top: 6px; border-top: 1px solid var(--line); padding-top: 6px; }
+  .bgm-list button {
+    width: 100%; text-align: left; padding: 6px 8px; border: 0; border-radius: 8px; background: none;
+    color: var(--ink-dim); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .bgm-list button:hover { background: rgba(155,92,255,.15); color: var(--ink); }
+  .bgm-list button.on { color: var(--cyan-soft); }
+  .bgm-list button.on::before { content: "♪ "; }
+  @media (max-width: 600px) { .bgm-panel { width: min(250px, calc(100vw - 60px)); } }
 </style>
 </head>
 <body>
@@ -486,6 +530,25 @@
     </div>
   </div>
 </div>
+
+<!-- 배경음악: 오른쪽 옆 버튼 -->
+<aside class="bgm" id="bgm" aria-label="배경음악">
+  <button class="bgm-tab" id="bgmTab" aria-expanded="false" aria-controls="bgmPanel" title="배경음악">
+    <span class="bgm-eq" aria-hidden="true"><i></i><i></i><i></i></span><span class="bgm-tab-txt">BGM</span>
+  </button>
+  <div class="bgm-panel" id="bgmPanel">
+    <p class="bgm-kicker">배경음악</p>
+    <strong class="bgm-title" id="bgmTitle"></strong>
+    <span class="bgm-artist" id="bgmArtist"></span>
+    <div class="bgm-ctrl">
+      <button id="bgmPrev" aria-label="이전 곡">⏮</button>
+      <button id="bgmPlay" class="bgm-play" aria-label="음악 재생">▶</button>
+      <button id="bgmNext" aria-label="다음 곡">⏭</button>
+    </div>
+    <label class="bgm-vol">🔈<input id="bgmVol" type="range" min="0" max="1" step="0.05" aria-label="음량"></label>
+    <ol class="bgm-list" id="bgmList"></ol>
+  </div>
+</aside>
 
 <script>
 /* ============================================================
@@ -840,6 +903,72 @@ function renderRanking() {
 
 renderHero();
 renderRows();
+
+/* ── 배경음악: 오른쪽 옆 ♪ 버튼 → 패널에서 켜고 끄기 ─────────────────────
+   곡 추가: audio/ 폴더에 mp3 를 넣고 아래 TRACKS 에 한 줄 추가.
+   자동 재생 없음. 켜 둔 채로 게임에 갔다 오면, 화면을 처음 누를 때 이어서 재생. */
+(() => {
+  const TRACKS = [
+    { title: "Shibuya Static", artist: "", src: "audio/shibuya-static.mp3" },
+    { title: "Megalovania (Electro House Remix)", artist: "Yeok · 원곡 Toby Fox", src: "audio/megalovania-yeok.mp3" },
+    { title: "REDRED (Anime Remix)", artist: "CORTIS", src: "audio/redred.mp3" },
+  ];
+  const KEY = "samgongyuk/bgm";
+  const load = () => { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch { return {}; } };
+  const saved = load();
+  const save = (extra = {}) => { try { localStorage.setItem(KEY, JSON.stringify({ index, volume: audio.volume, on: wantOn, time: audio.currentTime || 0, ...extra })); } catch {} };
+
+  const box = $("bgm"), tab = $("bgmTab"), play = $("bgmPlay"), next = $("bgmNext"), prev = $("bgmPrev"),
+        vol = $("bgmVol"), title = $("bgmTitle"), artist = $("bgmArtist"), list = $("bgmList");
+  const audio = new Audio();
+  audio.preload = "none";
+  let index = Math.min(saved.index || 0, TRACKS.length - 1);
+  let wantOn = !!saved.on;
+  audio.volume = saved.volume ?? 0.5;
+  vol.value = audio.volume;
+
+  list.innerHTML = TRACKS.map((t, i) => `<li><button data-i="${i}">${esc(t.title)}</button></li>`).join("");
+
+  function render() {
+    const t = TRACKS[index], on = !audio.paused;
+    box.classList.toggle("playing", on);
+    play.textContent = on ? "⏸" : "▶";
+    play.setAttribute("aria-label", on ? "음악 멈춤" : "음악 재생");
+    title.textContent = t.title;
+    artist.textContent = t.artist;
+    list.querySelectorAll("button").forEach(b => b.classList.toggle("on", +b.dataset.i === index));
+  }
+  function setTrack(i, time = 0) {
+    index = (i + TRACKS.length) % TRACKS.length;
+    audio.src = TRACKS[index].src;
+    if (time) audio.addEventListener("loadedmetadata", () => { audio.currentTime = time; }, { once: true });
+    render(); save({ time });
+  }
+  function start() { wantOn = true; audio.play().then(render).catch(render); save(); }
+  function stop() { wantOn = false; audio.pause(); save(); }
+
+  setTrack(index, saved.time || 0);
+  tab.onclick = () => { const open = box.classList.toggle("open"); tab.setAttribute("aria-expanded", open); };
+  play.onclick = () => (audio.paused ? start() : stop());
+  next.onclick = () => { setTrack(index + 1); if (wantOn) start(); };
+  prev.onclick = () => { setTrack(index - 1); if (wantOn) start(); };
+  list.onclick = e => { const b = e.target.closest("button"); if (!b) return; setTrack(+b.dataset.i); start(); };
+  vol.oninput = () => { audio.volume = +vol.value; save(); };
+  audio.addEventListener("play", render);
+  audio.addEventListener("pause", render);
+  audio.addEventListener("ended", () => { setTrack(index + 1); start(); });
+  audio.addEventListener("error", () => { title.textContent = "음악 파일을 못 불러왔어요"; });
+  setInterval(() => { if (!audio.paused) save(); }, 3000);
+  addEventListener("pagehide", () => save());
+
+  // 켜 둔 채로 돌아왔으면: 브라우저가 자동 재생을 막으니 첫 클릭/키 입력 때 이어서 재생
+  if (wantOn) {
+    const resume = e => { if (e.target.closest && e.target.closest("#bgm")) return; start(); off(); };
+    const off = () => { removeEventListener("pointerdown", resume); removeEventListener("keydown", resume); };
+    addEventListener("pointerdown", resume); addEventListener("keydown", resume);
+  }
+  render();
+})();
 </script>
 </body>
 </html>
