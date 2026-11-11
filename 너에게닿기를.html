@@ -1252,7 +1252,9 @@ __mods['src/quiz.js'] = (() => {
  * (multi-head origins head by head, then the insertion). The bone turns and
  * the camera closes in; up to five identical targets appear (the answer plus
  * nearby decoys that don't overlap on screen). Hit = points (+ combo), decoy =
- * penalty but the question stays open, blank shot = combo break.
+ * penalty but the question stays open, blank shot = combo break. The answer is
+ * never shown for the player: after a wrong shot or when time runs out they
+ * keep choosing until they hit it.
  * ========================================================================== */
 
 
@@ -1335,6 +1337,7 @@ class Quiz {
     this.answer = this.region.points[q.key];
     this.revealUntil = 0;
     this.missed = false;
+    this.overtime = false;
     this.born = performance.now() + TURN_MS;
 
     const options = this._options();
@@ -1417,7 +1420,7 @@ class Quiz {
     this.viewer.reveal(this.answer);
     this.viewer.addPin(this.answer, this.q.role === 'origin' ? COLORS.origin : COLORS.insertion, this.radius * 0.5);
     this._timer(false);
-    this._steps(hit ? 'done' : 'miss');
+    this._steps(hit && !this.missed ? 'done' : 'miss');   // found only after a mistake → marked as missed
     const m = this.muscle, parts = m._parts;
     const next = this.queue[this.asked];
     let ms = REVEAL_MS;
@@ -1450,11 +1453,11 @@ class Quiz {
   frame(now) {
     if (this.running) {
       if (this.revealUntil && now >= this.revealUntil) this._next();
-      else if (!this.revealUntil && now - this.born >= this.d.life) {
+      else if (!this.revealUntil && !this.overtime && now - this.born >= this.d.life) {
+        // Time's up: no answer is given away — the player keeps choosing until they hit it.
         Sfx.timeout();
-        this.shots++; this.combo = 0; this.missed = true;
-        this._pop(`시간 초과! 정답은 ${this.answer.ko}`, 'bad');
-        this._settle(false);
+        this.overtime = true; this.combo = 0; this.missed = true;
+        this._pop('시간 초과! 다시 골라 봐', 'bad');
         this._stats();
       }
     }
