@@ -450,6 +450,10 @@
     font: 700 11px var(--font-display); letter-spacing: .12em; backdrop-filter: blur(8px);
   }
   .bgm-tab:hover { color: var(--ink); }
+  .bgm-tab { cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none; }
+  .bgm.dragging { transition: none; }
+  .bgm.dragging .bgm-tab { cursor: grabbing; }
+  .bgm-tab::before { content: ""; width: 14px; height: 2px; border-radius: 1px; background: currentColor; opacity: .5; box-shadow: 0 4px 0 currentColor; margin-bottom: 4px; }
   .bgm-tab-txt { writing-mode: vertical-rl; }
   .bgm.playing .bgm-tab { color: var(--cyan-soft); border-color: var(--cyan); box-shadow: var(--glow-cyan); }
   .bgm-eq { display: flex; align-items: flex-end; gap: 2px; height: 14px; }
@@ -602,7 +606,7 @@ const APPS = [
     url: "HIGO_뼈게임_사이트판.html",
     glow: "#2de2e6",
     thumb: "thumbs/higo-play.jpg",
-    hero: "thumbs/higo-title.jpg",
+    hero: "thumbs/landmark-start.jpg",   // 지금 LandMark 시작 화면 캡처
     detail: "thumbs/landmark-detail.jpg",   // 상세 창 그림
     facts: [["5", "스테이지"], ["2P", "대결"], ["3D", "뼈 모델"]],
     featured: true
@@ -948,7 +952,42 @@ renderRows();
   function stop() { wantOn = false; audio.pause(); save(); }
 
   setTrack(index, saved.time || 0);
-  tab.onclick = () => { const open = box.classList.toggle("open"); tab.setAttribute("aria-expanded", open); };
+  // 탭: 누르면 패널 열고 닫기, 위아래로 끌면 위치 이동(위치는 기억)
+  const POS_KEY = "samgongyuk/bgm-pos";
+  const clampTop = y => { const half = box.offsetHeight / 2 + 8; return Math.min(innerHeight - half, Math.max(half + 62, y)); };   // 패널이 화면 밖·상단 바 뒤로 안 나가게
+  const placeAt = ratio => { box.style.top = clampTop(ratio * innerHeight) + "px"; };
+  let posRatio = 0.5;
+  try { const r = parseFloat(localStorage.getItem(POS_KEY)); if (r > 0 && r < 1) posRatio = r; } catch {}
+  placeAt(posRatio);
+  addEventListener("resize", () => placeAt(posRatio));
+  let drag = null;
+  tab.addEventListener("pointerdown", e => {
+    drag = { y: e.clientY, top: box.getBoundingClientRect().top + box.offsetHeight / 2, moved: false };
+    try { tab.setPointerCapture(e.pointerId); } catch {}
+  });
+  tab.addEventListener("pointermove", e => {
+    if (!drag) return;
+    const dy = e.clientY - drag.y;
+    if (!drag.moved && Math.abs(dy) < 6) return;
+    drag.moved = true;
+    box.classList.add("dragging");
+    box.style.top = clampTop(drag.top + dy) + "px";
+  });
+  const endDrag = () => {
+    if (!drag) return;
+    if (drag.moved) {
+      posRatio = parseFloat(box.style.top) / innerHeight;
+      try { localStorage.setItem(POS_KEY, posRatio.toFixed(4)); } catch {}
+    }
+    box.classList.remove("dragging");
+    setTimeout(() => { drag = null; }, 0);
+  };
+  tab.addEventListener("pointerup", endDrag);
+  tab.addEventListener("pointercancel", endDrag);
+  tab.onclick = () => {
+    if (drag && drag.moved) return;   // 끌기였으면 열고 닫지 않음
+    const open = box.classList.toggle("open"); tab.setAttribute("aria-expanded", open);
+  };
   play.onclick = () => (audio.paused ? start() : stop());
   next.onclick = () => { setTrack(index + 1); if (wantOn) start(); };
   prev.onclick = () => { setTrack(index - 1); if (wantOn) start(); };
