@@ -414,19 +414,43 @@
   /* =========================================================
      조절하는 곳 (게임 데이터)
      ========================================================= */
-  // lv = 몇 레벨에 열리는지, mp = 쓸 때 드는 MP
+  // 용어 출처: 수업 자료 "3장 뼈대계통", "3. 근육생리" (음성 모델이 아는 단어만)
+  // words: [영어, 한글 뜻, 나오기 시작하는 단계]  → 단계 1 = 튜토리얼·스테이지1, 2 = 스테이지2 ... 5 = 보스(전부)
+  // mp = 쓸 때 드는 MP
   const SKILLS = [
-    { key:'attack',  name:'ATTACK',    sub:'뼈',    icon:'images/icon-attack.png',  kind:'slash',   power:20, mp:0,  lv:1,
-      words:[['Femur','넙다리뼈'],['Tibia','정강뼈'],['Fibula','종아리뼈'],['Humerus','위팔뼈'],['Patella','무릎뼈'],['Clavicle','빗장뼈'],['Scapula','어깨뼈'],['Pelvis','골반']] },
-    { key:'fire',    name:'FIRE BALL', sub:'척추',  icon:'images/icon-fire.png',    kind:'fire',    power:35, mp:8,  lv:2,
-      words:[['Cervical','목뼈의 (경추)'],['Thoracic','등뼈의 (흉추)'],['Lumbar','허리의 (요추)'],['Sacrum','엉치뼈'],['Vertebra','척추뼈']] },
-    { key:'thunder', name:'THUNDER',   sub:'근육',  icon:'images/icon-thunder.png', kind:'thunder', power:40, mp:10, lv:3,
-      words:[['Biceps','위팔두갈래근'],['Triceps','위팔세갈래근'],['Quadriceps','넙다리네갈래근'],['Hamstring','뒤넙다리근'],['Tendon','힘줄'],['Ligament','인대']] },
-    { key:'spell',   name:'SPELL',     sub:'주문',  icon:'images/icon-spell.png',   kind:'bolt',    power:55, mp:15, lv:4,
-      words:[['Vertebral','척추의']] },
-    { key:'cure',    name:'CURE',      sub:'움직임', icon:null,                     kind:'heal',    power:30, mp:6,  lv:1,
-      words:[['Flexion','굽힘'],['Extension','폄'],['Abduction','벌림'],['Rotation','돌림']] }
+    { key:'attack',  name:'ATTACK',    sub:'팔다리뼈', icon:'images/icon-attack.png',  kind:'slash',   power:20, mp:0,
+      words:[['Femur','넙다리뼈',1],['Tibia','정강뼈',1],['Humerus','위팔뼈',1],['Patella','무릎뼈',1],
+             ['Fibula','종아리뼈',2],['Radius','노뼈',2],['Clavicle','빗장뼈',2],
+             ['Scapula','어깨뼈',3],['Pelvis','골반',3],
+             ['Phalanx','손가락뼈 · 발가락뼈',4],['Metacarpal','손허리뼈',4],['Metatarsal','발허리뼈',4]] },
+    { key:'fire',    name:'FIRE BALL', sub:'척주',    icon:'images/icon-fire.png',    kind:'fire',    power:35, mp:8,
+      words:[['Cervical','목뼈의',1],['Lumbar','허리뼈의',1],['Rib','갈비뼈',1],
+             ['Thoracic','등뼈의',2],['Sacrum','엉치뼈',2],['Sternum','복장뼈',2],
+             ['Vertebra','척추뼈',3],['Atlas','고리뼈 (첫째목뼈)',3],['Axis','중쇠뼈 (둘째목뼈)',3]] },
+    { key:'thunder', name:'THUNDER',   sub:'근육',    icon:'images/icon-thunder.png', kind:'thunder', power:40, mp:10,
+      words:[['Tendon','힘줄',1],['Actin','액틴',1],['Myosin','미오신',1],
+             ['Fascia','근막',2],['Troponin','트로포닌',2],['Agonist','주동근',2],['Antagonist','대항근',2],
+             ['Isometric','등척성',3],['Isotonic','등장성',3],
+             ['Concentric','단축성 (수축)',4],['Eccentric','신장성 (수축)',4]] },
+    { key:'spell',   name:'SPELL',     sub:'머리뼈',  icon:'images/icon-spell.png',   kind:'bolt',    power:55, mp:15,
+      words:[['Vertebral','척추의',1],
+             ['Skull','머리뼈',3],['Mandible','아래턱뼈',3],['Maxilla','위턱뼈',3],
+             ['Frontal','이마뼈의',4],['Parietal','마루뼈의',4],['Occipital','뒤통수뼈의',4],['Temporal','관자뼈의',4],
+             ['Zygomatic','광대뼈의',5],['Hyoid','목뿔뼈',5]] },
+    { key:'cure',    name:'CURE',      sub:'근수축',  icon:null,                     kind:'heal',    power:30, mp:6,
+      words:[['Twitch','연축',1],['Tetanus','강축',1],['Atrophy','위축',1],
+             ['Hypertrophy','비대',2],['Rigor','강직',2],['Paralysis','마비',2],
+             ['Elasticity','탄력성',3],['Extensibility','신장성',3],
+             ['Excitability','흥분성',4],['Conductivity','전도성',4]] }
   ];
+  function wordTier(i){ return Math.max(1, Math.min(5, i)); }   // 스테이지 번호 → 용어 단계 (튜토리얼은 1)
+  function wordsAt(sk, i){ return sk.words.filter(function(w){ return w[2] <= wordTier(i); }); }
+  function countWords(i){ return SKILLS.reduce(function(n, sk){ return n + wordsAt(sk, i).length; }, 0); }
+  function newWords(i){       // 이 스테이지에서 처음 나오는 용어
+    const out = []; if (wordTier(i) <= 1 || wordTier(i) === wordTier(i - 1)) return out;
+    SKILLS.forEach(function(sk){ sk.words.forEach(function(w){ if (w[2] === wordTier(i)) out.push(w[0]); }); });
+    return out;
+  }
   // 스테이지 (몬스터 그림은 지금 드래곤 한 장을 색만 바꿔 씀 → 새 그림이 생기면 img 를 바꾸면 됨)
   const STAGES = [
     { title:'TUTORIAL', name:'BABY DRAGON', hp:40,  atkMin:3,  atkMax:5,  scale:.75, exp:30,  tutorial:true,
@@ -632,19 +656,18 @@
     b.className = 'skill-btn'; b.dataset.key = sk.key;
     const icon = sk.icon ? '<img src="' + sk.icon + '" alt="">' : CURE_SVG;
     b.innerHTML = (sk.mp ? '<span class="cost">MP' + sk.mp + '</span>' : '') +
-      '<span class="lockmark">LV.' + sk.lv + '</span>' +
+      '<span class="lockmark">LOCK</span>' +
       '<div class="tile">' + icon + '</div><div class="lbl px">' + sk.name + '</div><div class="sub">' + sk.sub + '</div>';
     bindTap(b, function(){ onSkill(sk); });
     menu.appendChild(b);
   });
-  function skillLocked(sk){ return MON.tutorial ? sk.key !== 'attack' : save.lv < sk.lv; }
+  function skillLocked(sk){ return !!MON.tutorial && sk.key !== 'attack'; }   // 튜토리얼만 ATTACK 하나
   function updateMenu(){
     menu.querySelectorAll('.skill-btn').forEach(function(b){
       const sk = SKILLS.filter(function(s){ return s.key === b.dataset.key; })[0];
       const locked = skillLocked(sk);
       b.classList.toggle('lock', locked);
       b.classList.toggle('nomp', !locked && wizMP < sk.mp);
-      b.querySelector('.lockmark').textContent = MON.tutorial ? 'LOCK' : 'LV.' + sk.lv;
     });
   }
   function selectBtn(key){
@@ -747,7 +770,7 @@
   function shuffle(a){ for (let i = a.length - 1; i > 0; i--){ const j = Math.floor(Math.random() * (i + 1)); const t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
   function pick(a){ return a[Math.floor(Math.random() * a.length)]; }
   function pickWord(sk){
-    const list = sk.words;
+    const list = wordsAt(sk, stageIdx);
     if (list.length === 1) return list[0];
     let w; do { w = list[Math.floor(Math.random() * list.length)]; } while (w[0] === lastWord[sk.key]);
     lastWord[sk.key] = w[0]; return w;
@@ -759,7 +782,7 @@
     if (state !== 'player') return;
     if (skillLocked(sk)){
       SFX.miss();
-      log(MON.tutorial ? '튜토리얼에서는 ATTACK 만 쓸 수 있어요.' : sk.name + ' 은(는) LV.' + sk.lv + ' 이 되면 열려요.', 'fail');
+      log('튜토리얼에서는 ATTACK 만 쓸 수 있어요.', 'fail');
       return;
     }
     if (wizMP < sk.mp){
@@ -990,9 +1013,8 @@
     if (save.lv > oldLv){
       SFX.lvup();
       html += '<div class="lvup px">LEVEL UP! LV.' + save.lv + '</div>';
-      const opened = SKILLS.filter(function(s){ return s.lv > oldLv && s.lv <= save.lv; });
       html += '<div class="unlock">HP ' + maxHP(save.lv) + ' · MP ' + maxMP(save.lv) +
-        (opened.length ? '<br>새 기술: <b>' + opened.map(function(s){ return s.name; }).join(', ') + '</b>' : '') + '</div>';
+        '</div>';
     }
     if (MON.tutorial) html += '<div class="unlock">튜토리얼 완료! 이제 지도에서 스테이지를 골라요</div>';
     if (MON.boss && first) html += '<div class="lvup px">ALL CLEAR!</div>';
@@ -1020,6 +1042,8 @@
     setHP();
     log(MON.title + ' - ' + MON.name + ' 이(가) 나타났다!', 'sys');
     log('기술을 누르고, 나오는 주문을 소리 내어 외쳐라!', 'sys');
+    const nw = newWords(i);
+    if (nw.length) log('새 용어 ' + nw.length + '개 등장! ' + nw.join(', '), 'ok');
     state = 'player';
     if (MON.tutorial){ guide('<b>튜토리얼</b><br>아래의 <u>ATTACK</u> 을 눌러 보세요!'); pulse('attack'); }
   }
@@ -1028,14 +1052,13 @@
   const NODE_POS = [[100, 300], [225, 215], [345, 315], [465, 215], [585, 315], [705, 205]];
   let mapSel = 0;
   function unlocked(i){ return i === 0 || save.cleared.indexOf(i - 1) !== -1; }
-  function showMap(){
+  function showMap(keepSel){
     state = 'map';
     $('result').className = ''; guide(null);
     $('map-lv').textContent = 'WIZARD LV.' + save.lv;
     $('map-exp').textContent = 'EXP ' + save.exp + '/' + expNeed(save.lv);
     $('map-exp-bar').style.width = Math.round(save.exp / expNeed(save.lv) * 100) + '%';
-    const skills = SKILLS.filter(function(s){ return s.lv <= save.lv; }).map(function(s){ return s.name; });
-    $('map-stat').textContent = 'HP ' + maxHP(save.lv) + ' · MP ' + maxMP(save.lv) + ' · 기술 ' + skills.join(', ');
+    $('map-stat').textContent = 'HP ' + maxHP(save.lv) + ' · MP ' + maxMP(save.lv) + ' · 공격력 x' + powMul(save.lv).toFixed(2);
     let d = '';
     NODE_POS.forEach(function(p, i){ if (i) d += ' L' + p[0] + ' ' + (p[1] + 46); else d = 'M' + p[0] + ' ' + (p[1] + 46); });
     $('map-path').innerHTML = '<path d="' + d + '" stroke="#000" stroke-width="10" fill="none"/><path d="' + d + '" stroke="#8f95b2" stroke-width="4" stroke-dasharray="10 8" fill="none"/>';
@@ -1043,7 +1066,7 @@
     let next = -1;
     STAGES.forEach(function(s, i){ if (next < 0 && unlocked(i) && save.cleared.indexOf(i) === -1) next = i; });
     if (!unlocked(mapSel)) mapSel = 0;
-    if (next >= 0 && save.cleared.indexOf(mapSel) !== -1 && mapSel !== next) mapSel = next;
+    if (keepSel !== true && next >= 0) mapSel = next;   // 지도를 열면 다음 판을 골라 둠
     STAGES.forEach(function(s, i){
       const b = document.createElement('button');
       const lock = !unlocked(i);
@@ -1053,20 +1076,22 @@
         '<div class="nl px">' + s.title + '</div><div class="nn px">' + (lock ? '???' : s.name) + '</div>';
       bindTap(b, function(){
         if (lock){ SFX.miss(); return; }
-        SFX.select(); mapSel = i; showMap();
+        SFX.select(); mapSel = i; showMap(true);
       });
       box.appendChild(b);
     });
     const s = STAGES[mapSel];
     $('info-t1').textContent = s.title + ' · ' + s.name;
+    const nw = countWords(mapSel), nNew = nw - (mapSel > 1 ? countWords(mapSel - 1) : nw);
     $('info-t2').innerHTML = 'HP ' + s.hp + ' · 공격 ' + s.atkMin + '~' + s.atkMax + ' · 보상 EXP ' + s.exp +
+      '<br>용어 <b style="color:var(--gold)">' + nw + '개</b>' + (nNew > 0 ? ' <span style="color:#7dff9a">(NEW +' + nNew + ')</span>' : '') +
       (save.cleared.indexOf(mapSel) !== -1 ? ' <span style="color:#7dff9a">(CLEAR · 다시 하면 절반)</span>' : '') +
       (s.tutorial ? '<br><span style="color:#cfc9ff">처음이라면 여기부터! 주문 외치는 법을 배워요</span>' : '');
     mapEl.classList.add('show');
   }
   bindTap($('go-btn'), function(){ if (state === 'map' && !optEl.classList.contains('show')){ SFX.select(); startStage(mapSel); } });
   bindTap($('again-btn'), function(){ startStage(stageIdx); });
-  bindTap($('tomap-btn'), showMap);
+  bindTap($('tomap-btn'), function(){ showMap(); });
 
   /* ---------- 시작 (NEW GAME / LOAD GAME) ---------- */
   function goFullscreen(){
