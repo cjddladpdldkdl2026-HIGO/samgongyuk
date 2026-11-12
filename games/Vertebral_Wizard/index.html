@@ -1223,8 +1223,7 @@
       else { const ok = await setupMic(); if (!ok) useButtons('마이크를 쓸 수 없어서'); }
     }
     $('title').classList.add('hide');
-    if (isNew) startStage(0);
-    else showMap();
+    showMap();      // 시작하면 지도부터: 깬 스테이지를 다시 할지, 다음 스테이지를 할지 고름
   }
   bindTap(startBtn, function(){ enterGame(true); });
   bindTap(loadBtn, function(){ enterGame(false); });
