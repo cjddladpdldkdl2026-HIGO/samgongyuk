@@ -149,7 +149,7 @@
       linear-gradient(90deg, rgba(7,1,15,.9) 0%, rgba(7,1,15,.62) 38%, rgba(7,1,15,.15) 68%, rgba(7,1,15,.35) 100%),
       linear-gradient(0deg, var(--bg-0) 0%, rgba(7,1,15,0) 32%),
       linear-gradient(180deg, rgba(7,1,15,.55) 0%, rgba(7,1,15,0) 18%),
-      var(--bg-img) center / cover no-repeat;
+      var(--bg-img) var(--bg-pos, center) / cover no-repeat;
   }
   .slide .sun { background: linear-gradient(180deg, var(--gold) 0%, #ff8a3d 40%, var(--c) 75%, var(--violet) 100%); }
   .slide .screen { border-color: var(--c); box-shadow: 0 0 6px var(--c), 0 0 24px var(--c), 0 30px 60px rgba(0,0,0,.6); }
@@ -391,6 +391,11 @@
     position: absolute; inset: 0; z-index: 1; background: var(--bg-1) center / cover no-repeat;
   }
   .modal-top .shot::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 55%, rgba(11,4,30,.9)); }
+  /* detailFull: 그림을 자르지 않고 그림 비율 그대로 보여 주기 (타이틀·인물 안 잘리게) */
+  .modal-top.full { height: auto; }
+  .modal-top.full::before { display: none; }
+  .modal-top.full .shot { background-size: 100% 100%; }
+  .modal-top.full .shot::after { display: none; }
 
   /* 튀어나오는 캐릭터 (pop): 배경은 창 안, 캐릭터 윗부분은 창 밖으로 */
   .modal-bg { overflow-y: auto; align-items: safe center; }
@@ -602,6 +607,26 @@
    ============================================================ */
 const APPS = [
   {
+    title: "딴딴/딴",
+    emoji: "🎤",
+    category: "game",
+    tag: "NEW",
+    year: "2026",
+    who: "PTX+AI · 삼공육",
+    desc: "비트에 맞춰 해부학 용어를 따라 외치는 리듬 게임! 나레이터가 먼저 외치면 박자에 맞춰 똑같이 따라 해요. 뇌·뇌신경, 신경로, 바닥핵, 뼈·랜드마크, 근육, 머리·얼굴까지 405개 용어.",
+    url: "games/DdanDdan/index.html",
+    glow: "#7c9bff",
+    thumb: "thumbs/ddan-title.jpg",     // 카드 썸네일
+    hero: "thumbs/ddan-title.jpg",      // 배너 속 화면: 메인 타이틀
+    bg: "thumbs/bg-ddan.jpg",           // 배너 전체 배경 (무대 + 하늘)
+    bgPos: "center top",                // 배경이 잘릴 때 하늘이 많이 보이게 위쪽 기준
+    detail: "thumbs/ddan-detail.jpg",   // 상세 창 그림
+    detailFull: true,                   // 상세 창 그림을 자르지 않고 통째로
+    facts: [["405", "용어"], ["7", "맵"], ["🎤", "따라 외치기"]],
+    needsServer: true,   // 마이크·음성 모델을 써요
+    featured: true
+  },
+  {
     title: "너에게 닿기를",
     emoji: "💪",
     category: "game",
@@ -611,7 +636,7 @@ const APPS = [
     desc: "근육의 이는곳에서 닿는곳까지! 3D 뼈 위에서 부착점을 쏴서 맞히는 퀴즈와 근육 도감. 어깨·위팔, 아래팔, 엉덩이·넙다리, 종아리·발 4부위 근육 32개를 플레이할 수 있어요.",
     url: "너에게닿기를.html",
     glow: "#ff2e88",
-    thumb: "thumbs/neoege-play.jpg",   // 카드에 보일 게임 화면 사진
+    thumb: "thumbs/neoege-title.jpg",  // 카드 썸네일: 타이틀 그림
     hero: "thumbs/neoege-title.jpg",   // 큰 배너에 보일 사진 (없으면 thumb 사용)
     bg: "thumbs/bg-neoege.jpg",        // 배너 전체 배경
     // 상세 정보 창: 캐릭터가 창 위로 튀어나오는 그림. line = 창 윗선이 지나가는 높이(그림의 42%),
@@ -636,7 +661,7 @@ const APPS = [
     desc: "3D 뼈 위의 랜드마크를 조준해서 맞히는 해부학 에임 게임 (5단계, 2인 대결).",
     url: "HIGO_뼈게임_사이트판.html",
     glow: "#2de2e6",
-    thumb: "thumbs/higo-play.jpg",
+    thumb: "thumbs/landmark-thumb.jpg",   // 카드 썸네일: 우주 그림 + 네온 타이틀
     hero: "thumbs/landmark-card.jpg",    // 배너 속 작은 화면: 네온 타이틀만
     bg: "thumbs/bg-landmark.jpg",        // 배너 전체 배경(우주 그림)
     detail: "thumbs/landmark-detail.jpg",   // 상세 창 그림
@@ -673,8 +698,9 @@ const APPS = [
   },
   {
     title: "너에게 닿기를 — 아래팔·다리",
-    emoji: "🦵",
+    emoji: "",
     category: "soon",
+    thumb: "thumbs/soon-neoege.jpg",   // 어둡게 톤다운한 그림 (글씨 없이)
     desc: "아래팔, 엉덩이·넙다리, 종아리·발 부위 근육 추가 예정"
   },
   {
@@ -768,7 +794,7 @@ function renderHero() {
     const facts = (a.facts || []).map(([n, l]) => `<div><b>${esc(n)}</b>${esc(l)}</div>`).join("");
     const pic = a.hero || a.thumb;
     return `
-    <div class="slide${a.bg ? " has-bg" : ""}" style="--c:${glow(a)}${a.bg ? `;--bg-img:url('${a.bg}')` : ""}" aria-roledescription="slide" aria-label="${i + 1} / ${list.length}">
+    <div class="slide${a.bg ? " has-bg" : ""}" style="--c:${glow(a)}${a.bg ? `;--bg-img:url('${a.bg}')` : ""}${a.bgPos ? `;--bg-pos:${a.bgPos}` : ""}" aria-roledescription="slide" aria-label="${i + 1} / ${list.length}">
       <div class="hero-inner">
         <div>
           <p class="eyebrow">동아리 추천 ${String(i + 1).padStart(2, "0")} · ${esc(a.year || "")}</p>
@@ -900,6 +926,8 @@ function openModal(a, kit) {
   top.style.setProperty("--c", glow(a));
   modal.style.setProperty("--c", glow(a));
   modal.classList.toggle("popout", !!a.pop);
+  top.classList.toggle("full", !a.pop && !!a.detailFull);
+  top.style.aspectRatio = a.detailFull ? "16 / 9" : "";
   const pic = a.detail || a.hero || a.thumb;   // detail: 상세 창 전용 그림(없으면 배너 그림)
   if (a.pop) {
     // 배경은 상세 창 안에, 캐릭터(윤곽선 안쪽)만 창 위로 튀어나오게
@@ -908,6 +936,11 @@ function openModal(a, kit) {
     top.innerHTML = `<div class="pop-bg"></div><div class="pop-fg-wrap"><div class="pop-fg" style="clip-path:polygon(${a.pop.shape})"></div></div>`;
   } else if (pic) {
     top.innerHTML = `<div class="shot" style="background-image:url('${pic}')"></div>`;
+    if (a.detailFull) {   // 그림 비율 그대로, 자르지 않고 통째로
+      const im = new Image();
+      im.onload = () => { if (top.classList.contains("full")) top.style.aspectRatio = `${im.naturalWidth} / ${im.naturalHeight}`; };
+      im.src = pic;
+    }
   } else {
     top.innerHTML = `<div class="emoji">${a.emoji}</div>`;
   }

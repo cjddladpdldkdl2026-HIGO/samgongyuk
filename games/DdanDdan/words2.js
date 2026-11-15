@@ -1,0 +1,383 @@
+/* BRAIN BEAT — more terms (2026-11-14). Sources: 학습 슬라이드 (신경과학_에크만) · 물리치료 공부방 (근육 100 · 뼈대계 16장).
+ * headbone / headmuscle (머리·얼굴): not in either site → standard terms of 해부학 용어 개정 6판.
+ * Korean names: 해부학 용어 개정 6판. Readings: the Korean clinical way, "/" = one beat each (a piece is at most 4 syllables).
+ * 5–8 beats → the word gets two bars. These words are judged by the timing of the shout (the recogniser doesn't know them).
+ * Line format:  map | English | 한글 | reading — " ; " between English words, "/" between beats  */
+window.WORDS2_TEXT = `
+tract|ceruleospinal tract|청색반점척수로|세룰리오/스파이날 ; 트랙
+tract|raphespinal tract|솔기척수로|라페/스파이날 ; 트랙
+tract|fasciculus gracilis|얇은다발|파시/큘러스 ; 그라/실리스
+tract|fasciculus cuneatus|쐐기다발|파시/큘러스 ; 큐니/에이터스
+tract|medial lemniscus|안쪽섬유띠|미디얼 ; 렘니/스커스
+tract|internal capsule|속섬유막|인터널 ; 캡슐
+tract|corona radiata|대뇌부챗살|코로나 ; 라디아타
+tract|medial longitudinal fasciculus|안쪽세로다발|미디얼 ; 론지/튜디널 ; 파시/큘러스
+tract|medial forebrain bundle|안쪽앞뇌다발|미디얼 ; 포브레인 ; 번들
+tract|optic tract|시각로|옵틱 ; 트랙
+tract|optic chiasm|시각교차|옵틱 ; 카이아즘
+nuclei|basal ganglia|바닥핵|베이절 ; 갱글리아
+nuclei|striatum|줄무늬체|스트리/아툼
+nuclei|caudate nucleus|꼬리핵|코데이트 ; 뉴클/리어스
+nuclei|putamen|조가비핵|퓨테이먼
+nuclei|globus pallidus|창백핵|글로버스 ; 팔리더스
+nuclei|lentiform nucleus|렌즈핵|렌티폼 ; 뉴클/리어스
+nuclei|substantia nigra|흑색질|서브스탠/시아 ; 나이그라
+nuclei|subthalamic nucleus|시상밑핵|서브/탈라믹 ; 뉴클/리어스
+nuclei|nucleus accumbens|기댐핵|뉴클/리어스 ; 어컴벤스
+nuclei|raphe nuclei|솔기핵|라페 ; 뉴클/리아이
+nuclei|locus ceruleus|청색반점|로커스 ; 세룰/리어스
+nuclei|reticular formation|그물체|레티큘러 ; 포메이션
+nuclei|vestibular nuclei|안뜰핵|베스/티뷸러 ; 뉴클/리아이
+nuclei|solitary nucleus|고립로핵|솔리터리 ; 뉴클/리어스
+nuclei|nucleus ambiguus|의문핵|뉴클/리어스 ; 앰비/규어스
+bone|cervical curve|목굽이|서비컬 ; 커브
+bone|thoracic curve|등굽이|쏘라식 ; 커브
+bone|lumbar curve|허리굽이|럼바 ; 커브
+bone|sacral curve|엉치굽이|세이크럴 ; 커브
+bone|cervical vertebrae|목뼈|서비컬 ; 버티브리
+bone|thoracic vertebrae|등뼈|쏘라식 ; 버티브리
+bone|lumbar vertebrae|허리뼈|럼바 ; 버티브리
+bone|atlas|고리뼈|아틀라스
+bone|axis|중쇠뼈|액시스
+bone|sacrum|엉치뼈|세이크럼
+bone|coccyx|꼬리뼈|칵식스
+bone|intervertebral disc|척추사이원반|인터/버티브럴 ; 디스크
+bone|intervertebral foramen|척추사이구멍|인터/버티브럴 ; 포레이먼
+bone|spinous process|가시돌기|스파이/너스 ; 프로세스
+bone|transverse process|가로돌기|트랜스/버스 ; 프로세스
+bone|superior articular process|위관절돌기|슈피리어 ; 아티큘러 ; 프로세스
+bone|inferior articular process|아래관절돌기|인피리어 ; 아티큘러 ; 프로세스
+bone|lamina|고리판|라미나
+bone|pedicle|고리뿌리|페디클
+bone|vertebral body|척추뼈몸통|버티브럴 ; 바디
+bone|vertebral foramen|척추뼈구멍|버티브럴 ; 포레이먼
+bone|vertebral arch|척추뼈고리|버티브럴 ; 아치
+bone|anterior arch|앞고리|앤티리어 ; 아치
+bone|posterior arch|뒤고리|포스/테리어 ; 아치
+bone|anterior tubercle|앞결절|앤티리어 ; 튜버클
+bone|posterior tubercle|뒤결절|포스/테리어 ; 튜버클
+bone|lateral mass|가쪽덩이|래터럴 ; 매스
+bone|transverse foramen|가로구멍|트랜스/버스 ; 포레이먼
+bone|dens|치아돌기|덴스
+bone|facet for dens|치아돌기오목|퍼셋 ; 포 ; 덴스
+bone|groove for vertebral artery|척추동맥고랑|그루브 ; 포 ; 버티브럴 ; 아터리
+bone|superior articular surface|위관절면|슈피리어 ; 아티큘러 ; 서피스
+bone|anterior articular facet|앞관절면|앤티리어 ; 아티큘러 ; 퍼셋
+bone|posterior articular facet|뒤관절면|포스/테리어 ; 아티큘러 ; 퍼셋
+bone|superior costal facet|위갈비오목|슈피리어 ; 코스탈 ; 퍼셋
+bone|inferior costal facet|아래갈비오목|인피리어 ; 코스탈 ; 퍼셋
+bone|transverse costal facet|가로갈비오목|트랜스/버스 ; 코스탈 ; 퍼셋
+bone|inferior vertebral notch|아래척추뼈패임|인피리어 ; 버티브럴 ; 노치
+bone|accessory process|덧돌기|액세서리 ; 프로세스
+bone|mammillary process|꼭지돌기|매밀러리 ; 프로세스
+bone|base of sacrum|엉치뼈바닥|베이스 ; 오브 ; 세이크럼
+bone|ala of sacrum|엉치뼈날개|알라 ; 오브 ; 세이크럼
+bone|sacral promontory|엉치뼈곶|세이크럴 ; 프라/먼토리
+bone|sacral canal|엉치뼈관|세이크럴 ; 커낼
+bone|sacral hiatus|엉치뼈틈새|세이크럴 ; 하이/에이터스
+bone|sacral cornu|엉치뼈뿔|세이크럴 ; 코누
+bone|median sacral crest|정중엉치뼈능선|미디언 ; 세이크럴 ; 크레스트
+bone|intermediate sacral crest|중간엉치뼈능선|인터/미디엇 ; 세이크럴 ; 크레스트
+bone|lateral sacral crest|가쪽엉치뼈능선|래터럴 ; 세이크럴 ; 크레스트
+bone|anterior sacral foramen|앞엉치뼈구멍|앤티리어 ; 세이크럴 ; 포레이먼
+bone|posterior sacral foramen|뒤엉치뼈구멍|포스/테리어 ; 세이크럴 ; 포레이먼
+bone|transverse line|가로선|트랜스/버스 ; 라인
+bone|auricular surface|귓바퀴면|오리큘러 ; 서피스
+bone|superior angle|위각|슈피리어 ; 앵글
+bone|inferior angle|아래각|인피리어 ; 앵글
+bone|superior border|위모서리|슈피리어 ; 보더
+bone|medial border|안쪽모서리|미디얼 ; 보더
+bone|lateral border|가쪽모서리|래터럴 ; 보더
+bone|supraspinous fossa|가시위오목|수프라/스파이/너스 ; 포사
+bone|infraspinous fossa|가시아래오목|인프라/스파이/너스 ; 포사
+bone|acromion|봉우리|아크로/미온
+bone|coracoid process|부리돌기|코라/코이드 ; 프로세스
+bone|spine of scapula|어깨뼈가시|스파인 ; 오브 ; 스캐퓰라
+bone|glenoid cavity|접시오목|글레/노이드 ; 캐비티
+bone|supraglenoid tubercle|접시위결절|수프라/글레/노이드 ; 튜버클
+bone|infraglenoid tubercle|접시아래결절|인프라/글레/노이드 ; 튜버클
+bone|manubrium|복장뼈자루|머뉴/브리엄
+bone|body of sternum|복장뼈몸통|바디 ; 오브 ; 스터넘
+bone|sternal angle|복장뼈각|스터널 ; 앵글
+bone|xiphoid process|칼돌기|지포이드 ; 프로세스
+bone|xiphisternal joint|칼몸통결합|지피/스터널 ; 조인트
+bone|jugular notch|목아래패임|저귤러 ; 노치
+bone|clavicular notch|빗장패임|클라/비큘러 ; 노치
+bone|head of humerus|위팔뼈머리|헤드 ; 오브 ; 휴머러스
+bone|anatomical neck|해부목|아나/토미컬 ; 넥
+bone|surgical neck|외과목|서지컬 ; 넥
+bone|greater tubercle|큰결절|그레이터 ; 튜버클
+bone|lesser tubercle|작은결절|레서 ; 튜버클
+bone|crest of greater tubercle|큰결절능선|크레스트 ; 오브 ; 그레이터 ; 튜버클
+bone|crest of lesser tubercle|작은결절능선|크레스트 ; 오브 ; 레서 ; 튜버클
+bone|intertubercular groove|결절사이고랑|인터/튜버큘러 ; 그루브
+bone|deltoid tuberosity|세모근거친면|델토이드 ; 튜버/로시티
+bone|radial groove|노신경고랑|레이디얼 ; 그루브
+bone|medial epicondyle|안쪽위관절융기|미디얼 ; 에피/콘다일
+bone|lateral epicondyle|가쪽위관절융기|래터럴 ; 에피/콘다일
+bone|medial supracondylar ridge|안쪽위관절융기능선|미디얼 ; 수프라/콘딜러 ; 릿지
+bone|lateral supracondylar ridge|가쪽위관절융기능선|래터럴 ; 수프라/콘딜러 ; 릿지
+bone|capitulum|작은머리|캐피튤럼
+bone|trochlea|도르래|트로/클리아
+bone|coronoid fossa|갈고리오목|코로/노이드 ; 포사
+bone|radial fossa|노오목|레이디얼 ; 포사
+bone|olecranon fossa|팔꿈치오목|올레/크라논 ; 포사
+bone|radius|노뼈|레이디/어스
+bone|ulna|자뼈|울나
+bone|olecranon|팔꿈치머리|올레/크라논
+bone|head of radius|노뼈머리|헤드 ; 오브 ; 레이디/어스
+bone|neck of radius|노뼈목|넥 ; 오브 ; 레이디/어스
+bone|radial tuberosity|노뼈거친면|레이디얼 ; 튜버/로시티
+bone|head of ulna|자뼈머리|헤드 ; 오브 ; 울나
+bone|ulnar tuberosity|자뼈거친면|울나 ; 튜버/로시티
+bone|radial styloid process|노뼈붓돌기|레이디얼 ; 스타일/로이드 ; 프로세스
+bone|ulnar styloid process|자뼈붓돌기|울나 ; 스타일/로이드 ; 프로세스
+bone|coronoid process|갈고리돌기|코로/노이드 ; 프로세스
+bone|trochlear notch|도르래패임|트로클/리어 ; 노치
+bone|radial notch|노패임|레이디얼 ; 노치
+bone|ulnar notch|자패임|울나 ; 노치
+bone|interosseous border|뼈사이모서리|인터/아시어스 ; 보더
+bone|head of femur|넙다리뼈머리|헤드 ; 오브 ; 피머
+bone|neck of femur|넙다리뼈목|넥 ; 오브 ; 피머
+bone|shaft of femur|넙다리뼈몸통|섀프트 ; 오브 ; 피머
+bone|fovea capitis|넙다리뼈머리오목|포비아 ; 캐피티스
+bone|greater trochanter|큰돌기|그레이터 ; 트로캔터
+bone|lesser trochanter|작은돌기|레서 ; 트로캔터
+bone|intertrochanteric line|돌기사이선|인터/트로/캔터릭 ; 라인
+bone|intertrochanteric crest|돌기사이능선|인터/트로/캔터릭 ; 크레스트
+bone|trochanteric fossa|돌기오목|트로/캔터릭 ; 포사
+bone|gluteal tuberosity|볼기근거친면|글루티얼 ; 튜버/로시티
+bone|pectineal line|두덩근선|펙티니얼 ; 라인
+bone|linea aspera|거친선|리니아 ; 아스페라
+bone|medial condyle|안쪽관절융기|미디얼 ; 콘다일
+bone|lateral condyle|가쪽관절융기|래터럴 ; 콘다일
+bone|medial supracondylar line|안쪽관절융기위선|미디얼 ; 수프라/콘딜러 ; 라인
+bone|lateral supracondylar line|가쪽관절융기위선|래터럴 ; 수프라/콘딜러 ; 라인
+bone|adductor tubercle|모음근결절|어덕터 ; 튜버클
+bone|intercondylar fossa|융기사이오목|인터/콘딜러 ; 포사
+bone|patellar surface|무릎면|퍼텔러 ; 서피스
+bone|popliteal surface|오금면|팝리티얼 ; 서피스
+bone|nutrient foramen|영양구멍|뉴트리/언트 ; 포레이먼
+bone|tibial tuberosity|정강뼈거친면|티비얼 ; 튜버/로시티
+bone|intercondylar eminence|융기사이융기|인터/콘딜러 ; 에미넌스
+bone|soleal line|가자미근선|솔리얼 ; 라인
+bone|anterior border|앞모서리|앤티리어 ; 보더
+bone|medial malleolus|안쪽복사|미디얼 ; 말리/올러스
+bone|lateral malleolus|가쪽복사|래터럴 ; 말리/올러스
+bone|head of fibula|종아리뼈머리|헤드 ; 오브 ; 피뷸라
+bone|neck of fibula|종아리뼈목|넥 ; 오브 ; 피뷸라
+bone|scaphoid|손배뼈|스캐/포이드
+bone|lunate|반달뼈|루네이트
+bone|triquetrum|세모뼈|트라이/퀴트럼
+bone|pisiform|콩알뼈|피시폼
+bone|trapezium|큰마름뼈|트라피/지엄
+bone|trapezoid|작은마름뼈|트래퍼/조이드
+bone|capitate|알머리뼈|캐피/테이트
+bone|hamate|갈고리뼈|해메이트
+bone|metacarpal|손허리뼈|메타카펄
+bone|phalanges|손가락뼈|팔랜지스
+bone|talus|목말뼈|탈러스
+bone|calcaneus|발꿈치뼈|칼카/네우스
+bone|navicular|발배뼈|네비큘러
+bone|cuboid|입방뼈|큐보이드
+bone|medial cuneiform|안쪽쐐기뼈|미디얼 ; 큐니폼
+bone|intermediate cuneiform|중간쐐기뼈|인터/미디엇 ; 큐니폼
+bone|lateral cuneiform|가쪽쐐기뼈|래터럴 ; 큐니폼
+bone|metatarsal|발허리뼈|메타타설
+bone|ilium|엉덩뼈|일리엄
+bone|ischium|궁둥뼈|이스키엄
+bone|pubis|두덩뼈|퓨비스
+bone|iliac crest|엉덩뼈능선|일리악 ; 크레스트
+bone|iliac fossa|엉덩뼈오목|일리악 ; 포사
+bone|iliac tuberosity|엉덩뼈거친면|일리악 ; 튜버/로시티
+bone|anterior superior iliac spine|위앞엉덩뼈가시|앤티리어 ; 슈피리어 ; 일리악 ; 스파인
+bone|posterior superior iliac spine|위뒤엉덩뼈가시|포스/테리어 ; 슈피리어 ; 일리악 ; 스파인
+bone|greater sciatic notch|큰궁둥패임|그레이터 ; 사이애틱 ; 노치
+bone|lesser sciatic notch|작은궁둥패임|레서 ; 사이애틱 ; 노치
+bone|ischial spine|궁둥가시|이스키얼 ; 스파인
+bone|ischial tuberosity|궁둥뼈결절|이스키얼 ; 튜버/로시티
+bone|obturator foramen|폐쇄구멍|옵튜/레이터 ; 포레이먼
+bone|gluteal surface|볼기면|글루티얼 ; 서피스
+bone|lunate surface|반달면|루네이트 ; 서피스
+bone|acetabulum|절구|아세/타뷸럼
+bone|acetabular fossa|절구오목|아세/타뷸러 ; 포사
+bone|acetabular notch|절구패임|아세/타뷸러 ; 노치
+bone|acetabular margin|절구모서리|아세/타뷸러 ; 마진
+muscle|trapezius|등세모근|트라피/지어스
+muscle|levator scapulae|어깨올림근|리베이터 ; 스캐퓰라
+muscle|rhomboid minor|작은마름근|롬보이드 ; 마이너
+muscle|rhomboid major|큰마름근|롬보이드 ; 메이저
+muscle|latissimus dorsi|넓은등근|래티/시머스 ; 도르시
+muscle|pectoralis major|큰가슴근|펙토/랄리스 ; 메이저
+muscle|pectoralis minor|작은가슴근|펙토/랄리스 ; 마이너
+muscle|serratus anterior|앞톱니근|세라투스 ; 앤티리어
+muscle|subclavius|빗장밑근|서브/클라/비어스
+muscle|deltoid|어깨세모근|델토이드
+muscle|supraspinatus|가시위근|수프라/스피/네이터스
+muscle|infraspinatus|가시아래근|인프라/스피/네이터스
+muscle|teres minor|작은원근|테레스 ; 마이너
+muscle|teres major|큰원근|테레스 ; 메이저
+muscle|subscapularis|어깨밑근|서브/스캐퓰/라리스
+muscle|biceps brachii|위팔두갈래근|바이셉스 ; 브라키/아이
+muscle|triceps brachii|위팔세갈래근|트라이/셉스 ; 브라키/아이
+muscle|brachialis|위팔근|브라키/알리스
+muscle|coracobrachialis|부리위팔근|코라코/브라키/알리스
+muscle|anconeus|팔꿈치근|앤코/니어스
+muscle|pronator teres|원엎침근|프로/네이터 ; 테레스
+muscle|pronator quadratus|네모엎침근|프로/네이터 ; 쿼드/라투스
+muscle|flexor carpi radialis|노쪽손목굽힘근|플렉서 ; 카피 ; 레이디/알리스
+muscle|flexor carpi ulnaris|자쪽손목굽힘근|플렉서 ; 카피 ; 울나리스
+muscle|palmaris longus|긴손바닥근|팔마리스 ; 롱구스
+muscle|flexor digitorum superficialis|얕은손가락굽힘근|플렉서 ; 디지토룸 ; 수퍼피/셜리스
+muscle|flexor digitorum profundus|깊은손가락굽힘근|플렉서 ; 디지토룸 ; 프로/펀더스
+muscle|flexor pollicis longus|긴엄지굽힘근|플렉서 ; 폴리시스 ; 롱구스
+muscle|brachioradialis|위팔노근|브라키오/레이디/알리스
+muscle|extensor carpi radialis longus|긴노쪽손목폄근|익스텐서 ; 카피 ; 레이디/알리스 ; 롱구스
+muscle|extensor carpi radialis brevis|짧은노쪽손목폄근|익스텐서 ; 카피 ; 레이디/알리스 ; 브레비스
+muscle|extensor carpi ulnaris|자쪽손목폄근|익스텐서 ; 카피 ; 울나리스
+muscle|extensor digitorum|손가락폄근|익스텐서 ; 디지토룸
+muscle|extensor digiti minimi|새끼폄근|익스텐서 ; 디지티 ; 미니미
+muscle|supinator|손뒤침근|수피/네이터
+muscle|abductor pollicis longus|긴엄지벌림근|앱덕터 ; 폴리시스 ; 롱구스
+muscle|extensor pollicis brevis|짧은엄지폄근|익스텐서 ; 폴리시스 ; 브레비스
+muscle|extensor pollicis longus|긴엄지폄근|익스텐서 ; 폴리시스 ; 롱구스
+muscle|extensor indicis|집게폄근|익스텐서 ; 인디시스
+muscle|abductor pollicis brevis|짧은엄지벌림근|앱덕터 ; 폴리시스 ; 브레비스
+muscle|flexor pollicis brevis|짧은엄지굽힘근|플렉서 ; 폴리시스 ; 브레비스
+muscle|opponens pollicis|엄지맞섬근|오포넨스 ; 폴리시스
+muscle|adductor pollicis|엄지모음근|어덕터 ; 폴리시스
+muscle|abductor digiti minimi|새끼벌림근|앱덕터 ; 디지티 ; 미니미
+muscle|opponens digiti minimi|새끼맞섬근|오포넨스 ; 디지티 ; 미니미
+muscle|flexor digiti minimi brevis|짧은새끼굽힘근|플렉서 ; 디지티 ; 미니미 ; 브레비스
+muscle|lumbricals|벌레근|럼브리/컬스
+muscle|palmar interossei|바닥쪽뼈사이근|팔마 ; 인터/아시아이
+muscle|dorsal interossei|등쪽뼈사이근|도설 ; 인터/아시아이
+muscle|psoas major|큰허리근|소아스 ; 메이저
+muscle|psoas minor|작은허리근|소아스 ; 마이너
+muscle|iliacus|엉덩근|일리/아커스
+muscle|gluteus maximus|큰볼기근|글루/테우스 ; 맥시머스
+muscle|gluteus medius|중간볼기근|글루/테우스 ; 미디어스
+muscle|gluteus minimus|작은볼기근|글루/테우스 ; 미니머스
+muscle|tensor fasciae latae|넙다리근막긴장근|텐서 ; 파시에 ; 라테
+muscle|piriformis|궁둥구멍근|피리/포미스
+muscle|obturator internus|속폐쇄근|옵튜/레이터 ; 인터너스
+muscle|obturator externus|바깥폐쇄근|옵튜/레이터 ; 익스/터너스
+muscle|superior gemellus|위쌍둥이근|슈피리어 ; 제멜러스
+muscle|inferior gemellus|아래쌍둥이근|인피리어 ; 제멜러스
+muscle|quadratus femoris|넙다리네모근|쿼드/라투스 ; 페모리스
+muscle|pectineus|두덩근|펙티/니어스
+muscle|gracilis|두덩정강근|그라/실리스
+muscle|sartorius|넙다리빗근|사토/리어스
+muscle|adductor longus|긴모음근|어덕터 ; 롱구스
+muscle|adductor brevis|짧은모음근|어덕터 ; 브레비스
+muscle|adductor magnus|큰모음근|어덕터 ; 매그너스
+muscle|rectus femoris|넙다리곧은근|렉터스 ; 페모리스
+muscle|vastus medialis|안쪽넓은근|배스터스 ; 미디/알리스
+muscle|vastus intermedius|중간넓은근|배스터스 ; 인터/미디어스
+muscle|vastus lateralis|가쪽넓은근|배스터스 ; 래터/랄리스
+muscle|biceps femoris|넙다리두갈래근|바이셉스 ; 페모리스
+muscle|semitendinosus|반힘줄근|세미/텐디/노서스
+muscle|semimembranosus|반막근|세미/멤브레/노서스
+muscle|tibialis anterior|앞정강근|티비/알리스 ; 앤티리어
+muscle|tibialis posterior|뒤정강근|티비/알리스 ; 포스/테리어
+muscle|extensor digitorum longus|긴발가락폄근|익스텐서 ; 디지토룸 ; 롱구스
+muscle|extensor hallucis longus|긴엄지폄근(발)|익스텐서 ; 할루시스 ; 롱구스
+muscle|peroneus tertius|셋째종아리근|페로/니어스 ; 터셔스
+muscle|peroneus longus|긴종아리근|페로/니어스 ; 롱구스
+muscle|peroneus brevis|짧은종아리근|페로/니어스 ; 브레비스
+muscle|gastrocnemius|장딴지근|개스트록/니미어스
+muscle|soleus|가자미근|솔리어스
+muscle|plantaris|장딴지빗근|플랜/타리스
+muscle|popliteus|오금근|팝리/티어스
+muscle|flexor digitorum longus|긴발가락굽힘근|플렉서 ; 디지토룸 ; 롱구스
+muscle|flexor hallucis longus|긴엄지굽힘근(발)|플렉서 ; 할루시스 ; 롱구스
+muscle|extensor hallucis brevis|짧은엄지폄근(발)|익스텐서 ; 할루시스 ; 브레비스
+muscle|extensor digitorum brevis|짧은발가락폄근|익스텐서 ; 디지토룸 ; 브레비스
+muscle|abductor hallucis|엄지벌림근|앱덕터 ; 할루시스
+muscle|adductor hallucis|엄지모음근(발)|어덕터 ; 할루시스
+muscle|flexor digitorum brevis|짧은발가락굽힘근|플렉서 ; 디지토룸 ; 브레비스
+muscle|flexor hallucis brevis|짧은엄지굽힘근(발)|플렉서 ; 할루시스 ; 브레비스
+muscle|quadratus plantae|발바닥네모근|쿼드/라투스 ; 플랜테
+muscle|plantar interossei|바닥쪽뼈사이근(발)|플랜타 ; 인터/아시아이
+headbone|frontal bone|이마뼈|프론탈 ; 본
+headbone|parietal bone|마루뼈|퍼라이/어탈 ; 본
+headbone|temporal bone|관자뼈|템포럴 ; 본
+headbone|occipital bone|뒤통수뼈|옥시피탈 ; 본
+headbone|sphenoid bone|나비뼈|스페/노이드 ; 본
+headbone|ethmoid bone|벌집뼈|에스/모이드 ; 본
+headbone|nasal bone|코뼈|네이절 ; 본
+headbone|lacrimal bone|눈물뼈|래크리멀 ; 본
+headbone|zygomatic bone|광대뼈|자이고/매틱 ; 본
+headbone|maxilla|위턱뼈|맥실라
+headbone|mandible|아래턱뼈|맨디블
+headbone|palatine bone|입천장뼈|팔라타인 ; 본
+headbone|vomer|보습뼈|보머
+headbone|inferior nasal concha|아래코선반|인피리어 ; 네이절 ; 콘카
+headbone|hyoid bone|목뿔뼈|하이/오이드 ; 본
+headbone|coronal suture|관상봉합|코로널 ; 수처
+headbone|sagittal suture|시상봉합|새지털 ; 수처
+headbone|lambdoid suture|시옷봉합|람도이드 ; 수처
+headbone|squamous suture|비늘봉합|스쿼머스 ; 수처
+headbone|external occipital protuberance|바깥뒤통수뼈융기|익스터널 ; 옥시피탈 ; 프로튜/버런스
+headbone|superior nuchal line|위목덜미선|슈피리어 ; 뉴컬 ; 라인
+headbone|mastoid process|꼭지돌기|매스/토이드 ; 프로세스
+headbone|styloid process|붓돌기|스타일/로이드 ; 프로세스
+headbone|zygomatic arch|광대활|자이고/매틱 ; 아치
+headbone|external acoustic meatus|바깥귀길|익스터널 ; 어쿠스틱 ; 미에/이터스
+headbone|internal acoustic meatus|속귀길|인터널 ; 어쿠스틱 ; 미에/이터스
+headbone|foramen magnum|큰구멍|포레이먼 ; 매그넘
+headbone|occipital condyle|뒤통수뼈관절융기|옥시피탈 ; 콘다일
+headbone|mandibular fossa|턱관절오목|맨디/뷸러 ; 포사
+headbone|sella turcica|안장|셀라 ; 터시카
+headbone|crista galli|볏돌기|크리스타 ; 갈리
+headbone|cribriform plate|벌집판|크리브/리폼 ; 플레이트
+headbone|optic canal|시각신경관|옵틱 ; 커낼
+headbone|superior orbital fissure|위눈확틈새|슈피리어 ; 오비탈 ; 피셔
+headbone|supraorbital foramen|눈확위구멍|수프라/오비탈 ; 포레이먼
+headbone|infraorbital foramen|눈확아래구멍|인프라/오비탈 ; 포레이먼
+headbone|jugular foramen|목정맥구멍|저귤러 ; 포레이먼
+headbone|carotid canal|목동맥관|커로티드 ; 커낼
+headbone|foramen ovale|타원구멍|포레이먼 ; 오발레
+headbone|foramen rotundum|원형구멍|포레이먼 ; 로툰덤
+headbone|hard palate|단단입천장|하드 ; 팔레트
+headbone|nasal septum|코중격|네이절 ; 셉텀
+headbone|mental foramen|턱끝구멍|멘탈 ; 포레이먼
+headbone|condylar process|관절돌기|콘딜러 ; 프로세스
+headbone|coronoid process of mandible|근육돌기|코로/노이드 ; 프로세스 ; 오브 ; 맨디블
+headbone|angle of mandible|아래턱각|앵글 ; 오브 ; 맨디블
+headbone|ramus of mandible|아래턱가지|레이머스 ; 오브 ; 맨디블
+headbone|glabella|미간|글라벨라
+headbone|nasion|코뿌리점|네이지온
+headbone|bregma|브레그마|브레그마
+headbone|lambda|람다|람다
+headbone|pterion|프테리온|프테리온
+headmuscle|occipitofrontalis|뒤통수이마근|옥시피토/프론/탈리스
+headmuscle|orbicularis oculi|눈둘레근|오비큘/라리스 ; 오큘라이
+headmuscle|orbicularis oris|입둘레근|오비큘/라리스 ; 오리스
+headmuscle|corrugator supercilii|눈썹주름근|코러/게이터 ; 수퍼/실리아이
+headmuscle|procerus|눈살근|프로/세러스
+headmuscle|nasalis|코근|네이/잘리스
+headmuscle|levator labii superioris|위입술올림근|리베이터 ; 레비아이 ; 슈피/리오리스
+headmuscle|levator anguli oris|입꼬리올림근|리베이터 ; 앵굴리 ; 오리스
+headmuscle|zygomaticus major|큰광대근|자이고/매티커스 ; 메이저
+headmuscle|zygomaticus minor|작은광대근|자이고/매티커스 ; 마이너
+headmuscle|risorius|입꼬리당김근|리소/리어스
+headmuscle|depressor anguli oris|입꼬리내림근|디프레서 ; 앵굴리 ; 오리스
+headmuscle|depressor labii inferioris|아래입술내림근|디프레서 ; 레비아이 ; 인피/리오리스
+headmuscle|mentalis|턱끝근|멘탈리스
+headmuscle|buccinator|볼근|벅시/네이터
+headmuscle|masseter|깨물근|매서터
+headmuscle|temporalis|관자근|템포/랄리스
+headmuscle|medial pterygoid|안쪽날개근|미디얼 ; 테리/고이드
+headmuscle|lateral pterygoid|가쪽날개근|래터럴 ; 테리/고이드
+headmuscle|superior rectus|위곧은근|슈피리어 ; 렉터스
+headmuscle|inferior rectus|아래곧은근|인피리어 ; 렉터스
+headmuscle|medial rectus|안쪽곧은근|미디얼 ; 렉터스
+headmuscle|lateral rectus|가쪽곧은근|래터럴 ; 렉터스
+headmuscle|superior oblique|위빗근|슈피리어 ; 오블리크
+headmuscle|inferior oblique|아래빗근|인피리어 ; 오블리크
+headmuscle|levator palpebrae superioris|위눈꺼풀올림근|리베이터 ; 팔페/브리 ; 슈피/리오리스
+headmuscle|genioglossus|턱끝혀근|제니오/글로서스
+headmuscle|hyoglossus|목뿔혀근|하이오/글로서스
+headmuscle|styloglossus|붓혀근|스타일로/글로서스
+`;

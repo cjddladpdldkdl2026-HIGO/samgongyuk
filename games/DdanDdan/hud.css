@@ -1,0 +1,225 @@
+/* ============================================================================
+ * 딴딴/딴 — HUD skin (loaded last). Look of the menu concepts: dark glass panels, thin neon cyan / violet
+ * frames with corner brackets, electric glow, techy upper-case type. Positions are NOT changed here —
+ * only colours, frames, type and effects.
+ * ========================================================================== */
+:root {
+  /* colours taken from the stage art: sky blue glass, ice-white edges, cyan light, a little violet as the accent */
+  --hud-bg: rgba(20, 62, 138, .58);        /* panel glass: the deep blue of the buildings */
+  --hud-bg2: rgba(28, 84, 170, .55);       /* buttons, tiles: a lighter sky blue */
+  --hud-cyan: #8fe6ff; --hud-violet: #a98bff; --hud-pink: #ff8ad8; --hud-red: #ff6b85; --hud-green: #6dffc0;
+  --hud-text: #f2faff; --hud-muted: #c4def5;
+  --hud-edge: rgba(200, 238, 255, .75);
+  --hud-glow-c: 0 0 0 1px rgba(200, 238, 255, .6), 0 0 16px rgba(143, 230, 255, .45), inset 0 0 18px rgba(143, 230, 255, .12);
+  --hud-glow-v: 0 0 0 1px rgba(169, 139, 255, .9), 0 0 22px rgba(169, 139, 255, .6), inset 0 0 22px rgba(169, 139, 255, .18);
+  /* corner brackets: draw ⌐ ¬ └ ┘ with gradients (colour --bc, arm length --bl) */
+  --bl: 14px;
+  --brackets:
+    linear-gradient(var(--bc), var(--bc)) top left / var(--bl) 2px no-repeat, linear-gradient(var(--bc), var(--bc)) top left / 2px var(--bl) no-repeat,
+    linear-gradient(var(--bc), var(--bc)) top right / var(--bl) 2px no-repeat, linear-gradient(var(--bc), var(--bc)) top right / 2px var(--bl) no-repeat,
+    linear-gradient(var(--bc), var(--bc)) bottom left / var(--bl) 2px no-repeat, linear-gradient(var(--bc), var(--bc)) bottom left / 2px var(--bl) no-repeat,
+    linear-gradient(var(--bc), var(--bc)) bottom right / var(--bl) 2px no-repeat, linear-gradient(var(--bc), var(--bc)) bottom right / 2px var(--bl) no-repeat;
+  --bc: var(--hud-cyan);
+  --ink: var(--hud-text); --dim: var(--hud-muted);
+  --hud-font: 'Rajdhani', 'Black Han Sans', sans-serif;
+}
+
+/* ── panels: dark glass, neon frame, corner brackets, faint scan lines ── */
+.panel { color: var(--hud-text); border: 1px solid var(--hud-edge); border-radius: 6px;
+  background: var(--brackets), repeating-linear-gradient(0deg, rgba(255, 255, 255, .04) 0 1px, transparent 1px 4px), var(--hud-bg);
+  -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); box-shadow: var(--hud-glow-c), 0 12px 30px rgba(10, 40, 100, .35); }
+.setupBox h2, .missHead { position: relative; color: #fff; font-family: var(--cute); letter-spacing: .04em; padding-bottom: 6px;
+  border-bottom: 1px solid rgba(143, 230, 255, .3); text-shadow: 0 0 10px rgba(143, 230, 255, .55); }
+.setupBox h2::after, .missHead::after { content: ''; position: absolute; right: 0; bottom: -1px; width: 60px; height: 2px; background: linear-gradient(90deg, var(--hud-cyan), var(--hud-violet)); }
+.setupTitle { color: #fff !important; -webkit-text-stroke: 0 !important; text-shadow: 0 0 14px rgba(169, 139, 255, .9), 0 2px 0 #000 !important; letter-spacing: .03em; }
+
+/* ── buttons: dark tile, neon edge, brackets; hover = brighter glow ── */
+.btn3d { color: var(--hud-text); border: 1px solid var(--hud-edge); border-radius: 4px; background: var(--brackets), var(--hud-bg2);
+  box-shadow: var(--hud-glow-c); text-shadow: 0 0 8px rgba(143, 230, 255, .45); }
+.btn3d:hover { box-shadow: 0 0 0 1px var(--hud-cyan), 0 0 24px rgba(143, 230, 255, .65), inset 0 0 22px rgba(143, 230, 255, .15); color: #fff; }
+.btn3d:active { transform: scale(.98); }
+/* the main action (START / PLAY / 다시하기): violet-cyan neon bar with lightning glow and a light sweep */
+.big { --bc: #fff; color: #fff; border: 1px solid rgba(255, 255, 255, .9); border-radius: 4px; transform: none;
+  font-family: var(--hud-font); font-weight: 700; letter-spacing: .14em; text-transform: uppercase;
+  background: var(--brackets), linear-gradient(90deg, rgba(58, 160, 255, .92), rgba(130, 110, 255, .92) 60%, rgba(220, 110, 240, .88));
+  box-shadow: 0 0 0 1px var(--hud-violet), 0 0 28px rgba(169, 139, 255, .75), 0 0 60px rgba(143, 230, 255, .25), inset 0 0 24px rgba(169, 139, 255, .35);
+  text-shadow: 0 0 10px #fff, 0 0 22px var(--hud-cyan); }
+.big:active { transform: scale(.98); }
+.big:disabled { filter: grayscale(.6) brightness(.8); }
+#title .startBig { --bl: 18px; animation: hudPulse 1.6s ease-in-out infinite; }
+@keyframes hudPulse { 0%, 100% { box-shadow: 0 0 0 1px var(--hud-violet), 0 0 22px rgba(169, 139, 255, .65), inset 0 0 20px rgba(169, 139, 255, .3); }
+  50% { box-shadow: 0 0 0 1px #fff, 0 0 44px rgba(169, 139, 255, .95), 0 0 80px rgba(143, 230, 255, .45), inset 0 0 30px rgba(169, 139, 255, .5); } }
+/* side arrows like "◀ GAME START ▶" when a main button is hovered */
+.big:hover::before { content: '◀'; position: absolute; left: 12px; top: 50%; translate: 0 -50%; color: var(--hud-cyan); font-size: .55em; text-shadow: 0 0 8px var(--hud-cyan); }
+
+/* ── choices (maps, voices): dark tiles; selected = violet neon frame with brackets ── */
+.choice { color: var(--hud-text); border: 1px solid rgba(143, 230, 255, .3); border-radius: 4px; background: var(--hud-bg2); box-shadow: none; }
+.choice:hover { border-color: var(--hud-cyan); box-shadow: 0 0 14px rgba(143, 230, 255, .35); }
+.choice b { color: #fff; }
+.choice small { color: var(--hud-muted); }
+.choice.on { --bc: var(--hud-violet); transform: none; border-color: var(--hud-violet);
+  background: var(--brackets), linear-gradient(90deg, rgba(169, 139, 255, .28), rgba(143, 230, 255, .1)), var(--hud-bg2); box-shadow: var(--hud-glow-v); }
+.voices .choice.on { background: var(--brackets), linear-gradient(90deg, rgba(169, 139, 255, .28), rgba(143, 230, 255, .1)), var(--hud-bg2); }
+.choice.on b { text-shadow: 0 0 10px rgba(169, 139, 255, .9); }
+
+/* ── song box ── */
+.ytRow input { color: var(--hud-text); background: rgba(14, 44, 104, .6); border: 1px solid var(--hud-edge); border-radius: 4px; box-shadow: inset 0 0 14px rgba(143, 230, 255, .12); }
+.ytRow input::placeholder { color: var(--hud-muted); }
+.ytRow input:focus { background: rgba(14, 44, 104, .75); border-color: var(--hud-cyan); box-shadow: 0 0 12px rgba(143, 230, 255, .45), inset 0 0 14px rgba(143, 230, 255, .15); }
+.ytBtn { color: #fff; -webkit-text-stroke: 0; background: var(--brackets), linear-gradient(90deg, rgba(255, 79, 109, .5), rgba(255, 79, 216, .35)), var(--hud-bg2); --bc: var(--hud-pink); border-color: var(--hud-pink); }
+.subSong.on, .ytBtn.on { outline: 0; --bc: var(--hud-violet); box-shadow: var(--hud-glow-v); border-color: var(--hud-violet); }
+.songInfo { color: var(--hud-text); background: rgba(14, 44, 104, .5); border: 1px solid rgba(143, 230, 255, .35); border-radius: 4px; }
+.thumb { border: 1px solid var(--hud-cyan); border-radius: 3px; }
+.light { border: 1px solid currentColor; border-radius: 3px; font-family: var(--hud-font); font-weight: 700; letter-spacing: .04em; background: rgba(0, 0, 0, .35) !important; }
+.light.green { color: var(--hud-green); } .light.yellow { color: #ffd84d; } .light.red { color: var(--hud-red); } .light.wait { color: var(--hud-muted); }
+.mini { color: var(--hud-text); background: var(--hud-bg2); border: 1px solid var(--hud-edge); border-radius: 3px; box-shadow: none; }
+.mini.hot { background: rgba(169, 139, 255, .35); border-color: var(--hud-violet); }
+.pdots i { border: 1px solid var(--hud-cyan); background: transparent; } .pdots i.on { background: var(--hud-cyan); box-shadow: 0 0 8px var(--hud-cyan); }
+.adjust summary { color: var(--hud-muted); }
+#setup .status:not(:empty), #setup .duckOpt, #setup .tip { color: var(--hud-text); background: var(--hud-bg); border: 1px solid rgba(143, 230, 255, .3); border-radius: 3px; }
+.tip b { color: var(--hud-cyan); }
+.status.ok { color: var(--hud-green); } .status.err { color: var(--hud-red); }
+.back, .quit { font-family: var(--hud-font); font-weight: 700; letter-spacing: .06em; }
+.credits { color: rgba(232, 244, 255, .75); text-shadow: 0 1px 2px #000; }
+
+/* ── play: HUD boxes, MC frame, bubble, video frame ── */
+.hud .box { --bc: var(--hud-cyan); border-radius: 4px; }
+.hud .box:nth-child(1), .hud .box:nth-child(2), .hud .box:nth-child(3) { background: var(--brackets), var(--hud-bg); }
+.hud small { color: var(--hud-cyan); font-family: var(--hud-font); letter-spacing: .18em; }
+.hud b { color: #fff; font-family: var(--hud-font); text-shadow: 0 0 10px rgba(143, 230, 255, .7); }
+#combo.hot { color: var(--hud-pink); text-shadow: 0 0 14px var(--hud-pink); }
+.prog { border: 1px solid var(--hud-edge); border-radius: 2px; background: rgba(14, 44, 104, .6); }
+.prog i { background: linear-gradient(90deg, var(--hud-cyan), var(--hud-violet), var(--hud-pink)); box-shadow: 0 0 10px var(--hud-violet); }
+.mcPic { border: 1px solid var(--hud-cyan); border-radius: 4px; box-shadow: var(--hud-glow-c); }
+.mcPic.talk { box-shadow: var(--hud-glow-v); border-color: var(--hud-violet); }
+.mcPic figcaption { font-family: var(--cute); }
+.bubble { color: #fff; background: var(--hud-bg); border: 1px solid var(--hud-edge); border-radius: 4px; box-shadow: var(--hud-glow-c); }
+.bubble::before { background: var(--hud-bg); border-left: 1px solid var(--hud-edge); border-bottom: 1px solid var(--hud-edge); }
+.phase { text-shadow: 0 0 16px rgba(169, 139, 255, .95), 0 0 2px #000, 0 2px 0 #000; }
+.phase.resp { color: var(--hud-cyan); text-shadow: 0 0 16px rgba(143, 230, 255, .95), 0 2px 0 #000; }
+.count { text-shadow: 0 0 30px var(--hud-violet), 0 0 60px var(--hud-cyan), 0 4px 0 #000; }
+.tv { --bc: var(--hud-cyan); --bl: 22px; border: 1px solid var(--hud-cyan); border-radius: 4px; box-shadow: 0 0 0 1px rgba(169, 139, 255, .6), 0 0 26px rgba(143, 230, 255, .45), 0 0 50px rgba(169, 139, 255, .3); }
+.listen, .heard { color: #fff; text-shadow: 0 1px 3px #000, 0 0 10px rgba(143, 230, 255, .6); }
+.lbar, .mic { border: 1px solid var(--hud-edge) !important; background: rgba(14, 44, 104, .6) !important; border-radius: 2px !important; }
+.mic i { background: var(--hud-green); box-shadow: 0 0 8px var(--hud-green); }
+.beats i { background: rgba(14, 44, 104, .6); border: 1px solid var(--hud-cyan); }
+.beats i.on { background: var(--hud-violet); box-shadow: 0 0 12px var(--hud-violet); }
+.beats i.on.resp { background: var(--hud-cyan); box-shadow: 0 0 12px var(--hud-cyan); }
+.tapSync { color: #fff; }
+
+/* word cards: dark glass, frame in the word's colour (--ws), brackets; the beat card lights up */
+.slot { --bc: var(--ws); color: #fff; border: 1px solid var(--ws); border-radius: 4px;
+  background: var(--brackets), linear-gradient(180deg, rgba(255, 255, 255, .06), transparent), var(--hud-bg);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--ws) 45%, transparent), inset 0 0 16px color-mix(in srgb, var(--ws) 15%, transparent); }
+.slot .ko { color: #fff; text-shadow: 0 0 12px color-mix(in srgb, var(--ws) 80%, transparent); }
+.slot .en { color: var(--ws); letter-spacing: .12em; }
+.slot.resp:not(.now) { border-style: dashed; }
+.slot.now { background: var(--brackets), linear-gradient(180deg, color-mix(in srgb, var(--ws) 40%, transparent), color-mix(in srgb, var(--ws) 12%, transparent)), var(--hud-bg);
+  box-shadow: 0 0 0 1px #fff, 0 0 26px var(--ws), inset 0 0 22px color-mix(in srgb, var(--ws) 35%, transparent); }
+.slot.joinR::after { background: var(--ws); border: 0; height: 3px; margin-top: -1.5px; box-shadow: 0 0 10px var(--ws); }
+.meanTag::before, .wordTag.multi::before { border-color: var(--hud-cyan); background: transparent; }
+.meanTag span, .wordTag span, .wordline span { color: #fff; background: var(--hud-bg); border: 1px solid var(--hud-edge); border-radius: 3px; }
+.wordTag i { color: var(--hud-cyan); }
+.judge { text-shadow: 0 0 10px currentColor, 0 2px 0 #000 !important; -webkit-text-stroke: 0 !important; }
+.j-perfect { color: var(--hud-green); } .j-good { color: var(--hud-cyan); } .j-miss { color: var(--hud-red); }
+.slot.miss { filter: grayscale(.4); border-color: var(--hud-red); }
+.slot.miss::before { color: var(--hud-red); -webkit-text-stroke: 0; text-shadow: 0 0 16px var(--hud-red), 0 2px 0 #000; }
+.missFlash { box-shadow: inset 0 0 0 3px var(--hud-red), inset 0 0 140px rgba(255, 79, 109, .55); }
+.sticker { color: #fff; border: 1px solid rgba(255, 255, 255, .85); border-radius: 4px; font-family: var(--cute);
+  box-shadow: 0 0 18px currentColor, 0 0 0 1px rgba(0, 0, 0, .3); text-shadow: 0 0 8px rgba(255, 255, 255, .8); }
+
+/* ── result ── */
+.stats div { --bc: var(--hud-cyan); color: #fff; border: 1px solid var(--hud-edge); border-radius: 4px; background: var(--brackets), var(--hud-bg2) !important; }
+.stats div.sScore { --bc: var(--hud-violet); border-color: var(--hud-violet); box-shadow: var(--hud-glow-v); }
+.stats div.sMiss { --bc: var(--hud-red); border-color: var(--hud-red); }
+.stats b { font-family: var(--hud-font); text-shadow: 0 0 12px rgba(143, 230, 255, .7); }
+.stats .sMiss b { color: var(--hud-red); text-shadow: 0 0 12px rgba(255, 79, 109, .7); }
+.stats small { color: var(--hud-muted); font-family: var(--hud-font); letter-spacing: .14em; }
+.missHead span { background: var(--hud-violet); border: 0; box-shadow: 0 0 10px var(--hud-violet); }
+.missItem { color: var(--hud-text); background: var(--hud-bg2); border: 1px solid rgba(143, 230, 255, .3); border-radius: 4px; }
+.mTop b { color: var(--hud-cyan); } .mN { color: var(--hud-red); }
+.mPart { background: rgba(14, 44, 104, .6); border: 1px solid rgba(169, 139, 255, .5); border-radius: 3px; }
+.mPart small { color: var(--hud-muted); }
+.resRight .misslist::-webkit-scrollbar-thumb { background: linear-gradient(var(--hud-cyan), var(--hud-violet)); }
+.grade { text-shadow: 0 0 30px var(--hud-violet), 0 0 60px var(--hud-cyan), 0 6px 0 #000; }
+.cheer { text-shadow: 0 0 12px rgba(169, 139, 255, .9), 0 2px 3px #000; }
+.misslist, .missNone { color: var(--hud-text); }
+
+/* ── type check: everything that sits straight on the bright stage art gets white + a navy outline + glow,
+ *    so it reads on sky, clouds and steel alike. Fonts: Black Han Sans (Korean display), Rajdhani (numbers /
+ *    English), Pretendard (small text). ── */
+.phase, .count, .setupTitle, .listen, .heard, .cheer, .grade, .judge {
+  -webkit-text-stroke: 4px rgba(12, 40, 100, .9) !important; paint-order: stroke fill; }
+.phase, .phase.call, .phase.wait { color: #fff; text-shadow: 0 0 18px rgba(169, 139, 255, .95), 0 3px 0 rgba(12, 40, 100, .9) !important; }
+.phase.resp { color: #fff; text-shadow: 0 0 18px rgba(143, 230, 255, 1), 0 3px 0 rgba(12, 40, 100, .9) !important; }
+.listen, .heard, .cheer { -webkit-text-stroke: 3px rgba(12, 40, 100, .9) !important; }
+.heard b { color: var(--hud-cyan); }
+.slot .en { font-family: var(--hud-font); font-weight: 700; text-shadow: 0 1px 2px rgba(0, 0, 0, .6); }
+.choice small, .tip, .duckOpt, .status, .credits { font-family: var(--ui); }
+
+/* ============================================================================
+ * Readability pass (menu concepts): clean bold sans for Korean, pure white text on deep-navy glass,
+ * bright secondary text, one clear accent (cyan) and violet only for "selected".
+ * ========================================================================== */
+:root {
+  --hud-bg: rgba(8, 24, 62, .88);  --hud-bg2: rgba(14, 38, 88, .9);
+  --hud-cyan: #5ff0ff; --hud-violet: #b98cff; --hud-text: #ffffff; --hud-muted: #d2e6ff;
+  --hud-edge: rgba(150, 225, 255, .8);
+  --cute: 'Pretendard Variable', 'Pretendard', 'Malgun Gothic', sans-serif;   /* Korean display → clean bold sans */
+  --ui: 'Pretendard Variable', 'Pretendard', 'Malgun Gothic', sans-serif;
+}
+/* every heading-ish Korean text: Pretendard ExtraBold, tight tracking */
+.choice b, .setupBox h2, .missHead, .setupTitle, .slot .ko, .phase, .bubble, .sticker, .mcPic figcaption, .cheer, .count,
+.mKo, .mPart em, .meanTag span, .wordTag span, .wordline, .ytBtn, .subSong, .mini, .back, .quit, .tapSync, .listen, .light,
+.songName, .missNone, .heard, .judge, .hud b, .stats b {
+  font-weight: 800 !important; letter-spacing: -.01em; }
+.setupTitle { font-size: 30px !important; }
+.choice b { font-size: 19px; }
+.choice small { font-size: 13.5px; line-height: 1.5; color: var(--hud-muted); font-weight: 500; }
+.setupBox h2 { font-size: 19px; color: #fff; }
+.subSong, .ytBtn { font-size: 16px; color: #fff; }
+.ytRow input { font-size: 15px; font-weight: 600; color: #fff; }
+.tip, .duckOpt, .status { font-size: 13.5px !important; font-weight: 600; }
+.duckOpt small { color: var(--hud-muted); }
+.bubble { font-size: 20px; }
+.slot .ko { letter-spacing: -.02em; }
+.slot .en { font-size: 13px; letter-spacing: .14em; }
+.phase { font-weight: 900 !important; }
+.hud small, .stats small { font-size: 12px; font-weight: 700; color: var(--hud-cyan); }
+.missItem, .mTop b { font-weight: 700; }
+/* the English kicker on buttons (GAME START style) stays in Rajdhani */
+.big, #title .startBig, .hud b, .stats b { font-family: var(--hud-font) !important; }
+/* text straight on the bright art: thinner outline that suits the slimmer face */
+.phase, .count, .setupTitle, .listen, .heard, .cheer, .grade { -webkit-text-stroke: 3px rgba(6, 20, 56, .95) !important; }
+/* main buttons: Korean label + small English line under it (게임 시작 / GAME START) */
+.big .kr, .homeBtn .kr { display: block; font-family: var(--ui); font-weight: 800; letter-spacing: .02em; text-transform: none; line-height: 1.15; }
+.big .en2, .homeBtn .en2 { display: block; margin-top: 2px; font-family: var(--hud-font); font-weight: 700; font-size: .5em; letter-spacing: .22em; opacity: .85; }
+#title .startBig { font-style: normal; padding: 10px 48px 8px; }
+.homeBtn { padding: 8px 12px; }
+.homeBtn .en2 { font-size: 11px; color: var(--hud-cyan); }
+
+/* ── no glow on letters: glows stay on box frames only (selected / the beat to speak).
+ *    Text is crisp: plain colour, and on the open art just a sharp navy outline + a hard 2px shadow (no blur). ── */
+*, *::before, *::after { text-shadow: none !important; }
+.phase, .count, .setupTitle, .listen, .heard, .cheer, .grade, .judge, .slot.miss::before {
+  text-shadow: 0 2px 0 rgba(6, 20, 56, .95) !important; }
+
+/* ── neon only on box frames: no inner glow, no glow on bars / dots / links / the logo halo ── */
+:root {
+  --hud-glow-c: 0 0 0 1px rgba(150, 225, 255, .8), 0 0 14px rgba(95, 240, 255, .45);
+  --hud-glow-v: 0 0 0 1px var(--hud-violet), 0 0 18px rgba(185, 140, 255, .65);
+}
+.panel { box-shadow: var(--hud-glow-c), 0 12px 30px rgba(6, 20, 56, .35); }
+.btn3d:hover { box-shadow: 0 0 0 1px var(--hud-cyan), 0 0 18px rgba(95, 240, 255, .6); }
+.big { box-shadow: 0 0 0 1px rgba(255, 255, 255, .9), 0 0 22px rgba(185, 140, 255, .7); }
+.slot { box-shadow: 0 0 0 1px var(--ws), 0 0 12px color-mix(in srgb, var(--ws) 55%, transparent); }
+.slot.now { box-shadow: 0 0 0 2px #fff, 0 0 24px var(--ws); }
+.slot.joinR::after, .prog i, .mic i, .beats i.on, .beats i.on.resp, .pdots i.on, .missHead span { box-shadow: none !important; }
+.ytRow input, .ytRow input:focus { box-shadow: 0 0 0 1px transparent; }
+.ytRow input:focus { box-shadow: 0 0 12px rgba(95, 240, 255, .5); }
+.titleLogo { filter: drop-shadow(0 3px 0 rgba(6, 20, 56, .85)); }   /* keep the art's own lightning, no extra halo */
+#title .startBig .bolt { filter: none; }
+
+/* active card: light only outside the frame; the inside stays the same dark glass as the others */
+.slot.now { background: var(--brackets), linear-gradient(180deg, rgba(255, 255, 255, .06), transparent), var(--hud-bg);
+  box-shadow: 0 0 0 2px #fff, 0 0 26px var(--ws), 0 0 48px color-mix(in srgb, var(--ws) 55%, transparent); }

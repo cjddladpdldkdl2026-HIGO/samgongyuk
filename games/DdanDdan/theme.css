@@ -1,0 +1,179 @@
+/* ============================================================================
+ * 딴딴/딴 — theme layer (loaded after style.css). Look of the title art: clear blue sky, white,
+ * deep navy outlines and an electric violet glow — "청량하면서 강렬한".
+ * The game logic still only relies on the ids / state classes listed at the top of style.css.
+ * ========================================================================== */
+:root {
+  --navy: #0b1d4f; --sky-1: #2f8cff; --sky-2: #7cc8ff; --ice: #e8f6ff; --violet: #7c4dff; --violet-2: #b14dff; --neon: #c9a8ff; --cyan: #5ce1ff;
+  /* the old tokens, re-pointed so every existing rule follows the new look */
+  --line: var(--navy); --ink: var(--navy); --dim: #4a5f8f;
+  --pink: var(--violet); --pink2: #d9ccff; --yellow: var(--cyan); --mint: var(--sky-2); --mint2: #d6efff; --cream: rgba(255, 255, 255, .86);
+  --orange: var(--violet-2); --green: #43e0b0; --lav: var(--neon); --sky: var(--sky-2);
+  --o: 2px solid rgba(11, 29, 79, .85);
+  --sh: 0 8px 22px rgba(18, 54, 150, .28);
+  --glow: 0 0 0 1.5px rgba(255, 255, 255, .9), 0 0 18px rgba(124, 77, 255, .55), 0 8px 24px rgba(18, 54, 150, .35);
+  --cute: 'Black Han Sans', 'Pretendard Variable', sans-serif;          /* Korean display: bold, sharp */
+  --round: 'Rajdhani', 'Black Han Sans', sans-serif;                     /* numbers & English: techy */
+  --ui: 'Pretendard Variable', 'Malgun Gothic', sans-serif;
+}
+
+/* ── background: the title art, blurred, under a sky wash ── */
+html { background: var(--navy); }
+body { background: transparent; color: var(--ink); }
+body::before { content: ''; position: fixed; inset: 0; z-index: -2; background: url(img/bg-stage.jpg) center / cover no-repeat, url(img/title-art.jpg) center / cover no-repeat; }   /* the stage art, sharp (no blur) */
+body::after { content: ''; position: fixed; inset: 0; z-index: -1;
+  background: linear-gradient(180deg, rgba(190, 228, 255, .12) 0%, rgba(40, 90, 210, .18) 100%); }   /* only a light tint now */
+.sky, .fence, .floor { display: none; }                 /* the old cartoon scenery */
+.notes { display: none; }   /* no rising sparkles */
+
+/* ── panels & cards: frosted glass ── */
+.panel { background: rgba(255, 255, 255, .82); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+  border: 1.5px solid rgba(255, 255, 255, .95); border-radius: 18px; box-shadow: var(--sh); }
+
+/* ── buttons ── */
+.btn3d { border: 1.5px solid rgba(255, 255, 255, .95); border-radius: 14px; background: rgba(255, 255, 255, .9); color: var(--navy);
+  box-shadow: var(--sh); transition: transform .12s, box-shadow .2s, filter .2s; }
+.btn3d:hover { box-shadow: var(--glow); }
+.btn3d:active { transform: scale(.97); box-shadow: var(--sh); }
+/* the main action: electric blue → violet, slanted like the logo's brush stroke, with a light sweep */
+.big { position: relative; overflow: hidden; border: 0; border-radius: 12px; transform: skewX(-8deg);
+  font-family: var(--cute); font-weight: 400; letter-spacing: .04em; color: #fff;
+  background: linear-gradient(100deg, var(--sky-1) 0%, var(--violet) 62%, var(--violet-2) 100%);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, .95), 0 0 24px rgba(124, 77, 255, .65), 0 10px 26px rgba(18, 54, 150, .4);
+  text-shadow: 0 2px 0 rgba(11, 29, 79, .35); }
+.big::after { content: ''; position: absolute; top: 0; bottom: 0; left: -40%; width: 30%; transform: skewX(-20deg);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .55), transparent); animation: sweep 2.6s ease-in-out infinite; }
+.big:hover { filter: brightness(1.08); }
+.big:active { transform: skewX(-8deg) scale(.97); }
+@keyframes sweep { 0%, 55% { left: -40%; } 100% { left: 130%; } }
+
+/* ── title screen: the art (no logo) fills the screen; the logo is its own layer, so it is never cut off ── */
+#title { padding: 0 16px; justify-content: flex-end; align-items: center; gap: 2.5vh;
+  background: var(--navy) url(img/title-art.jpg) center / cover no-repeat; }
+#title .titleRow { display: none; }
+.srOnly { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+#title::before { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 45%; pointer-events: none;
+  background: linear-gradient(180deg, transparent, rgba(11, 29, 79, .55)); }
+/* the logo (transparent PNG made from the black-background art) with a navy shadow so the white strokes stay sharp on the bright sky */
+.titleLogo { position: relative; display: block; width: min(64vw, 105vh, 1100px); height: auto; pointer-events: none;
+  filter: drop-shadow(0 4px 0 rgba(11, 29, 79, .85)) drop-shadow(0 0 22px rgba(11, 29, 79, .7)) drop-shadow(0 0 26px rgba(124, 77, 255, .55));
+  animation: logoIn .9s cubic-bezier(.2, 1.4, .4, 1) both; }
+@keyframes logoIn { from { opacity: 0; transform: scale(1.25) rotate(-3deg); } to { opacity: 1; transform: none; } }
+/* logo low in the frame (never cut), START tucked bottom-right */
+.titleLogo { margin-bottom: 3.5vh; }
+#title .startBig { position: absolute; right: 3.5vw; bottom: 5vh; margin: 0; padding: 8px 40px 6px; font-family: var(--round); font-weight: 700; font-style: italic;
+  font-size: clamp(18px, 1.8vw, 26px) !important; letter-spacing: .14em; animation: startPulse 1.6s ease-in-out infinite; }
+#title .startBig .bolt { display: inline-block; margin-right: 10px; font-style: normal; filter: drop-shadow(0 0 6px #fff); }
+@keyframes startPulse { 0%, 100% { box-shadow: 0 0 0 2px rgba(255, 255, 255, .95), 0 0 18px rgba(124, 77, 255, .55), 0 10px 26px rgba(18, 54, 150, .4); }
+  50% { box-shadow: 0 0 0 2px #fff, 0 0 38px rgba(177, 77, 255, .95), 0 10px 26px rgba(18, 54, 150, .4); } }
+/* phones held upright: keep the singer in view, logo nearly full width */
+@media (max-aspect-ratio: 4/5) {
+  #title { background-position: 30% center; }
+  .titleLogo { width: 94vw; margin-bottom: 18vh; }
+  #title .startBig { right: auto; left: 50%; bottom: 8vh; translate: -50% 0; padding: 10px 44px 8px; }
+}
+@media (prefers-reduced-motion: reduce) { .big::after, #title .startBig { animation: none; } }
+
+/* ── type: headings and big words get the sharp display face + a violet glow ── */
+.setupBox h2, .missHead { font-family: var(--cute); font-weight: 400; color: var(--navy); }
+.phase { color: #fff; -webkit-text-stroke: 0; text-shadow: 0 0 14px rgba(124, 77, 255, .9), 0 3px 0 var(--navy); }
+.phase.call { color: #fff; } .phase.resp { color: var(--cyan); } .phase.wait { color: #fff; }
+.count { color: #fff; -webkit-text-stroke: 0; text-shadow: 0 0 24px rgba(177, 77, 255, .95), 0 6px 0 var(--navy); font-style: italic; }
+.grade { color: #fff; -webkit-text-stroke: 0; text-shadow: 0 0 30px rgba(177, 77, 255, .95), 0 8px 0 var(--navy); font-style: italic; }
+.cheer { font-family: var(--cute); color: #fff; text-shadow: 0 2px 8px rgba(11, 29, 79, .6); }
+
+/* ── choices (maps, voices) ── */
+.choice { background: rgba(255, 255, 255, .9); border: 1.5px solid rgba(11, 29, 79, .18); border-radius: 14px; box-shadow: 0 4px 12px rgba(18, 54, 150, .15); }
+.choice b { font-family: var(--cute); font-weight: 400; color: var(--navy); }
+.choice.on { background: linear-gradient(120deg, #e3f3ff, #ece4ff); border-color: var(--violet); transform: translateY(-2px);
+  box-shadow: 0 0 0 2px var(--violet), 0 0 18px rgba(124, 77, 255, .45); }
+
+/* ── HUD, speech bubble, cards in play ── */
+.hud .box { border-radius: 12px; }
+.hud .box:nth-child(1) { background: linear-gradient(135deg, #fff, #dff1ff); } .hud .box:nth-child(2) { background: linear-gradient(135deg, #fff, #e8e0ff); } .hud .box:nth-child(3) { background: linear-gradient(135deg, #fff, #d9f7ff); }
+.hud b { font-family: var(--round); font-weight: 700; color: var(--navy); }
+.bubble { font-family: var(--cute); font-weight: 400; border: 1.5px solid #fff; box-shadow: var(--glow); }
+.bubble::before { border-color: #fff; }
+.slot { border: 2px solid rgba(255, 255, 255, .95); border-radius: 16px; box-shadow: var(--sh); }
+.slot .ko { font-family: var(--cute); font-weight: 400; color: var(--navy); }
+.slot .en { font-family: var(--round); font-weight: 600; }
+.slot.now { box-shadow: var(--glow); }
+.sticker { font-family: var(--cute); border-color: #fff; }
+.prog { border: 1.5px solid #fff; background: rgba(255, 255, 255, .5); }
+.prog i { background: linear-gradient(90deg, var(--sky-1), var(--violet), var(--violet-2)); border-right: 0; }
+
+/* ── setup: the page itself never scrolls. Wide screens: maps on the left (full height, the list scrolls inside
+ *    with the mouse wheel), narration · song · PLAY on the right. ── */
+#setup { overflow: hidden; }
+.mapBox .maps { overflow-y: auto; overscroll-behavior: contain; padding: 4px 8px 6px 2px; margin: -4px -8px -6px -2px;
+  scrollbar-width: thin; scrollbar-color: var(--violet) transparent; }
+.mapBox .maps::-webkit-scrollbar { width: 8px; }
+.mapBox .maps::-webkit-scrollbar-thumb { background: linear-gradient(var(--sky-1), var(--violet)); border-radius: 8px; }
+.mapBox .maps::-webkit-scrollbar-track { background: rgba(11, 29, 79, .06); border-radius: 8px; }
+@media (min-width: 900px) {
+  #setup.on { display: grid; grid-template-columns: minmax(0, 600px) minmax(0, 520px); grid-template-rows: auto auto auto auto auto auto auto 0 auto;   /* title · voices · song · PLAY · status · option · tip · (space) · credits */
+    justify-content: center; align-content: center; align-items: stretch; justify-items: stretch; column-gap: 18px; row-gap: 12px; padding: 22px 24px 12px; }
+  #setup .setupGrid { display: contents; }
+  #setup .setupTitle { grid-column: 1 / -1; margin: 0; }
+  #setup .mapBox { grid-column: 1; grid-row: 2 / 5; display: flex; flex-direction: column; min-height: 0; }
+  #setup .mapBox .maps { flex: 1; min-height: 0; max-height: none; align-content: start; }
+  #setup .setupGrid > .setupBox:not(.mapBox) { grid-column: 2; grid-row: 2; }
+  #setup .voices { grid-template-columns: 1fr 1fr; }
+  #setup .songBox { grid-column: 2; grid-row: 3; width: auto; margin: 0; }
+  /* the map box ends exactly where the PLAY button ends: no empty space under the list */
+  #setup .playRow { display: contents; }
+  #setup #playBtn { grid-column: 2; grid-row: 4; align-self: end; }
+  #setup .status { grid-column: 2; grid-row: 5; } #setup .duckOpt { grid-column: 2; grid-row: 6; } #setup .tip { grid-column: 2; grid-row: 7; }
+  #setup .credits { grid-column: 1 / -1; grid-row: 9; margin: 0; font-size: 11px; opacity: .8; }
+  #setup .mapBox .maps { grid-auto-rows: 1fr; }   /* cards share the height evenly when they fit */
+  #setup .back { top: 22px; }
+}
+/* narrow screens: everything stacks; the map list gets a fixed window and scrolls inside */
+@media (max-width: 899px) {
+  #setup { padding-top: 64px; }
+  .mapBox .maps { max-height: 34vh; }
+}
+/* short laptop screens: trim the right column so PLAY always stays on screen */
+@media (min-width: 900px) and (max-height: 780px) {
+  #setup.on { row-gap: 8px; padding-top: 14px; }
+  #setup .setupTitle { font-size: 24px; }
+  #setup .tip, #setup .credits, #setup .voices .choice small { display: none; }
+  #setup .setupBox { padding: 10px 12px 12px; }
+  #setup .setupBox h2 { font-size: 17px; margin-bottom: 6px; }
+  #setup .songBox { gap: 6px; }
+  #setup #playBtn { padding: 10px; font-size: 22px; }
+  #setup .duckOpt small { display: none; }
+}
+
+/* ── the MC: chest-up portrait in a small frame (선희 = guitarist, 인준 = singer) ──
+ * .mcPic.talk while the MC calls a word: brighter violet glow + a tiny push */
+.mcPic { position: relative; flex: none; margin: 0; width: clamp(104px, 11vw, 140px); aspect-ratio: 4 / 5; border-radius: 16px; overflow: hidden;
+  border: 2px solid #fff; background: var(--sky-2); box-shadow: 0 0 0 1px rgba(11, 29, 79, .25), 0 10px 26px rgba(18, 54, 150, .35);
+  transition: box-shadow .12s, transform .12s; }
+.mcPic img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.mcPic::after { content: ''; position: absolute; inset: 0; pointer-events: none; border-radius: inherit;
+  background: linear-gradient(180deg, transparent 60%, rgba(11, 29, 79, .55)); }
+.mcPic figcaption { position: absolute; left: 0; right: 0; bottom: 4px; z-index: 1; text-align: center; font-family: var(--cute); font-size: 15px; color: #fff;
+  letter-spacing: .08em; text-shadow: 0 0 8px rgba(124, 77, 255, .9), 0 1px 0 var(--navy); }
+.mcPic.talk { transform: scale(1.04); box-shadow: 0 0 0 2px #fff, 0 0 26px rgba(177, 77, 255, .9), 0 10px 26px rgba(18, 54, 150, .35); }
+body.beat .mcPic { animation: mcBeat calc(var(--beat) * .9) ease-out; }
+@keyframes mcBeat { 0% { translate: 0 -3px; } 100% { translate: 0 0; } }
+body.video .mcPic { width: 104px; }
+.resPic { width: 96px; }
+@media (max-width: 640px) { .mcPic { width: 84px; } }
+/* small notes under PLAY: a soft white plate so they read on the sharp stage background */
+#setup .status:not(:empty), #setup .duckOpt, #setup .tip { justify-self: start; padding: 4px 12px; border-radius: 10px;
+  background: rgba(255, 255, 255, .82); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); color: var(--navy); }
+
+/* ── result: full art of the narrator (선희 = guitarist on the left, 인준 = singer on the right);
+ *    the score board sits on the other half so the character stays visible. #result[data-mc] ── */
+#result { background: var(--navy) center / cover no-repeat; }
+#result[data-mc="sunhi"] { background-image: url(img/res-sunhi.jpg); }
+#result[data-mc="injoon"] { background-image: url(img/res-injoon.jpg); }
+#result .resPic { display: none; }
+@media (min-width: 900px) {
+  #result .resWrap { width: min(940px, 54vw); grid-template-columns: minmax(260px, 340px) minmax(0, 1fr); }
+  #result[data-mc="sunhi"] .resWrap { margin-left: auto; margin-right: 2vw; }
+  #result[data-mc="injoon"] .resWrap { margin-right: auto; margin-left: 2vw; }
+  #result { align-items: stretch; }
+}

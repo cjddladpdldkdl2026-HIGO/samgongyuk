@@ -1,0 +1,1061 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>딴딴/딴</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Rajdhani:wght@600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="theme.css">
+<link rel="stylesheet" href="hud.css">
+</head>
+<body>
+<div class="sky"></div>
+<div class="fence"></div>
+<div class="floor"></div>
+<div class="notes" id="notes"></div>
+<div class="stickers" id="stickers"></div>
+
+<!-- the MC: a little brain with headphones (drawn here, reused below) -->
+<template id="brainTpl">
+<svg class="brain" viewBox="0 0 120 112" aria-hidden="true">
+  <path d="M20 58 C14 6 106 6 100 58" fill="none" stroke="#4a3236" stroke-width="11" stroke-linecap="round"/>
+  <path d="M20 58 C14 6 106 6 100 58" fill="none" stroke="#7fd6d3" stroke-width="5" stroke-linecap="round"/>
+  <path d="M22 66 C9 62 9 41 23 37 C23 21 43 15 53 23 C61 11 83 13 87 27 C103 25 113 43 103 55 C113 69 99 85 85 79 C79 93 53 95 47 83 C33 91 15 83 22 66 Z" fill="#ff9fba" stroke="#4a3236" stroke-width="3.5" stroke-linejoin="round"/>
+  <path d="M40 34 q8 -6 14 2 M70 30 q8 -2 10 6 M30 56 q-4 -8 4 -12 M90 56 q6 -6 0 -12" fill="none" stroke="#e0638a" stroke-width="3" stroke-linecap="round"/>
+  <ellipse cx="46" cy="56" rx="5.5" ry="7" fill="#4a3236"/><ellipse cx="74" cy="56" rx="5.5" ry="7" fill="#4a3236"/>
+  <circle cx="48" cy="53" r="2" fill="#fff"/><circle cx="76" cy="53" r="2" fill="#fff"/>
+  <ellipse cx="35" cy="67" rx="6" ry="3.5" fill="#f2668b" opacity=".55"/><ellipse cx="85" cy="67" rx="6" ry="3.5" fill="#f2668b" opacity=".55"/>
+  <path class="mouth-c" d="M53 66 q7 7 14 0" fill="none" stroke="#4a3236" stroke-width="3" stroke-linecap="round"/>
+  <g class="mouth-o"><path d="M52 64 q8 14 16 0 z" fill="#4a3236"/><path d="M55 70 q5 4 10 0" fill="none" stroke="#f2668b" stroke-width="3" stroke-linecap="round"/></g>
+  <rect x="5" y="48" width="18" height="28" rx="8" fill="#7fd6d3" stroke="#4a3236" stroke-width="3.5"/>
+  <rect x="97" y="48" width="18" height="28" rx="8" fill="#7fd6d3" stroke="#4a3236" stroke-width="3.5"/>
+  <circle cx="14" cy="62" r="3.5" fill="#fff"/><circle cx="106" cy="62" r="3.5" fill="#fff"/>
+</svg>
+</template>
+
+<!-- ── title: just START ─────────────────────────────────────────────────── -->
+<section class="screen on" id="title">
+  <h1 class="srOnly">딴딴/딴</h1>
+  <img class="titleLogo" src="img/title-logo.png?v=3" alt="딴딴/딴 — ELECTRONIC POP ROCK">
+  <div class="titleRow"><div class="bouncy" id="titleBrain"></div></div>
+  <button class="big btn3d startBig" id="startBtn"><span class="kr">게임 시작</span><span class="en2">GAME START</span></button>
+</section>
+
+<!-- ── setup: map · narration · song ──────────────────────────────────────── -->
+<section class="screen" id="setup">
+  <button class="back btn3d" id="backBtn">← 처음으로</button>
+  <div class="setupTitle">무엇으로 놀까? 🎶</div>
+  <div class="setupGrid">
+    <div class="setupBox panel mapBox"><div class="choices maps" id="maps"></div></div>
+    <div class="setupBox panel"><h2>🎙 나레이션</h2><div class="choices voices" id="voices">
+      <button class="choice on" data-v="sunhi"><b>🎀 선희</b><small>밝은 여자 목소리 · 누르면 들려줘요</small></button>
+      <button class="choice" data-v="injoon"><b>🧢 인준</b><small>힘찬 남자 목소리 · 누르면 들려줘요</small></button>
+    </div></div>
+  </div>
+  <div class="songBox setupBox panel">
+    <h2>🎵 노래</h2>
+    <div class="ytRow">
+      <input id="ytUrl" type="url" inputmode="url" placeholder="▶ 유튜브 링크를 붙여 넣어 주세요 (라이브 영상도 돼요)">
+      <button class="ytBtn btn3d" id="ytBtn">불러오기</button>
+    </div>
+    <div class="songBtns">
+      <button class="subSong btn3d" id="mp3Btn">🎵 내 MP3 넣기</button>
+      <button class="subSong btn3d" id="builtinBtn">💿 기본 곡 (EDM Detection Mode)</button>
+    </div>
+    <input type="file" id="fileIn" accept="audio/mpeg,audio/mp3,.mp3,audio/*" hidden>
+    <div class="songInfo" id="songInfo">
+      <img class="thumb" id="thumb" alt="">
+      <div class="songName" id="songName"></div>
+      <span class="light wait" id="light">분석 중…</span>
+      <div class="reasons" id="reasons"></div>
+      <div class="songTools" id="songTools">
+        <button class="mini" id="previewBeat">▶ 박자 미리 듣기</button><span class="pdots" id="pdots"><i></i><i></i><i></i><i></i></span>
+      </div>
+      <details class="adjust" id="adjust"><summary>박자가 안 맞으면? 직접 맞추기</summary>
+        <div class="songTools"><span>박 위치</span><button class="mini" data-adj="nudge" data-v="-0.02">◀ 당기기</button><button class="mini" data-adj="nudge" data-v="0.02">밀기 ▶</button></div>
+        <div class="songTools"><span>시작</span><button class="mini" data-adj="bar" data-v="-1">◀ 한 마디 일찍</button><button class="mini" data-adj="bar" data-v="1">한 마디 늦게 ▶</button></div>
+        <div class="songTools"><span>빠르기</span><button class="mini" data-adj="tempo" data-v="0.5">× ½ 느리게</button><button class="mini" data-adj="tempo" data-v="2">× 2 빠르게</button></div>
+      </details>
+    </div>
+  </div>
+  <div class="playRow">
+    <button class="big btn3d" id="playBtn" disabled><span class="kr">플레이 ▶</span><span class="en2">PLAY</span></button>
+    <div class="status" id="status"></div>
+    <label class="duckOpt"><input type="checkbox" id="duckOpt"> 🔉 내 차례에 노래 소리 살짝 줄이기 <small>(스피커로 할 때 인식이 잘 안 되면 켜 보세요)</small></label>
+    <p class="tip">🎧 <b>이어폰</b>을 끼면 음악과 내 목소리가 안 섞여서 훨씬 잘 알아들어요. 노래 <b>전주</b>가 끝나면 시작해요!</p>
+  </div>
+  <p class="credits" id="credits">💿 기본 곡 "EDM Detection Mode" Kevin MacLeod (incompetech.com) · Licensed under Creative Commons: By Attribution 4.0 License<br>
+    나레이션: Microsoft 신경망 음성(선희·인준, edge-tts로 생성) · 음성 인식: Vosk (Apache-2.0) · 효과: canvas-confetti · 글꼴: Pretendard, Rajdhani, Black Han Sans (OFL)</p>
+</section>
+
+<!-- ── play ──────────────────────────────────────────────────────────────── -->
+<section class="screen" id="play">
+  <div class="hud">
+    <div class="box btn3d"><small>SCORE</small><b id="score">0</b></div>
+    <div class="box btn3d"><small>LEVEL</small><b id="level">1</b></div>
+    <div class="box btn3d"><small>COMBO</small><b id="combo">0</b></div>
+  </div>
+  <div class="prog"><i id="prog"></i></div>
+  <div class="stage">
+    <div class="topRow">
+      <div class="tv" id="tv"><div id="ytBox"></div><div class="tvHint" id="tvHint">▶ 영상이 안 나오면 영상을 한 번 눌러 주세요</div></div>
+      <div class="mcCol">
+        <div class="mc"><figure class="mcPic" id="mcBrain"><img id="mcImg" src="img/mc-sunhi.jpg" alt=""><figcaption id="mcName">선희</figcaption></figure><div class="bubble" id="bubble">가보자고!</div></div>
+        <div class="phase wait" id="phase">준비…</div>
+        <div class="listen" id="listen"><div class="lbar"><i id="lbar"></i></div><span id="ltext">🎧 박자 듣는 중…</span></div>
+      </div>
+    </div>
+    <div class="count" id="count"></div>
+    <div class="wordline" id="wordline"></div>
+    <div class="slots" id="slots"></div>
+    <div class="beats" id="beats"><i></i><i></i><i></i><i></i></div>
+    <div class="heard" id="heard"></div>
+    <div class="mic"><i id="micbar"></i></div>
+    <button class="tapSync btn3d" id="tapSync">👆 박자에 맞춰 톡톡! <small id="tapLeft">8번 눌러 주세요</small></button>
+  </div>
+  <div class="missFlash" id="missFlash"></div>
+  <button class="quit btn3d" id="quitBtn">← 그만하기</button>
+</section>
+
+<!-- ── result ────────────────────────────────────────────────────────────── -->
+<section class="screen" id="result">
+  <div class="resWrap">
+    <div class="resLeft">
+      <figure class="mcPic resPic" id="resBrain"><img id="resImg" src="img/mc-sunhi.jpg" alt=""></figure>
+      <div class="grade" id="grade">S</div>
+      <div class="cheer" id="cheer">완전 최고!</div>
+      <div class="card panel">
+        <div class="stats">
+          <div class="sScore"><b id="rScore">0</b><small>점수</small></div>
+          <div class="sMiss"><b id="rMiss">0</b><small>MISS</small></div>
+        </div>
+        <button class="big btn3d" id="againBtn"><span class="kr">다시하기</span><span class="en2">RETRY</span></button>
+        <button class="homeBtn btn3d" id="homeBtn"><span class="kr">다른 용어 말해보기</span><span class="en2">OTHER TERMS</span></button>
+      </div>
+    </div>
+    <div class="resRight card panel">
+      <h3 class="missHead">📝 다시 연습해 볼 용어 <span id="missCount">0</span></h3>
+      <div class="misslist" id="missList"></div>
+    </div>
+  </div>
+</section>
+
+<script src="../Vertebral_Wizard/lib/vosk.js"></script>
+<script src="beat.js"></script>
+<script src="words2.js"></script>
+<script>
+'use strict';
+/* ── words, chopped into beat-sized pieces ────────────────────────────────────
+ * [English, 한글(의학용어 6판), map, pieces]  piece = [id, 한글 읽기, sounds the recogniser may hear]
+ * Each piece is one beat: the MC shouts it, then the player shouts it back. */
+// Terms, Korean names and meanings follow the 청암대 학습 슬라이드 (study-slides-app: 신경과학_에크만 13장 뇌신경,
+// 12장 척수영역 · 신경계 해부생리). A word = meaning groups (안뜰 / 척수 / 로); a group = 1-beat pieces read the Korean way
+// (베스! 티뷸로! / 스파이날! / 트랙!). Piece: [id, Korean reading, what the recogniser may hear, meaning, group no.]
+const WORD_DATA = [
+  ['Pons', '다리뇌', 'brain', [['pons', '폰스', ['pons', 'ponds', 'pawns', 'bonds'], '다리뇌', 0]]],
+  ['Medulla', '숨뇌', 'brain', [['medulla', '메듈라', ['medulla', 'med dula', 'medal a', 'made ula'], '숨뇌', 0]]],
+  ['Midbrain', '중간뇌', 'brain', [['mid', '미드', ['mid', 'meet', 'mead'], '중간', 0], ['brain', '브레인', ['brain', 'brains'], '뇌', 1]]],
+  ['Cerebellum', '소뇌', 'brain', [['cerebellum', '세레벨럼', ['cerebellum', 'sarah bellum', 'sara bell um', 'serra bellum'], '소뇌', 0]]],
+  ['Thalamus', '시상', 'brain', [['thalamus', '탈라무스', ['thalamus', 'tala moose', 'dollar moose', 'tala mus'], '시상', 0]]],
+  ['Hypothalamus', '시상하부', 'brain', [['hypo', '하이포', ['hypo', 'hi po', 'high po'], '하부', 0], ['thalamus', '탈라무스', ['thalamus', 'tala moose', 'dollar moose', 'tala mus'], '시상', 1]]],
+  ['Cerebrum', '대뇌', 'brain', [['cerebrum', '세레브럼', ['cerebrum', 'sarah brum', 'sara broom', 'sarah bram'], '대뇌', 0]]],
+  ['Hippocampus', '해마', 'brain', [['hippo', '히포', ['hippo', 'hip oh'], '해마', 0], ['campus', '캠퍼스', ['campus', 'camp us'], '해마', 0]]],
+  ['Amygdala', '편도체', 'brain', [['amyg', '아미그', ['a mig', 'amigo', 'amig'], '편도체', 0], ['dala', '달라', ['dala', 'dollar', 'da la'], '편도체', 0]]],
+  ['Olfactory', '후각신경', 'nerve', [['olfactory', '올팩토리', ['olfactory', 'all factory', 'old factory', 'ol factory'], '후각', 0]]],
+  ['Optic', '시각신경', 'nerve', [['optic', '옵틱', ['optic', 'op tick'], '시각', 0]]],
+  ['Oculomotor', '눈돌림신경', 'nerve', [['oculo', '오큘로', ['ok you low', 'oculo', 'octo'], '눈', 0], ['motor', '모터', ['motor'], '돌림', 1]]],
+  ['Trochlear', '도르래신경', 'nerve', [['troch', '트로클', ['troke', 'truck', 'trok'], '도르래', 0], ['lear', '리어', ['lear', 'leer', 'rear', 'lia'], '도르래', 0]]],
+  ['Trigeminal', '삼차신경', 'nerve', [['tri', '트라이', ['try', 'tri'], '삼차', 0], ['geminal', '제미널', ['gem in all', 'geminal', 'jimmy nell'], '삼차', 0]]],
+  ['Abducens', '가돌림신경', 'nerve', [['abducens', '앱듀센스', ['abducens', 'ab do sense', 'app due sense', 'ab ducens'], '가돌림', 0]]],
+  ['Facial', '얼굴신경', 'nerve', [['facial', '페이셜', ['facial'], '얼굴', 0]]],
+  ['Vestibulocochlear', '속귀신경(안뜰달팽이신경)', 'nerve', [['ves', '베스', ['vest', 'bess', 'best', 'vess'], '안뜰', 0], ['tibulo', '티뷸로', ['tib you low', 'tibia low', 'tibulo'], '안뜰', 0], ['cochlear', '코클리어', ['cochlear', 'coke lear', 'cock lee are', 'cock lear'], '달팽이', 1]]],
+  ['Glossopharyngeal', '혀인두신경', 'nerve', [['glosso', '글로소', ['gloss oh', 'glosso', 'glossa'], '혀', 0], ['pharyngeal', '파린지얼', ['pharyngeal', 'far in gee all', 'fair in jill', 'paring geal'], '인두', 1]]],
+  ['Vagus', '미주신경', 'nerve', [['vagus', '베이거스', ['vegas', 'vagus', 'vague us'], '미주', 0]]],
+  ['Accessory', '더부신경', 'nerve', [['accessory', '액세서리', ['accessory', 'access sorry', 'accessories', 'ac cessory'], '더부', 0]]],
+  ['Hypoglossal', '혀밑신경', 'nerve', [['hypo', '하이포', ['hypo', 'hi po', 'high po'], '밑', 0], ['glossal', '글로설', ['glossal', 'gloss all'], '혀', 1]]],
+  ['Corticospinal tract', '겉질척수로', 'tract', [['cortico', '코르티코', ['cortico', 'courty co', 'corti co', 'korty co'], '겉질', 0], ['spinal', '스파이날', ['spinal', 'spine all', 'spinel', 'spy nal'], '척수', 1], ['tract', '트랙', ['tract', 'track', 'trek', 'tracked'], '로', 2]]],
+  ['Corticobulbar tract', '겉질숨뇌로', 'tract', [['cortico', '코르티코', ['cortico', 'courty co', 'corti co', 'korty co'], '겉질', 0], ['bulbar', '벌바', ['bulbar', 'bull bar', 'bulb are', 'bulb'], '숨뇌', 1], ['tract', '트랙', ['tract', 'track', 'trek', 'tracked'], '로', 2]]],
+  ['Spinothalamic tract', '척수시상로', 'tract', [['spino', '스파이노', ['spino', 'spine oh', 'spy no'], '척수', 0], ['thalamic', '탈라믹', ['thalamic', 'tala mick', 'dollar mick'], '시상', 1], ['tract', '트랙', ['tract', 'track', 'trek', 'tracked'], '로', 2]]],
+  ['Spinocerebellar tract', '척수소뇌로', 'tract', [['spino', '스파이노', ['spino', 'spine oh', 'spy no'], '척수', 0], ['cerebellar', '세레벨라', ['cerebellar', 'sarah bella', 'sara bellar', 'serra beller'], '소뇌', 1], ['tract', '트랙', ['tract', 'track', 'trek', 'tracked'], '로', 2]]],
+  ['Rubrospinal tract', '적색척수로', 'tract', [['rubro', '루브로', ['rubro', 'ruby row', 'rube row', 'roo bro'], '적색', 0], ['spinal', '스파이날', ['spinal', 'spine all', 'spinel', 'spy nal'], '척수', 1], ['tract', '트랙', ['tract', 'track', 'trek', 'tracked'], '로', 2]]],
+  ['Vestibulospinal tract', '안뜰척수로', 'tract', [['ves', '베스', ['vest', 'bess', 'best', 'vess'], '안뜰', 0], ['tibulo', '티뷸로', ['tib you low', 'tibia low', 'tibulo'], '안뜰', 0], ['spinal', '스파이날', ['spinal', 'spine all', 'spinel', 'spy nal'], '척수', 1], ['tract', '트랙', ['tract', 'track', 'trek', 'tracked'], '로', 2]]],
+  ['Tectospinal tract', '덮개척수로', 'tract', [['tecto', '텍토', ['tecto', 'tech toe', 'tech though'], '덮개', 0], ['spinal', '스파이날', ['spinal', 'spine all', 'spinel', 'spy nal'], '척수', 1], ['tract', '트랙', ['tract', 'track', 'trek', 'tracked'], '로', 2]]],
+  ['Reticulospinal tract', '그물척수로', 'tract', [['reticulo', '레티큘로', ['reticulo', 'reti culo', 'ready cue low', 'retty cool oh'], '그물', 0], ['spinal', '스파이날', ['spinal', 'spine all', 'spinel', 'spy nal'], '척수', 1], ['tract', '트랙', ['tract', 'track', 'trek', 'tracked'], '로', 2]]],
+];
+const WORDS = WORD_DATA.map(([en, ko, map, ps]) => {
+  const w = { en, ko, map };
+  w.pieces = ps.map(([id, read, says, mean, group]) => ({ id, read, says, mean, group, beats: 1, clip: 'c-' + id, word: w }));
+  w.beats = w.pieces.reduce((a, p) => a + p.beats, 0);
+  return w;
+});
+// more terms (words2.js): one piece per "/" chunk, judged by the timing of the shout (no recogniser words)
+for (const line of (window.WORDS2_TEXT || '').trim().split('\n')) {
+  const [map, en, ko, reading] = line.split('|').map(x => x.trim());
+  if (!reading) continue;
+  const w = { en, ko, map };
+  // " ; " separates English words (a group each, so 3-piece words rest before the last word), "/" separates beats
+  w.pieces = reading.split(';').flatMap((part, g) => part.split('/').map(r => ({ id: '', read: r.trim(), says: [], mean: '', group: g, beats: 1, clip: 'k-' + r.trim(), word: w })));
+  w.beats = w.pieces.length;
+  WORDS.push(w);
+}
+WORDS.forEach(w => { if (w.map === 'nerve') w.map = 'brain'; });   // 뇌 부위 + 뇌신경 = one map
+const MAPS = [
+  { id: 'brain', name: '🧠 뇌·뇌신경', ex: '폰스! · 히포! 캠퍼스! · 베스! 티뷸로! 코클리어!' },
+  { id: 'tract', name: '🛤 신경로', ex: '베스! 티뷸로! 스파이날! 트랙!' },
+  { id: 'nuclei', name: '🧩 바닥핵·신경핵', ex: '글로버스! 팔리더스! · 서브스탠! 시아! 나이그라!' },
+  { id: 'bone', name: '🦴 뼈·랜드마크', ex: '그레이터! 트로캔터! · 아크로미온!' },
+  { id: 'muscle', name: '💪 근육', ex: '개스트록! 니미어스! · 델토이드!' },
+  { id: 'headbone', name: '💀 머리·얼굴뼈', ex: '매스! 토이드! 프로세스! · 맨디블!' },
+  { id: 'headmuscle', name: '😮 머리·얼굴 근육', ex: '매서터! · 오비큘! 라리스! 오리스!' },
+  { id: 'all', name: '🎲 전부 섞기', ex: '모든 맵 랜덤!' },
+];
+// pieces of the same word share a colour (light card, strong card when it's that beat)
+const WORD_COLORS = [['#dcefff', '#7cc8ff'], ['#ebe4ff', '#a98bff'], ['#dcfaff', '#5ce1ff'], ['#f3e4ff', '#d08bff']];   // sky / violet / ice / orchid
+
+/* tempo: set from the chosen song when a game starts */
+let BPM = 128, BEAT = 60 / BPM, BAR = BEAT * 4;
+function setTempo(bpm) { BPM = bpm; BEAT = 60 / bpm; BAR = BEAT * 4; document.documentElement.style.setProperty('--beat', BEAT + 's'); }
+/* Levels: how many beats a phrase uses and which words fit.
+ *  1 — one word, its pieces on beats 1·2·3 ("베스! 티뷸로! / 코클리어!")
+ *  2 — two words back to back, up to 4 beats
+ *  3 — 4-beat combos with the long words */
+const LEVELS = [
+  { phrases: 6, build: (pool) => [pick(pool.filter(w => w.beats >= 2).length ? pool.filter(w => w.beats >= 2) : pool)] },
+  { phrases: 5, build: (pool) => fill(pool, 4, 2) },
+  { phrases: 5, build: (pool) => fill(pool, 4, 2, true) },
+];
+const SCORE = { perfect: 300, good: 150, miss: 0 };
+const HYPE_GOOD = ['h-nice', 'h-yeah', 'h-awesome', 'h-great', 'h-best'];
+// the MC only says the terms; all of these just pop up as sticker words
+const HYPE_TEXT = { 'h-start': '가보자고~!', 'h-ready': '준비됐지?', 'h-nice': '좋아!', 'h-yeah': 'YEAH~!', 'h-awesome': '대박!',
+  'h-great': '잘했어!', 'h-best': '최고야!', 'h-louder': '더 크게!', 'h-levelup': 'LEVEL UP!', 'h-end': '최고였어!' };
+const HIT_WORDS = { perfect: ['YEAH!', '완벽!', '오예~', '굿굿!', '짱!', 'NICE!'], good: ['좋아~', 'GOOD!', '오케이!'], miss: ['아쉬워~!', '앗, 놓쳤다!', '아깝다~!', '다음엔 꼭!'] };
+const STICKER_COLORS = ['#2f8cff', '#7c4dff', '#b14dff', '#1fb8e8', '#5b6cff'];
+const MODEL_URL = new URL('../Vertebral_Wizard/models/vosk-model-small-en-us-0.15.tar.gz', location.href).href;
+// built-in song, measured: exactly 128 BPM, first beat 0.010 s, intro = 8 bars, full beat from 15.010 s
+const BUILTIN = { name: 'EDM Detection Mode — Kevin MacLeod', url: 'audio/bgm/edm-detection-mode.mp3', bpm: 128, beat0: 0.010, start: 0.010 + 8 * (240 / 128), light: 'green', reasons: [], builtIn: true };
+const DUCK = 0.33;   // music level while the player answers
+const MAX_INTRO = 20;   // never wait more than ~20 s of intro
+const AUTOTEST = new URLSearchParams(location.search).has('autotest');   // dev only: plays itself
+
+const $ = (id) => document.getElementById(id);
+const shuffle = (a) => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const pick = (a) => a[Math.floor(Math.random() * a.length)];
+/** Words whose pieces add up to `beats`, at least `min` words; `long` = start with a 3-piece word.
+ *  Multi-piece words come first, so one-beat words (Pons, Optic…) only fill a gap now and then. */
+function fill(pool, beats, min, long) {
+  const out = []; let used = 0;
+  const first = long ? pool.filter(w => w.beats >= 3) : pool.filter(w => w.beats >= 2);
+  for (const w of shuffle((first.length ? first : pool).slice())) { if (used + w.beats <= beats) { out.push(w); used += w.beats; break; } }
+  const rest = shuffle(pool.filter(w => w.beats >= 2)).concat(shuffle(pool.filter(w => w.beats < 2)));
+  for (const w of rest) {
+    if (out.includes(w)) continue;
+    if (used + w.beats <= beats) { out.push(w); used += w.beats; }
+    if (used === beats && out.length >= min) break;
+  }
+  return shuffle(out);
+}
+const opt = { map: 'brain', voice: 'sunhi', duck: false };   // duck: music down on the player's turn (off: the volume never changes)
+let song = null;   // { kind: 'yt' | 'mp3' | 'builtin', name, ready, … }
+
+/* ── mascot, floating notes, stickers, confetti ── */
+for (const id of ['titleBrain']) $(id).appendChild($('brainTpl').content.cloneNode(true));
+// the MC: a chest-up portrait that follows the narration voice (선희 → the guitarist, 인준 → the singer)
+const MC = { sunhi: { img: 'img/mc-sunhi.jpg', name: '선희' }, injoon: { img: 'img/mc-injoon.jpg', name: '인준' } };
+function setMC() { const m = MC[opt.voice] || MC.sunhi; $('mcImg').src = m.img; $('resImg').src = m.img; $('mcName').textContent = m.name; }
+document.querySelectorAll('.brain').forEach(svg => svg.style.width = '100%');
+for (let i = 0; i < 14; i++) {
+  const s = document.createElement('span');
+  s.textContent = pick(['✦', '✧', '⚡', '♪', '✦']);
+  s.style.left = (i / 14 * 100 + Math.random() * 5) + '%';
+  s.style.color = pick(STICKER_COLORS);
+  s.style.fontSize = (20 + Math.random() * 22) + 'px';
+  s.style.animationDuration = (9 + Math.random() * 9) + 's';
+  s.style.animationDelay = (-Math.random() * 18) + 's';
+  $('notes').appendChild(s);
+}
+function sticker(text, o = {}) {
+  const el = document.createElement('div');
+  el.className = 'sticker' + (o.small ? ' small' : '') + (o.oops ? ' oops' : '');
+  el.textContent = text;
+  el.style.background = o.color || pick(STICKER_COLORS);
+  el.style.left = (o.x ?? (12 + Math.random() * 76)) + '%';
+  el.style.top = (o.y ?? (22 + Math.random() * 50)) + '%';
+  el.style.setProperty('--r', (Math.random() * 20 - 10).toFixed(1) + 'deg');
+  $('stickers').appendChild(el);
+  setTimeout(() => el.remove(), 1300);
+}
+const PASTEL = ['#f2668b', '#7fd6d3', '#ffd54a', '#a7a8e6', '#8fd36a', '#ffffff'];
+function party(power = 1, origin) {
+  if (!window.confetti) return;
+  confetti({ particleCount: Math.round(60 * power), spread: 70 + 30 * power, startVelocity: 32 + 10 * power, origin: origin || { x: .5, y: .62 }, colors: PASTEL, shapes: ['circle', 'square', 'star'], scalar: 1.1 });
+}
+
+/* ── speech model (same library and model as 뭐라구요!?) ── */
+let model = null, modelFailed = false;
+if (AUTOTEST) { /* plays itself, no mic */ }
+else if (location.protocol === 'file:' || !window.Vosk) modelFailed = true;
+else Vosk.createModel(MODEL_URL).then(m => { model = m; refreshPlay(); }).catch(() => { modelFailed = true; refreshPlay(); });
+
+/* ── audio ── */
+let ac = null, master, musicBus, voiceBus, sfxBus, trackBus;
+function audio() {
+  if (ac) return ac;
+  ac = new (window.AudioContext || window.webkitAudioContext)();
+  master = ac.createGain(); master.gain.value = 0.95; master.connect(ac.destination);
+  const comp = ac.createDynamicsCompressor(); comp.threshold.value = -12; comp.ratio.value = 3; comp.connect(master);
+  musicBus = ac.createGain(); musicBus.gain.value = 0.55; musicBus.connect(comp);
+  sfxBus = ac.createGain(); sfxBus.gain.value = 0.5; sfxBus.connect(comp);
+  trackBus = ac.createGain(); trackBus.gain.value = 0; trackBus.connect(comp);
+  // MC voice: a little louder than the music, dry (no echo)
+  voiceBus = ac.createGain(); voiceBus.gain.value = 1.35; voiceBus.connect(comp);
+  return ac;
+}
+function env(g, t, a, peak, d) { g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(peak, t + a); g.gain.exponentialRampToValueAtTime(0.0001, t + a + d); }
+function blip(t, v = 1, hz = 1320) {   // cue on each "your turn" beat, and the preview metronome
+  const o = ac.createOscillator(), g = ac.createGain();
+  o.type = 'sine'; o.frequency.value = hz; env(g, t, 0.002, 0.22 * v, 0.05); o.connect(g); g.connect(sfxBus); o.start(t); o.stop(t + 0.09);
+}
+
+/* MC clips (mp3). Each keeps the offset where the voice actually starts, so it lands on the beat. */
+const clips = {};
+async function loadClips(voice) {
+  const names = [...new Set(WORDS.flatMap(w => w.pieces.map(p => p.clip)))];
+  await Promise.all(names.map(async n => {
+    const key = voice + '/' + n;
+    if (clips[key] !== undefined) return;
+    try {
+      const buf = await ac.decodeAudioData(await (await fetch(`audio/${voice}/${n}.mp3`)).arrayBuffer());
+      const d = buf.getChannelData(0); let peak = 0; for (const v of d) peak = Math.max(peak, Math.abs(v));
+      let s = 0; const th = peak * 0.06; while (s < d.length && Math.abs(d[s]) < th) s++;
+      clips[key] = { buf, start: Math.max(0, s / buf.sampleRate - 0.012) };
+    } catch { clips[key] = null; }
+  }));
+}
+/** Play an MC clip at audio time t. Hype lines are never spoken: they only pop up as a sticker word. */
+function say(name, t, stopAt) {
+  if (HYPE_TEXT[name]) { if (run) setTimeout(() => { if (run && !run.ended) sticker(HYPE_TEXT[name]); }, Math.max(0, (t - ac.currentTime) * 1000)); return; }
+  const c = clips[opt.voice + '/' + name];
+  if (!c) return;
+  const s = ac.createBufferSource(); s.buffer = c.buf; s.connect(voiceBus); s.start(t, c.start);
+  if (stopAt && stopAt < t + c.buf.duration - c.start) s.stop(stopAt);
+}
+
+/* ── setup screen ── */
+$('maps').innerHTML = MAPS.map(m => {
+  const n = m.id === 'all' ? WORDS.length : WORDS.filter(w => w.map === m.id).length;
+  return `<button class="choice${m.id === opt.map ? ' on' : ''}" data-v="${m.id}"><b>${m.name}</b><small>${m.ex}<br>단어 ${n}개</small></button>`;
+}).join('');
+$('maps').addEventListener('click', (e) => {
+  const b = e.target.closest('.choice'); if (!b) return;
+  opt.map = b.dataset.v; $('maps').querySelectorAll('.choice').forEach(x => x.classList.toggle('on', x === b));
+});
+$('voices').addEventListener('click', async (e) => {
+  const b = e.target.closest('.choice'); if (!b) return;
+  opt.voice = b.dataset.v; $('voices').querySelectorAll('.choice').forEach(x => x.classList.toggle('on', x === b)); setMC();
+  audio(); await ac.resume(); await loadClips(opt.voice);
+  const t = ac.currentTime + 0.05, beat = 60 / 128;   // a little sample: 베스! 티뷸로! 코클리어!
+  ['c-ves', 'c-tibulo', 'c-cochlear'].forEach((c, k) => say(c, t + k * beat, t + (k + 1) * beat - 0.01));
+});
+function markSong(kind) { $('ytBtn').classList.toggle('on', kind === 'yt'); $('mp3Btn').classList.toggle('on', kind === 'mp3'); $('builtinBtn').classList.toggle('on', kind === 'builtin'); }
+
+/* ── song 1 (main): a YouTube link — the video plays in the game, the beat is found live ── */
+const IS_PHONE = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || !(navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia);
+let yt = null, ytApi = null;
+function loadYTApi() {
+  if (ytApi) return ytApi;
+  ytApi = new Promise((res, rej) => {
+    window.onYouTubeIframeAPIReady = res;
+    const s = document.createElement('script'); s.src = 'https://www.youtube.com/iframe_api'; s.onerror = rej; document.head.appendChild(s);
+  });
+  return ytApi;
+}
+function ytId(text) {
+  const m = text.match(/(?:[?&]v=|youtu\.be\/|\/live\/|\/shorts\/|\/embed\/)([\w-]{11})/) || text.trim().match(/^([\w-]{11})$/);
+  return m && m[1];
+}
+/** load the video into the game's TV (paused) to check it can be embedded and get its title */
+async function cueYT(id) {
+  await loadYTApi();
+  if (yt) { try { yt.destroy(); } catch {} yt = null; $('tv').insertAdjacentHTML('afterbegin', '<div id="ytBox"></div>'); }
+  return new Promise((resolve) => {
+    let done = false; const finish = (r) => { if (!done) { done = true; resolve(r); } };
+    yt = new YT.Player('ytBox', {
+      videoId: id, playerVars: { playsinline: 1, rel: 0, modestbranding: 1 },
+      events: {
+        onReady: () => setTimeout(() => { const d = yt.getVideoData() || {}; finish({ ok: true, title: d.title || '', live: !!d.isLive || !yt.getDuration() }); }, 300),
+        onError: (e) => { if (!done) finish({ ok: false, code: e.data }); else ytError(e.data); },
+        onStateChange: (e) => ytState(e.data),
+      },
+    });
+    setTimeout(() => finish({ ok: true, title: '', live: false }), 8000);
+  });
+}
+function ytError(code) {
+  const msg = code === 101 || code === 150 ? '이 영상은 주인이 다른 사이트에서 재생을 막아 놨어요 😢 다른 영상을 골라 주세요' : '영상을 재생할 수 없어요 (오류 ' + code + ')';
+  if (run && song && song.kind === 'yt') { stopRun(); run = null; openSetup(); }
+  $('light').className = 'light red'; $('light').textContent = '🔴 ' + msg; if (song && song.kind === 'yt') song.ready = false; refreshPlay();
+}
+function ytState(s) {
+  if (!run || !song || song.kind !== 'yt') return;
+  if (s === 1) { run.videoPlaying = true; $('tvHint').classList.remove('on'); }
+  if (s === 0 && !run.ended && run.state === 'go') { run.done = true; setTimeout(showResult, 600); }   // the video ended
+}
+$('ytBtn').addEventListener('click', loadLink);
+$('ytUrl').addEventListener('keydown', (e) => { if (e.key === 'Enter') loadLink(); });
+async function loadLink() {
+  const id = ytId($('ytUrl').value);
+  stopPreview();
+  if (!id) { song = null; showSong(); $('songInfo').classList.add('on'); $('light').className = 'light red'; $('light').textContent = '🔴 유튜브 링크가 아닌 것 같아요'; $('reasons').textContent = '예: https://www.youtube.com/watch?v=… 또는 https://youtu.be/…'; refreshPlay(); return; }
+  song = { kind: 'yt', id, name: '유튜브 영상', ready: false };
+  markSong('yt'); showSong('영상 불러오는 중…');
+  const r = await cueYT(id).catch(() => ({ ok: false, code: 'net' }));
+  if (!song || song.id !== id) return;
+  if (!r.ok) { ytError(r.code); showSongName(); return; }
+  Object.assign(song, { name: r.title || '유튜브 영상', live: r.live, ready: true });
+  showSong(); refreshPlay();
+}
+
+/* ── song 2: my MP3 (analysed right here), song 3: the built-in track ── */
+$('mp3Btn').addEventListener('click', () => { audio(); ac.resume(); $('fileIn').value = ''; $('fileIn').click(); });
+$('fileIn').addEventListener('change', async () => {
+  const f = $('fileIn').files[0]; if (!f) return;
+  stopPreview();
+  song = { kind: 'mp3', name: f.name.replace(/\.[^.]+$/, ''), ready: false };
+  markSong('mp3'); showSong('분석 중… 0%');
+  try {
+    audio();
+    const buf = await ac.decodeAudioData(await f.arrayBuffer());
+    const r = await analyzeSong(buf, (p) => { $('light').textContent = `분석 중… ${Math.round(p * 100)}%`; });
+    Object.assign(song, r, { buf, ready: true });
+  } catch (err) {
+    song = null; showSong(); $('songInfo').classList.add('on'); $('light').className = 'light red'; $('light').textContent = '🔴 이 파일은 열 수 없어요';
+    $('reasons').textContent = 'MP3 같은 음악 파일인지 확인해 주세요.'; refreshPlay(); return;
+  }
+  showSong(); refreshPlay();
+});
+$('builtinBtn').addEventListener('click', async () => {
+  stopPreview();
+  song = { ...BUILTIN, kind: 'builtin', ready: false }; markSong('builtin'); showSong('불러오는 중…');
+  audio();
+  try { song.buf = await ac.decodeAudioData(await (await fetch(BUILTIN.url)).arrayBuffer()); song.ready = true; }
+  catch { song = null; }
+  showSong(); refreshPlay();
+});
+/** game tempo for a song: one piece per beat, but very fast songs go one piece per two beats */
+function gameBpm(bpm) { let b = bpm; while (b > 150) b /= 2; while (b < 70) b *= 2; return b; }
+function showSongName() {
+  const th = $('thumb');
+  if (song && song.kind === 'yt') { th.src = `https://i.ytimg.com/vi/${song.id}/mqdefault.jpg`; th.classList.add('on'); } else th.classList.remove('on');
+  $('songName').textContent = song ? (song.kind === 'yt' ? '▶ ' : '🎵 ') + song.name : '';
+}
+function showSong(waitText) {
+  $('songInfo').classList.toggle('on', !!song);
+  if (!song) return;
+  showSongName();
+  const L = $('light');
+  const hideTools = () => { $('songTools').style.display = 'none'; $('adjust').style.display = 'none'; };
+  if (!song.ready) { L.className = 'light wait'; L.textContent = waitText || '분석 중…'; $('reasons').innerHTML = ''; hideTools(); return; }
+  if (song.kind === 'yt') {
+    hideTools();
+    L.className = 'light wait'; L.textContent = song.live ? '🔴 LIVE · 박자는 플레이하면서 실시간으로 찾아요' : '🎧 박자는 플레이하면서 실시간으로 찾아요';
+    $('reasons').innerHTML = IS_PHONE
+      ? '📱 폰에서는 영상 소리를 직접 들을 수 없어서, 영상이 나오면 <b>박자에 맞춰 버튼을 8번 톡톡</b> 눌러 알려 주세요.'
+      : '① PLAY를 누르면 <b>"이 탭 공유"</b> 창이 떠요 → <b>탭 오디오 공유</b>가 켜져 있는지 보고 <b>공유</b><br>② 영상이 나오면 10~15초 동안 박자를 들어요 (몸 풀기!)<br>③ 박자를 찾으면 3·2·1·GO! ' +
+        (song.live ? '<br>🔴 라이브는 빨라지고 느려지는 걸 계속 따라가요. 그래도 살짝 흔들릴 수 있어요' : '');
+    return;
+  }
+  $('songTools').style.display = ''; $('adjust').style.display = song.builtIn ? 'none' : '';
+  const label = { green: '🟢 잘 맞아요! 바로 시작해도 돼요', yellow: '🟡 조금 애매해요 · 박자 미리 듣기로 확인해 보세요', red: '🔴 이 곡은 박자가 안 맞을 수 있어요' }[song.light];
+  L.className = 'light ' + song.light; L.textContent = label;
+  const gb = gameBpm(song.bpm), lines = [];
+  lines.push(`빠르기 <b>${Math.round(song.bpm * 10) / 10} BPM</b>` + (Math.abs(gb - song.bpm) > 1 ? ` → 게임은 ${Math.round(gb)} BPM으로 (${gb < song.bpm ? '2박에 한 번씩' : '반 박마다'})` : '') +
+    ` · 전주 <b>${song.start.toFixed(1)}초</b> 뒤 시작`);
+  for (const r of song.reasons) lines.push((r.lv === 'red' ? '🔴 ' : '🟡 ') + r.t);
+  if (song.light === 'red') lines.push('다른 곡을 고르는 걸 추천해요. 그래도 하고 싶으면 아래에서 직접 맞춰 보세요!');
+  $('reasons').innerHTML = lines.join('<br>');
+}
+/* manual fixes (MP3): nudge the beat, move the start by a bar, halve/double the tempo */
+document.querySelectorAll('[data-adj]').forEach(b => b.addEventListener('click', () => {
+  if (!song || !song.ready || !song.buf) return;
+  const v = +b.dataset.v, beat = 60 / song.bpm;
+  if (b.dataset.adj === 'nudge') { song.beat0 += v; song.start += v; }
+  if (b.dataset.adj === 'bar') { const ns = song.start + v * beat * 4; if (ns > 0.5 && ns < song.buf.duration - 30) song.start = ns; }
+  if (b.dataset.adj === 'tempo') { const nb = song.bpm * v; if (nb >= 50 && nb <= 260) song.bpm = nb; }
+  song.adjusted = true;
+  showSong(); playPreview();
+}));
+
+/* preview (MP3): 6 bars around the game start with a metronome on top */
+let preview = null;
+function stopPreview() {
+  if (!preview) return;
+  try { preview.src.stop(); } catch {} clearInterval(preview.timer);
+  trackBus.gain.cancelScheduledValues(0); trackBus.gain.value = 0;
+  $('pdots').querySelectorAll('i').forEach(i => i.classList.remove('on'));
+  $('previewBeat').textContent = '▶ 박자 미리 듣기'; $('previewBeat').classList.remove('hot');
+  preview = null;
+}
+function playPreview() {
+  stopPreview();
+  if (!song || !song.ready || !song.buf) return;
+  audio(); ac.resume();
+  const beat = 60 / song.bpm, from = Math.max(0, song.start - beat * 8), t0 = ac.currentTime + 0.1;
+  const src = ac.createBufferSource(); src.buffer = song.buf; src.connect(trackBus);
+  trackBus.gain.cancelScheduledValues(0); trackBus.gain.setValueAtTime(0.8, t0);
+  src.start(t0, from, beat * 24 + 0.2);
+  const first = Math.ceil((from - song.start) / beat - 1e-6);
+  for (let k = first; k < first + 24; k++) { const down = ((k % 4) + 4) % 4 === 0; blip(t0 + (song.start + k * beat - from), down ? 1.3 : 0.8, down ? 1760 : 1180); }
+  const timer = setInterval(() => {
+    const rel = ac.currentTime - t0 - (song.start - from), k = Math.floor(rel / beat), i = ((k % 4) + 4) % 4;
+    $('pdots').querySelectorAll('i').forEach((el, j) => el.classList.toggle('on', j === i));
+    if (ac.currentTime > t0 + beat * 24) stopPreview();
+  }, 30);
+  preview = { src, timer };
+  $('previewBeat').textContent = '■ 멈추기'; $('previewBeat').classList.add('hot');
+}
+$('previewBeat').addEventListener('click', () => preview ? stopPreview() : playPreview());
+
+function refreshPlay() {
+  const btn = $('playBtn'), st = $('status');
+  let msg = '', cls = 'status', ok = true;
+  if (!song) { ok = false; msg = '▶ 유튜브 링크를 넣거나, MP3·기본 곡을 골라 주세요'; }
+  else if (!song.ready) { ok = false; msg = song.kind === 'yt' ? '' : '노래 준비 중…'; }
+  if (!AUTOTEST) {
+    if (modelFailed) { ok = false; cls = 'status err'; msg = location.protocol === 'file:' ? '파일로 열어서 음성 인식을 못 써요 → 실행.bat 으로 열어 주세요' : '음성 인식 모델을 못 불러왔어요. 새로고침해 보세요'; }
+    else if (!model) { ok = false; msg = msg || '음성 인식 준비 중… (처음엔 30초~1분)'; }
+    else if (ok) { cls = 'status ok'; msg = '준비 완료! PLAY 누르면 마이크를 허용해 주세요 🎤'; }
+  }
+  btn.disabled = !ok;
+  btn.innerHTML = ok && song.light === 'red' && !song.adjusted ? '<span class="kr">그래도 플레이 ▶</span><span class="en2">PLAY ANYWAY</span>' : '<span class="kr">플레이 ▶</span><span class="en2">PLAY</span>';
+  st.textContent = msg; st.className = cls;
+}
+setInterval(() => { if ($('setup').classList.contains('on')) refreshPlay(); }, 1000);
+
+/* ── chart: what happens in every bar (shortened for short songs) ── */
+function buildChart(maxBars) {
+  const pool = WORDS.filter(w => opt.map === 'all' || w.map === opt.map);
+  let counts = LEVELS.map(L => L.phrases);
+  const need = (c) => 2 + (c.length - 1) + c.reduce((a, b) => a + b, 0) * 2;   // intro + breaks + outro + call/resp pairs
+  while (need(counts) > maxBars && counts.some(c => c > 1)) { const i = counts.indexOf(Math.max(...counts)); counts[i]--; }
+  while (need(counts) > maxBars && counts.length > 1) counts.pop();
+  const bars = [{ type: 'intro', hype: 'h-start' }];
+  counts.forEach((nPhr, li) => {
+    const L = LEVELS[li];
+    if (li) bars.push({ type: 'break', level: li + 1, hype: 'h-levelup' });
+    const seen = new Set();   // no phrase twice in a level
+    for (let p = 0; p < nPhr; p++) {
+      let words, tries = 0;
+      do { words = L.build(pool); } while (seen.has(words.map(w => w.en).join()) && ++tries < 30);
+      seen.add(words.map(w => w.en).join());
+      const pieces = words.flatMap(w => w.pieces);
+      const wordOf = words.flatMap((w, wi) => w.pieces.map(() => wi));
+      // one piece per beat (1·2·3·4). Two pieces → beats 1 and 3 (single word, level 1) so it breathes;
+      // three pieces → one rest beat before the last unit (the last word, or for a single word its last meaning group):
+      // 루브로! 스파이날! (쉬고) 트랙! · 하이포! (쉬고) 탈라! 무스!
+      let at = 0;
+      const ones = pieces.every(p => p.beats === 1);
+      const unit = (k) => words.length > 1 ? wordOf[k] : pieces[k].group;
+      let cut = pieces.length - 1; while (cut > 0 && unit(cut - 1) === unit(pieces.length - 1)) cut--;
+      const slots = ones && pieces.length === 2 && words.length === 1 && li === 0 ? [0, 2]
+        : ones && pieces.length === 3 && cut > 0 ? pieces.map((_, k) => k < cut ? k : k + 1)
+        : pieces.map(p => { const b = at; at += p.beats; return b; });
+      const len = slots[slots.length - 1] + pieces[pieces.length - 1].beats > 4 ? 8 : 4;   // long words: 2 bars
+      const phrase = { level: li + 1, words, pieces, wordOf, slots, results: [], len };
+      bars.push({ type: 'call', phrase, len });
+      bars.push({ type: 'resp', phrase, len });
+    }
+  });
+  // long (2-bar) words make the chart longer: drop answer pairs from the end until it fits the song
+  const beats = () => bars.reduce((n, b) => n + (b.len || 4), 0) + 4;
+  while (beats() > maxBars * 4 && bars.filter(b => b.type === 'call').length > 2) { const i = bars.map(b => b.type).lastIndexOf('call'); bars.splice(i, 2); }
+  bars.push({ type: 'outro', hype: 'h-end' });
+  return bars;
+}
+
+/* ── timing ───────────────────────────────────────────────────────────────────
+ * Every bar gets its start time when it is scheduled: the previous bar + 4 beats, snapped to the
+ * beat grid { beat, ref }. For an MP3 the grid never changes. For YouTube the live tracker keeps
+ * nudging the grid, so the bars follow a band that speeds up or slows down. */
+let run = null, trackSrc = null, live = null, capture = null;
+function newRun(maxBars) {
+  const bars = buildChart(maxBars);
+  return { bars, totalBeats: bars.reduce((n, b) => n + (b.len || 4), 0), barT: {}, barBeat: {}, nextBar: 0, curBar: null, grid: null, state: 'go',
+    score: 0, combo: 0, maxCombo: 0, counts: { perfect: 0, good: 0, miss: 0 }, missed: [], lag: 0.4, curKey: '', timer: null, done: false };
+}
+const barLen = (i) => (run.bars[i] && run.bars[i].len) || 4;   // beats in bar i (call/answer bars of a long word: 8)
+const snap = (t) => { const g = run.grid; return g.ref + Math.round((t - g.ref) / g.beat) * g.beat; };
+function useBeat(beat) { if (Math.abs(beat - BEAT) > 0.002) setTempo(60 / beat); }
+
+function tickRun() {
+  if (!run || run.ended) return;
+  if (run.state === 'listen') { listenTick(); return; }
+  if (run.live) followTick();
+  // enter bars whose time has come
+  while (run.barT[run.curBar + 1] !== undefined && ac.currentTime >= run.barT[run.curBar + 1]) {
+    run.curBar++;
+    if (run.curBar >= 0 && run.curBar < run.bars.length) enterBar(run.curBar);
+  }
+  // schedule what's coming (MC voice, cues, ducking)
+  const horizon = ac.currentTime + 0.25;
+  for (;;) {
+    const i = run.nextBar;
+    if (run.barT[i] === undefined) run.barT[i] = snap(run.barT[i - 1] + barLen(i - 1) * run.grid.beat);
+    const t = run.barT[i];
+    if (t > horizon) break;
+    run.nextBar++;
+    run.barBeat[i] = run.grid.beat; useBeat(run.grid.beat);
+    if (i < 0) { if (i === -2) say('h-ready', t + 0.02); continue; }
+    const bar = run.bars[i];
+    if (!bar) { finishSoon(); break; }
+    duck(bar.type === 'resp', t, bar.type === 'outro');
+    if (bar.hype) say(bar.hype, t + 0.02);
+    const B = run.grid.beat;
+    if (bar.type === 'call') bar.phrase.slots.forEach((b, k) => {
+      const next = bar.phrase.slots[k + 1];
+      say(bar.phrase.pieces[k].clip, t + b * B, next !== undefined ? t + next * B - 0.01 : t + bar.len * B - 0.01);
+    });
+    if (bar.type === 'resp') bar.phrase.slots.forEach(b => blip(t + b * B));
+  }
+}
+/** music down while the player answers (MP3: smooth gain; YouTube: player volume) */
+function duck(quiet, t, fadeOut) {
+  if (!opt.duck) quiet = false;   // default: steady volume all the way through
+  if (song.kind === 'yt') {
+    if (!opt.duck) return;
+    setTimeout(() => { try { yt.setVolume(quiet ? 40 : 100); } catch {} }, Math.max(0, (t - ac.currentTime) * 1000 - 30));
+    return;
+  }
+  trackBus.gain.setTargetAtTime(quiet ? DUCK * run.loud : run.loud, t - 0.03, 0.035);
+  if (fadeOut) trackBus.gain.setTargetAtTime(0, t + run.grid.beat * 2.8, 0.5);
+}
+function finishSoon() {
+  if (run.done) return;
+  run.done = true;
+  const end = run.barT[run.bars.length - 1] + 4 * run.grid.beat;
+  setTimeout(showResult, Math.max(0, (end - ac.currentTime) * 1000) + 400);
+}
+
+/* YouTube: listen until the beat is clear, then count in */
+function listenTick() {
+  const now = ac.currentTime;
+  if (run.live && now - (run.lastEst || 0) >= 1) {
+    run.lastEst = now;
+    const e = live.estimate();
+    const secs = live.secs, pct = Math.min(1, secs / 10);
+    $('lbar').style.width = Math.round(pct * 100) + '%';
+    if (e) {
+      run.ests.push(e); if (run.ests.length > 3) run.ests.shift();
+      const c = run.ests[run.ests.length - 1], [a, b] = run.ests;
+      const agree = run.ests.length === 3 && [a, b].every(x => Math.abs(x.bpm / c.bpm - 1) < 0.012 &&
+        Math.abs(((c.beatT - x.beatT) / (60 / c.bpm) + 0.5) % 1 - 0.5) < 0.12);
+      const clear = c.clarity >= 1.35 && c.hitRate >= 0.35;
+      $('ltext').textContent = clear ? `🎧 박자 듣는 중… ${Math.round(c.bpm)} BPM 같아요` : '🎧 박자 듣는 중…';
+      if (secs >= 9 && agree && clear) lock(c, c.clarity >= 1.7 && c.hitRate >= 0.6 && !song.live ? 'green' : 'yellow');
+    }
+    if (secs > 22 && run.state === 'listen' && !run.askedTap) { run.askedTap = true; showTapSync('박자를 잘 못 찾겠어요 😵 박자에 맞춰 톡톡 눌러 알려 주세요!'); }
+  }
+  if (!run.videoPlaying && song.kind === 'yt' && now - run.startedAt > 3) $('tvHint').classList.add('on');
+}
+function lock(e, light) {
+  const beat = 60 / gameBpm(e.bpm);
+  run.grid = { beat, ref: e.down };
+  // count-in bar (-1) on the first bar start at least ~1 beat away, then game bar 0
+  let t = e.down; while (t < ac.currentTime + 0.6) t += 4 * (60 / e.bpm) * Math.max(1, Math.round(beat / (60 / e.bpm)));
+  run.barT[-1] = t; run.nextBar = -1; run.curBar = -2; run.state = 'go';
+  $('listen').classList.remove('on'); $('tapSync').classList.remove('on');
+  if (song.kind === 'yt' && !song.live) {
+    try { const left = yt.getDuration() - yt.getCurrentTime() - (t - ac.currentTime) - 4 * beat; const n = Math.floor(left / (4 * beat)) - 1; if (n < run.bars.length) { run.bars = buildChart(Math.max(6, n)); run.totalBeats = run.bars.reduce((m, b) => m + (b.len || 4), 0); } } catch {}
+  }
+  if (live) live.locked = { bpm: e.bpm };
+  const msg = { green: '🟢 박자 찾았다!', yellow: song.live ? '🟡 라이브 박자 따라갈게!' : '🟡 박자 찾았어! (살짝 애매)', tap: '👆 박자 알았어!' }[light];
+  sticker(msg, { x: 50, y: 34, color: light === 'green' ? '#8fd36a' : '#ffd54a' });
+  $('phase').className = 'phase wait'; $('phase').textContent = '곧 시작!';
+}
+/* after the lock: keep following the song (tempo ±4 %, phase a few ms per update) */
+function followTick() {
+  const now = ac.currentTime;
+  if (now - (run.lastEst || 0) < 2) return;
+  run.lastEst = now;
+  const e = live.estimate(10);
+  if (!e || e.clarity < 1.3 || e.hitRate < 0.3) return;
+  const g = run.grid, songBeat = 60 / e.bpm, gb = 60 / gameBpm(e.bpm);
+  if (Math.abs(gb / g.beat - 1) < 0.04) g.beat = g.beat * 0.75 + gb * 0.25;
+  let err = ((e.beatT - g.ref) % songBeat + songBeat) % songBeat; if (err > songBeat / 2) err -= songBeat;
+  g.ref += Math.max(-0.025, Math.min(0.025, err * 0.35));
+}
+/* tap to set the beat (phones, or when the beat can't be heard): 8 taps on the beat */
+function showTapSync(text) { $('tapSync').classList.add('on'); run.taps = []; $('tapLeft').textContent = '8번 눌러 주세요'; if (text) bubble(text); }
+function tapSync() {
+  if (!run || run.state !== 'listen') return;
+  const now = ac.currentTime; run.taps.push(now);
+  const n = run.taps.length; $('tapLeft').textContent = n < 8 ? `${8 - n}번 더!` : '좋아요!';
+  const b = $('tapSync'); b.style.transform = 'translateY(4px)'; setTimeout(() => b.style.transform = '', 80);
+  if (n < 8) return;
+  const T = run.taps.slice(-8), iv = T.slice(1).map((t, i) => t - T[i]).sort((p, q) => p - q), beat = iv[3];
+  // least squares on the beat numbers
+  const k = T.map(t => Math.round((t - T[0]) / beat)), mk = k.reduce((a, b) => a + b) / 8, mt = T.reduce((a, b) => a + b) / 8;
+  let sxy = 0, sxx = 0; k.forEach((kk, i) => { sxy += (kk - mk) * (T[i] - mt); sxx += (kk - mk) * (kk - mk); });
+  const fit = sxx ? sxy / sxx : beat, ref = mt - fit * mk + (k[7] - k[0] >= 7 ? 0 : 0);
+  const bpm = 60 / fit;
+  if (!(bpm > 50 && bpm < 260)) { run.taps = []; $('tapLeft').textContent = '다시 8번!'; return; }
+  lock({ bpm, beatT: ref + k[7] * fit, down: ref + k[7] * fit }, 'tap');
+}
+$('tapSync').addEventListener('pointerdown', tapSync);
+
+/* ── per-frame visuals ── */
+function frame() {
+  if (!run || run.ended) return;
+  const now = ac.currentTime;
+  if (run.state === 'go' && run.barT[run.curBar] !== undefined) {
+    const c = run.curBar, B = run.barBeat[c] || run.grid.beat;
+    const beatIdx = Math.max(0, Math.min(barLen(c) - 1, Math.floor((now - run.barT[c]) / B))), key = c + ':' + beatIdx;
+    if (key !== run.curKey) {
+      run.curKey = key;
+      const b = document.body;
+      b.classList.remove('beat'); void b.offsetWidth; b.classList.add('beat');
+      const bar = c >= 0 ? run.bars[c] : null;
+      $('beats').querySelectorAll('i').forEach((el, k) => { el.classList.toggle('on', k === beatIdx % 4); el.classList.toggle('resp', !!bar && bar.type === 'resp'); });
+      if (c < 0) preroll(-(c * 4 + beatIdx)); else $('count').textContent = '';
+      highlightSlot(bar, beatIdx);
+      $('mcBrain').classList.toggle('talk', !!bar && bar.type === 'call' && bar.phrase.slots.includes(beatIdx));
+    }
+    karaoke(now);
+    const first = run.barT[0];
+    if (first !== undefined) $('prog').style.width = Math.min(100, Math.max(0, (now - first) / (run.totalBeats * run.grid.beat)) * 100) + '%';
+  }
+  requestAnimationFrame(frame);
+}
+/* karaoke: each card fills up from the left as its beat comes, and a ball bounces onto it right on the beat */
+function karaoke(now) {
+  const c = run.curBar, bar = c >= 0 ? run.bars[c] : null, ball = $('ball');
+  if (!bar || !bar.phrase || !ball) { if (ball) ball.classList.remove('on'); return; }
+  const ph = bar.phrase, cards = slotEls(), B = run.barBeat[c] || run.grid.beat;
+  const t0 = run.barT[c];
+  // targets: this bar's beats, plus the answer bar's beats if it's the same phrase next
+  const targets = ph.slots.map((b, k) => ({ t: t0 + b * B, k, own: true }));
+  const nb = run.bars[c + 1];
+  if (nb && nb.phrase === ph) ph.slots.forEach((b, k) => targets.push({ t: t0 + barLen(c) * B + b * B, k, own: false }));
+  // fill this bar's cards
+  cards.forEach((el, k) => {
+    const tt = t0 + ph.slots[k] * B, lead = B * 0.85;
+    el.style.setProperty('--p', Math.max(0, Math.min(1, (now - (tt - lead)) / lead)).toFixed(3));
+  });
+  // ball: arcs from one target to the next, landing exactly on each beat
+  const pos = (k) => { const el = cards[k]; return el ? { x: el.offsetLeft + el.offsetWidth / 2, y: el.offsetTop } : { x: 0, y: 0 }; };
+  let i = targets.findIndex(x => x.t > now);
+  if (i < 0) { ball.classList.remove('on'); return; }
+  const to = targets[i], from = i > 0 ? targets[i - 1] : { t: to.t - B, k: to.k, start: true };
+  const u = Math.max(0, Math.min(1, (now - from.t) / (to.t - from.t)));
+  const a = from.start ? { x: pos(to.k).x - 60, y: pos(to.k).y - 50 } : pos(from.k), b = pos(to.k);
+  const h = 34 + 18 * Math.min(2, Math.abs(to.t - from.t) / B);
+  ball.style.transform = `translate(${a.x + (b.x - a.x) * u}px, ${a.y + (b.y - a.y) * u - 4 * h * u * (1 - u) - 8}px)`;
+  ball.classList.add('on'); ball.classList.toggle('call', bar.type === 'call' && to.own);
+}
+function slotEls() { return $('slots').querySelectorAll('.slot'); }
+/* the song's intro: show that the game starts when it ends, then count in 3·2·1·GO on the last bar */
+function preroll(left) {
+  const c = $('count');
+  if (left <= 4) { c.textContent = ['GO!', '1', '2', '3'][left - 1] || ''; $('phase').textContent = '곧 시작!'; }
+  else {
+    c.textContent = '';
+    $('phase').className = 'phase wait'; $('phase').textContent = '🎵 전주 중~ 몸 풀기!';
+    if (left % 4 === 0) bubble(pick(['둠칫둠칫~', '어깨 들썩!', '박자 느껴봐~', '곧 시작이야!']));
+  }
+  c.classList.remove('pop'); void c.offsetWidth; c.classList.add('pop');
+}
+function highlightSlot(bar, beatIdx) {
+  const els = slotEls();
+  if (!bar || !bar.phrase) { els.forEach(e => e.classList.remove('now')); return; }
+  bar.phrase.slots.forEach((b, k) => { if (els[k]) els[k].classList.toggle('now', beatIdx >= b && beatIdx < b + bar.phrase.pieces[k].beats); });
+}
+function enterBar(i) {
+  const bar = run.bars[i], prev = run.bars[i - 1];
+  if (prev && prev.type === 'resp' && prev !== bar) closeResponse(prev);
+  const phase = $('phase');
+  if (bar.type === 'intro') { phase.className = 'phase wait'; phase.textContent = 'LET\'S GO!'; bubble('가보자고~! 🔥'); $('wordline').textContent = ''; }
+  if (bar.type === 'break') { phase.className = 'phase wait'; phase.textContent = `LEVEL ${bar.level}!`; $('level').textContent = bar.level; bubble('레벨 업! 더 많이~'); drawSlots(null); party(0.8, { x: .5, y: .4 }); }
+  if (bar.type === 'outro') { phase.className = 'phase wait'; phase.textContent = 'FINISH!'; bubble('최고였어! 💖'); drawSlots(null); }
+  if (bar.type === 'call') { phase.className = 'phase call'; phase.textContent = '👂 잘 들어 봐!'; drawSlots(bar.phrase, 'call'); bubble(bar.phrase.pieces.map(p => p.read + '!').join(' ')); $('level').textContent = bar.phrase.level; }
+  if (bar.type === 'resp') { phase.className = 'phase resp'; phase.textContent = '🎤 따라 해!'; drawSlots(bar.phrase, 'resp'); bubble('공이 닿을 때 외쳐!'); openResponse(bar, i); }
+}
+function drawSlots(phrase, kind) {
+  const box = $('slots');
+  if (!phrase) { box.innerHTML = ''; $('wordline').textContent = ''; return; }
+  $('wordline').innerHTML = phrase.words.map((w, wi) => `<span style="--wc:${WORD_COLORS[wi % 4][0]}"><b>${w.en}</b>${w.ko}</span>`).join('');
+  const last = phrase.pieces.length - 1;
+  box.style.setProperty('--n', Math.max(4, phrase.slots[last] + phrase.pieces[last].beats));
+  // row 1: the cards — pieces of one meaning group are tied by a link bar (.joinR; --gc = empty columns to the next piece)
+  // row 2: a bracket per meaning group with what it means (.meanTag: 안뜰 · 척수 · 로)
+  // row 3: a bracket over the whole word with its name (.wordTag)
+  const wo = phrase.wordOf, P = phrase.pieces, S = phrase.slots;
+  const same = (k, l) => l >= 0 && l < P.length && wo[k] === wo[l] && P[k].group === P[l].group;
+  const span = (ks) => `${S[ks[0]] + 1} / ${S[ks[ks.length - 1]] + P[ks[ks.length - 1]].beats + 1}`;
+  const groups = [];   // runs of pieces that share word + meaning group
+  P.forEach((p, k) => { if (k && same(k, k - 1)) groups[groups.length - 1].push(k); else groups.push([k]); });
+  box.innerHTML = P.map((p, k) => {
+    const [wc, ws] = WORD_COLORS[wo[k] % 4], joinR = same(k, k + 1), joinL = same(k, k - 1);
+    const gc = joinR ? S[k + 1] - S[k] - p.beats : 0;
+    return `<div class="slot ${kind}${joinR ? ' joinR' : ''}${joinL ? ' joinL' : ''}" style="grid-row:1;grid-column:${S[k] + 1} / span ${p.beats};--wc:${wc};--ws:${ws};--gc:${gc};--b:${p.beats}"><span class="judge"></span><div class="ko">${p.read}!</div>${p.id ? `<div class="en">${p.id.toUpperCase()}</div>` : ''}</div>`;
+  }).join('') + groups.map(ks => {
+    if (!P[ks[0]].mean) return '';   // no meaning label (words2 terms): the word bracket names it
+    const [wc] = WORD_COLORS[wo[ks[0]] % 4];
+    return `<div class="meanTag" style="grid-row:2;grid-column:${span(ks)};--wc:${wc}"><span>${P[ks[0]].mean}</span></div>`;
+  }).join('') + phrase.words.map((w, wi) => {
+    const ks = wo.map((x, k) => x === wi ? k : -1).filter(k => k >= 0), [wc, ws] = WORD_COLORS[wi % 4];
+    return `<div class="wordTag${ks.length > 1 ? ' multi' : ''}" style="grid-row:3;grid-column:${span(ks)};--wc:${wc};--ws:${ws}"><span>${w.en}<i>${w.ko}</i></span></div>`;
+  }).join('') + '<i class="ball" id="ball"></i>';
+  if (kind === 'resp') phrase.results.forEach((r, k) => r && markSlot(k, r, true));
+}
+function bubble(text) { const b = $('bubble'); b.textContent = text; b.style.transform = 'scale(1.12) rotate(-2deg)'; setTimeout(() => b.style.transform = '', 130); }
+
+/* ── judging ── */
+function judge(phrase, k, rating) {
+  if (phrase.results[k]) return;
+  phrase.results[k] = rating;
+  run.counts[rating]++;
+  const el = slotEls()[k], onScreen = run.bars[run.curBar] && run.bars[run.curBar].phrase === phrase;
+  if (onScreen && el) {   // a little word pops out of the card that was hit
+    const r = el.getBoundingClientRect();
+    const miss = rating === 'miss';
+    sticker(pick(HIT_WORDS[rating]), { small: !miss, oops: miss, x: (r.left + r.width / 2) / innerWidth * 100, y: (r.top - (miss ? 60 : 30)) / innerHeight * 100,
+      color: rating === 'perfect' ? '#8fd36a' : rating === 'good' ? '#7fd6d3' : '#ff4d4d' });
+    if (miss) {   // shake the card and flash the screen edge red
+      el.classList.remove('shake'); void el.offsetWidth; el.classList.add('shake');
+      const f = $('missFlash'); f.classList.remove('on'); void f.offsetWidth; f.classList.add('on');
+    }
+  }
+  if (rating === 'miss') { run.combo = 0; run.missed.push(phrase.pieces[k].word); }
+  else {
+    run.combo++; run.maxCombo = Math.max(run.maxCombo, run.combo);
+    run.score += SCORE[rating] + Math.min(run.combo, 30) * 10;
+    if (run.combo % 10 === 0) { sticker(`${run.combo} COMBO!`, { x: 50, y: 30, color: '#ffd54a' }); party(1.2); }
+  }
+  $('score').textContent = run.score.toLocaleString('ko-KR');
+  $('combo').textContent = run.combo; $('combo').classList.toggle('hot', run.combo >= 10);
+  if (onScreen) markSlot(k, rating);
+}
+function markSlot(k, rating, quiet) {
+  const el = slotEls()[k]; if (!el) return;
+  el.classList.add(rating);
+  const j = el.querySelector('.judge'); j.textContent = rating.toUpperCase(); j.className = `judge j-${rating}` + (quiet ? '' : ' show');
+  if (quiet) j.style.opacity = 1;
+}
+function rateDelta(d, beat) { const a = Math.abs(d); return a <= 0.2 ? 'perfect' : a <= Math.min(0.42, beat * 0.9) ? 'good' : null; }
+
+/* voice: one small grammar per answer bar (this phrase's pieces + a few decoys) */
+let mic = null, rec = null, listening = false;
+const onsets = [];   // times (ac clock) when the player started a shout
+async function setupMic() {
+  if (mic) return true;
+  if (!window.isSecureContext || !navigator.mediaDevices) return false;
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1 } });
+    const src = ac.createMediaStreamSource(stream), an = ac.createAnalyser(); an.fftSize = 512;
+    const proc = ac.createScriptProcessor(2048, 1, 1), mute = ac.createGain(); mute.gain.value = 0;
+    proc.onaudioprocess = (e) => { if (listening && rec) { try { rec.acceptWaveform(e.inputBuffer); } catch {} } };
+    src.connect(an); src.connect(proc); proc.connect(mute); mute.connect(ac.destination);
+    const buf = new Uint8Array(an.fftSize);
+    // level meter + voice onsets (the moment a shout starts) for words the recogniser can't know (Latin anatomy names)
+    let loud = false, floor = 4;
+    (function meter() {
+      an.getByteTimeDomainData(buf); let p = 0; for (const v of buf) p = Math.max(p, Math.abs(v - 128));
+      $('micbar').style.width = Math.min(100, p / 60 * 100) + '%';
+      if (!loud) floor = floor * 0.98 + p * 0.02;
+      if (!loud && p > Math.max(18, floor * 3)) { loud = true; onsets.push(ac.currentTime - an.fftSize / ac.sampleRate / 2); if (onsets.length > 64) onsets.shift(); }
+      else if (loud && p < Math.max(9, floor * 1.6)) loud = false;
+      requestAnimationFrame(meter);
+    })();
+    mic = { stream, proc };
+    return true;
+  } catch { return false; }
+}
+function openResponse(bar, i) {
+  const ph = bar.phrase, tStart = run.barT[i], B = run.barBeat[i] || run.grid.beat;
+  ph.beat = B;
+  ph.slotTimes = ph.slots.map(b => tStart + b * B);
+  ph.matched = 0;
+  $('heard').innerHTML = '';
+  ph.slotTimes.forEach((t, k) => {   // nobody answered → MISS a little after the window
+    const wait = (t + 0.42 + run.lag + 0.35 - ac.currentTime) * 1000;
+    setTimeout(() => { if (run && !ph.results[k]) judge(ph, k, 'miss'); }, Math.max(0, wait));
+    if (AUTOTEST) setTimeout(() => { if (run) judge(ph, k, rateDelta(ac.currentTime - t, B) || 'miss'); }, Math.max(0, (t - ac.currentTime) * 1000));
+    // timing judge: pieces with nothing for the recogniser to listen for (or no recogniser) count a shout that starts on the beat
+    if (!AUTOTEST && (!model || !ph.pieces[k].says.length)) setTimeout(() => {
+      if (!run || ph.results[k]) return;
+      const near = onsets.filter(o => Math.abs(o - t) <= 0.42 && !onsets.used?.has(o)).sort((a, b) => Math.abs(a - t) - Math.abs(b - t))[0];
+      if (near === undefined) return;   // the miss timer handles silence
+      (onsets.used ||= new Set()).add(near);
+      judge(ph, k, rateDelta(near - t, B) || 'miss');
+    }, Math.max(0, (t + 0.45 - ac.currentTime) * 1000));
+  });
+  if (!model) return;
+  const others = shuffle(WORDS.flatMap(w => w.pieces).filter(p => !ph.pieces.includes(p))).slice(0, 4);
+  const grammar = [...new Set([...ph.pieces, ...others].flatMap(p => p.says))].concat('[unk]');
+  try { rec && rec.remove(); } catch {}
+  rec = new model.KaldiRecognizer(ac.sampleRate, JSON.stringify(grammar));
+  const myRec = rec;
+  const onText = (text) => {
+    if (rec !== myRec || !text) return;
+    $('heard').innerHTML = '들린 말: <b>' + text + '</b>';
+    // walk the heard text in order, matching this phrase's pieces one by one
+    let pos = 0, n = 0;
+    const padded = ' ' + text + ' ';
+    for (let k = 0; k < ph.pieces.length; k++) {
+      let best = -1, len = 0;
+      for (const s of ph.pieces[k].says) { const at = padded.indexOf(' ' + s + ' ', pos); if (at >= 0 && (best < 0 || at < best)) { best = at; len = s.length + 1; } }
+      if (best < 0) break;
+      pos = best + len; n = k + 1;
+    }
+    const now = ac.currentTime;
+    for (let k = ph.matched; k < n; k++) {
+      if (ph.results[k]) continue;
+      const r = rateDelta(now - ph.slotTimes[k] - run.lag, ph.beat) || (now < ph.slotTimes[k] + 1.3 ? 'good' : 'miss');
+      judge(ph, k, r);
+      if (r !== 'miss') run.lag = Math.min(0.75, Math.max(0.18, run.lag * 0.8 + (now - ph.slotTimes[k]) * 0.2));
+    }
+    ph.matched = Math.max(ph.matched, n);
+  };
+  rec.on('partialresult', (m) => onText(((m && m.result && m.result.partial) || '').trim()));
+  rec.on('result', (m) => onText(((m && m.result && m.result.text) || '').trim()));
+  listening = true;
+}
+function closeResponse(bar) {
+  const r = rec;
+  setTimeout(() => {   // keep listening a moment for late words, then wrap up
+    if (rec !== r) return;
+    try { r && r.retrieveFinalResult(); } catch {}
+    setTimeout(() => { if (rec === r) { listening = false; rec = null; } try { r && r.remove(); } catch {} }, 400);
+  }, (run.lag + 0.4) * 1000);
+  const ph = bar.phrase, good = ph.results.filter(x => x && x !== 'miss').length;
+  if (good === ph.pieces.length) { say(pick(HYPE_GOOD), ac.currentTime + BEAT * 3.1); setTimeout(() => run && !run.ended && party(0.7), BEAT * 3100); }
+  else if (!good) say('h-louder', ac.currentTime + BEAT * 2.9);
+}
+addEventListener('keydown', (e) => { if (e.code === 'Escape' && run) quit(); if (e.code === 'Space' && run && run.state === 'listen' && $('tapSync').classList.contains('on')) { e.preventDefault(); tapSync(); } });
+
+/* ── flow ── */
+function show(id) { document.querySelectorAll('.screen').forEach(s => s.classList.toggle('on', s.id === id)); }
+function openSetup() { show('setup'); document.body.classList.remove('video'); refreshPlay(); }
+function resetHud() {
+  $('score').textContent = '0'; $('combo').textContent = '0'; $('combo').classList.remove('hot'); $('level').textContent = '1'; drawSlots(null);
+  $('count').textContent = ''; $('prog').style.width = '0';
+}
+async function play() {
+  if (!song || !song.ready) return;
+  stopPreview();
+  if (song.kind === 'yt') return playYT();
+  audio(); await ac.resume();
+  $('playBtn').disabled = true; $('playBtn').textContent = '나레이션 준비 중…';
+  await loadClips(opt.voice);
+  if (!AUTOTEST && !(await setupMic())) { micFail(); return; }
+  const beat = 60 / gameBpm(song.bpm), bar = 4 * beat;
+  setTempo(60 / beat);
+  // game bar 0 = where the intro ends; play at most ~MAX_INTRO s of intro before it
+  const preBars = Math.max(1, Math.min(Math.floor(song.start / bar), Math.floor(MAX_INTRO / bar)));
+  const offset = Math.max(0, song.start - preBars * bar);
+  run = newRun(Math.floor((song.buf.duration - song.start) / bar) - 1);
+  // keep loud and quiet songs about the same level
+  let e = 0, n = 0; const d = song.buf.getChannelData(0);
+  for (let i = Math.floor(song.start * song.buf.sampleRate); i < d.length; i += 97) { e += d[i] * d[i]; n++; }
+  run.loud = Math.min(1.6, Math.max(0.45, 0.2 / (Math.sqrt(e / Math.max(1, n)) || 0.2)));
+  const at = ac.currentTime + 0.3, t0 = at + (song.start - offset);
+  run.grid = { beat, ref: t0 }; run.barT[-preBars] = t0 - preBars * bar; run.nextBar = -preBars; run.curBar = -preBars - 1;
+  trackSrc = ac.createBufferSource(); trackSrc.buffer = song.buf; trackSrc.connect(trackBus);
+  trackBus.gain.cancelScheduledValues(0); trackBus.gain.setValueAtTime(run.loud, at);
+  trackSrc.start(at, offset);
+  resetHud();
+  $('phase').className = 'phase wait'; $('phase').textContent = '🎵 전주 중~ 몸 풀기!'; bubble('전주 끝나면 시작~!');
+  show('play');
+  run.timer = setInterval(tickRun, 25); tickRun();
+  requestAnimationFrame(frame);
+  refreshPlay();
+}
+function micFail() { $('status').textContent = '🎤 마이크를 쓸 수 없어요. 마이크를 허용하고 다시 눌러 주세요'; $('status').className = 'status err'; refreshPlay(); }
+async function playYT() {
+  // 1) tab audio first, while the click still counts as a user gesture
+  let stream = null, why = '';
+  if (!IS_PHONE && !AUTOTEST) {
+    try {
+      stream = await navigator.mediaDevices.getDisplayMedia({
+        video: true, audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false, suppressLocalAudioPlayback: false },
+        preferCurrentTab: true, selfBrowserSurface: 'include', surfaceSwitching: 'exclude', systemAudio: 'include',
+      });
+      if (!stream.getAudioTracks().length) { stream.getTracks().forEach(t => t.stop()); stream = null; why = '"탭 오디오 공유"가 꺼져 있었어요.'; }
+    } catch { stream = null; why = '탭 공유를 안 했어요.'; }
+  }
+  audio(); await ac.resume();
+  $('playBtn').disabled = true; $('playBtn').textContent = '나레이션 준비 중…';
+  await loadClips(opt.voice);
+  if (!AUTOTEST && !(await setupMic())) { if (stream) stream.getTracks().forEach(t => t.stop()); micFail(); return; }
+  // 2) start listening
+  run = newRun(36);
+  run.state = 'listen'; run.ests = []; run.startedAt = ac.currentTime; run.videoPlaying = false; run.lastEst = 0;
+  live = live || new LiveBeat(ac); live.reset(); live.locked = null;
+  if (stream) { capture = stream; capture.getVideoTracks().forEach(t => t.enabled = false); await live.connect(ac.createMediaStreamSource(stream)); run.live = true; }
+  else if (AUTOTEST) {   // dev only: pretend the tab sound is the built-in track
+    const buf = await ac.decodeAudioData(await (await fetch(BUILTIN.url)).arrayBuffer());
+    const s = ac.createBufferSource(); s.buffer = buf; await live.connect(s); s.start(ac.currentTime, 15); capture = { getTracks: () => [{ stop: () => { try { s.stop(); } catch {} } }] }; run.live = true;
+  }
+  resetHud();
+  document.body.classList.add('video');
+  $('listen').classList.add('on'); $('lbar').style.width = '0'; $('tvHint').classList.remove('on');
+  $('phase').className = 'phase wait';
+  if (run.live) { $('phase').textContent = '🎧 박자 듣는 중'; $('ltext').textContent = '🎧 박자 듣는 중…'; bubble('노래 들으면서 몸 풀기~'); $('tapSync').classList.remove('on'); }
+  else { $('phase').textContent = '👆 박자 알려줘!'; $('ltext').textContent = why || '📱 영상 박자에 맞춰 아래 버튼을 톡톡!'; $('listen').classList.remove('on'); showTapSync(why ? why + ' 대신 박자에 맞춰 톡톡 눌러 주세요!' : '박자에 맞춰 톡톡 눌러 줘!'); }
+  show('play');
+  try { yt.setVolume(100); if (song.live) yt.playVideo(); else { yt.seekTo(0, true); yt.playVideo(); } } catch {}
+  if (AUTOTEST) try { yt.mute(); } catch {}
+  run.timer = setInterval(tickRun, 25);
+  requestAnimationFrame(frame);
+  refreshPlay();
+}
+function stopRun() {
+  if (!run) return;
+  clearInterval(run.timer); run.ended = true; listening = false;
+  try { rec && rec.remove(); } catch {} rec = null;
+  if (trackSrc) { trackBus.gain.cancelScheduledValues(0); trackBus.gain.setTargetAtTime(0, ac.currentTime, 0.08); const s = trackSrc; trackSrc = null; setTimeout(() => { try { s.stop(); } catch {} }, 600); }
+  if (song && song.kind === 'yt') { try { yt.pauseVideo(); yt.setVolume(100); } catch {} }
+  if (live) live.disconnect();
+  if (capture) { capture.getTracks().forEach(t => t.stop()); capture = null; }
+  $('stickers').innerHTML = ''; $('tapSync').classList.remove('on'); $('listen').classList.remove('on');
+}
+function quit() { stopRun(); run = null; openSetup(); }
+function showResult() {
+  if (!run || run.ended) return;
+  stopRun();
+  document.body.classList.remove('video');
+  const c = run.counts, total = c.perfect + c.good + c.miss || 1;
+  const acc = Math.round((c.perfect + c.good * 0.6) / total * 100);
+  const g = acc >= 92 ? 'S' : acc >= 80 ? 'A' : acc >= 65 ? 'B' : acc >= 45 ? 'C' : 'D';
+  $('grade').textContent = g;
+  $('cheer').textContent = { S: '완전 최고! 뇌 박사님 등장 🎉', A: '우와 잘한다~! 💖', B: '좋아좋아! 한 번 더? 😆', C: '조금만 더 크게! 💪', D: '괜찮아~ 다시 해보자! 🌱' }[g];
+  $('rScore').textContent = run.score.toLocaleString('ko-KR'); $('rMiss').textContent = c.miss;
+  // missed words, most-missed first; each shows its meaning groups (베스·티뷸로 = 안뜰 / 스파이날 = 척수 / 트랙 = 로)
+  const n = new Map(); run.missed.forEach(w => n.set(w, (n.get(w) || 0) + 1));
+  const miss = [...n.keys()].sort((x, y) => n.get(y) - n.get(x));
+  $('missCount').textContent = miss.length;
+  $('missList').innerHTML = miss.length ? miss.map(w => {
+    const groups = []; w.pieces.forEach(p => { const g = groups[p.group] || (groups[p.group] = { mean: p.mean, reads: [] }); g.reads.push(p.read); });
+    return `<div class="missItem"><div class="mTop"><b>${w.en}</b><span class="mKo">${w.ko}</span><span class="mN">× ${n.get(w)}</span></div>`
+      + `<div class="mParts">${groups.map(g => `<span class="mPart"><em>${g.reads.join(' ')}</em><small>${g.mean}</small></span>`).join('<i>/</i>')}</div></div>`;
+  }).join('') : '<p class="missNone">놓친 용어 없음! 완벽해요 🎉</p>';
+  $('result').dataset.mc = opt.voice === 'injoon' ? 'injoon' : 'sunhi';   // result art follows the narration voice
+  show('result');
+  if (acc >= 65) { party(1.6, { x: .3, y: .5 }); setTimeout(() => party(1.6, { x: .7, y: .5 }), 300); }
+}
+$('startBtn').addEventListener('click', () => { audio(); ac.resume(); openSetup(); });
+$('backBtn').addEventListener('click', () => { stopPreview(); show('title'); });
+$('playBtn').addEventListener('click', play);
+$('duckOpt').addEventListener('change', (e) => { opt.duck = e.target.checked; });
+$('againBtn').addEventListener('click', play);
+$('homeBtn').addEventListener('click', () => { run = null; openSetup(); });
+$('quitBtn').addEventListener('click', quit);
+setTempo(128);
+</script>
+</body>
+</html>
