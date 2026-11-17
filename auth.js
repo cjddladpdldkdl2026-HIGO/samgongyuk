@@ -1,16 +1,15 @@
-/* 삼공육 로그인 — 모든 페이지가 같이 쓰는 파일 (Supabase 프로젝트 samgongyuk, 서울)
+/* 삼공육 로그인 접속 — 허브와 게임이 같이 쓰는 파일 (동아리 Supabase 프로젝트 samgongyuk, 서울)
  *
  *  쓰기 전에: <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+ *  로그인·회원가입 화면은 허브의 ☰ 사이드바(account.js)에 있어요. 게임은 같은 로그인 상태를 읽기만 해요.
  *
+ *  SamAuth.client               → Supabase 클라이언트 (account.js 도 이걸 써요)
  *  SamAuth.ready                → Promise, 로그인 상태를 다 읽으면 끝나요
- *  SamAuth.user / .profile      → 구글 로그인한 사람 / 가입(학번·닉네임)까지 마친 사람의 { nickname }
- *  SamAuth.signIn()             → 구글 로그인 (지금 페이지로 돌아와요)
- *  SamAuth.signOut()
- *  SamAuth.join(학번, 닉네임, 동의) → { ok, error?, nickname? }
- *  SamAuth.setNickname(닉네임)
- *  SamAuth.record({ game, mode, score, accuracy, detail })  → 가입한 사람만 저장, 실패해도 게임은 그대로
+ *  SamAuth.user / .profile      → 로그인한 사람 / { kind: 'student'|'admin', name, login_id, approved }
+ *  SamAuth.displayName          → 랭킹에 보이는 이름 (학생: 김*수 (26), 관리자: 닉네임)
+ *  SamAuth.record({ game, mode, score, accuracy, detail })  → 로그인한 사람만 저장, 실패해도 게임은 그대로
  *  SamAuth.ranking(game, mode)  → { top: [{ nickname, score, accuracy }], myBest, myRank, total }
- *  SamAuth.onChange(fn)         → 로그인·가입 상태가 바뀔 때마다 fn(SamAuth)
+ *  SamAuth.onChange(fn)
  *
  *  키는 Supabase 의 공개용(publishable) 키예요. 웹 페이지에 넣는 용도이고, 표마다 RLS 로 막혀 있어요.
  *  DB 구조: supabase/schema.sql
@@ -21,10 +20,15 @@
   const GAMES = ['landmark', 'ddan', 'wizard', 'neoege'];
 
   const listeners = [];
+  const mask = (p) => p.length <= 1 ? p : p.length === 2 ? p[0] + '*' : p[0] + '*'.repeat(p.length - 2) + p[p.length - 1];
   const A = {
-    client: null, user: null, profile: null,
+    url: URL_, key: KEY_, client: null, user: null, profile: null,
     get loggedIn() { return !!this.user; },
     get joined() { return !!this.profile; },
+    get displayName() {
+      const p = this.profile; if (!p) return '';
+      return p.kind === 'student' ? `${mask(p.name)} (${String(p.login_id).slice(0, 2)})` : p.name;
+    },
     onChange(fn) { listeners.push(fn); try { fn(A); } catch { /* ignore */ } },
   };
   const emit = () => listeners.forEach(fn => { try { fn(A); } catch { /* ignore */ } });
@@ -33,20 +37,18 @@
   if (!window.supabase || !window.supabase.createClient) {
     console.warn('[SamAuth] supabase-js 가 없어요');
     A.ready = Promise.resolve(A);
-    A.signIn = A.signOut = async () => {};
-    A.join = A.setNickname = async () => ({ ok: false, error: '로그인 기능을 불러오지 못했어요' });
     A.record = async () => null;
     A.ranking = async () => { throw new Error('auth unavailable'); };
     return;
   }
 
   const sb = A.client = window.supabase.createClient(URL_, KEY_, {
-    auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, storageKey: 'samgongyuk-auth' },
+    auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false, storageKey: 'samgongyuk-auth' },
   });
 
   async function loadProfile() {
     if (!A.user) { A.profile = null; return; }
-    const { data } = await sb.from('profiles').select('nickname, banned').eq('id', A.user.id).maybeSingle();
+    const { data } = await sb.from('profiles').select('id, kind, name, login_id, approved').eq('id', A.user.id).maybeSingle();
     A.profile = data || null;
   }
 
@@ -60,43 +62,19 @@
     return A;
   })();
 
-  sb.auth.onAuthStateChange(async (event, session) => {
+  sb.auth.onAuthStateChange((event, session) => {
     if (event === 'INITIAL_SESSION') return;
     const was = A.user && A.user.id;
     A.user = session ? session.user : null;
-    if ((A.user && A.user.id) !== was || event === 'SIGNED_OUT') { await loadProfile(); emit(); }
+    if ((A.user && A.user.id) !== was || event === 'SIGNED_OUT') {
+      setTimeout(async () => { await loadProfile(); emit(); }, 0);   // 콜백 안에서 바로 await 하지 않기 (supabase 안내)
+    }
   });
-
-  A.signIn = () => sb.auth.signInWithOAuth({
-    provider: 'google',
-    options: { redirectTo: location.href.split('#')[0], queryParams: { prompt: 'select_account' } },
-  });
-  A.signOut = async () => { await sb.auth.signOut(); A.user = null; A.profile = null; emit(); };
-
-  A.join = async (studentNo, nickname, agree) => {
-    const { data, error } = await sb.rpc('join_club', { p_student_no: studentNo, p_nickname: nickname, p_agree: !!agree });
-    if (error) return { ok: false, error: '저장하지 못했어요. 잠시 후 다시 해 주세요' };
-    if (data && data.ok) { await loadProfile(); emit(); }
-    return data;
-  };
-  A.setNickname = async (nickname) => {
-    const { data, error } = await sb.rpc('set_nickname', { p_nickname: nickname });
-    if (error) return { ok: false, error: '저장하지 못했어요' };
-    if (data && data.ok) { await loadProfile(); emit(); }
-    return data;
-  };
-
-  A.leave = async () => {
-    const { data, error } = await sb.rpc('leave_club');
-    if (error || !data || !data.ok) return { ok: false, error: (data && data.error) || '탈퇴하지 못했어요' };
-    await sb.auth.signOut(); A.user = null; A.profile = null; emit();
-    return { ok: true };
-  };
 
   A.record = async (row) => {
     try {
       await A.ready;
-      if (!A.profile || A.profile.banned || GAMES.indexOf(row.game) < 0) return null;
+      if (!A.profile || GAMES.indexOf(row.game) < 0) return null;
       const acc = Number(row.accuracy);
       const { error } = await sb.from('runs').insert({
         game: row.game, mode: String(row.mode || '').slice(0, 30), score: Math.round(Number(row.score) || 0),
