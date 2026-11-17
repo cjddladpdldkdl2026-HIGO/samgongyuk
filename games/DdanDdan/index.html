@@ -103,7 +103,7 @@
   <div class="prog"><i id="prog"></i></div>
   <div class="stage">
     <div class="topRow">
-      <div class="tv" id="tv"><div id="ytBox"></div><div class="tvHint" id="tvHint">▶ 영상이 안 나오면 영상을 한 번 눌러 주세요</div></div>
+      <div class="tv" id="tv"><div id="anatBox" class="anatBox"></div><div id="ytBox"></div><div class="tvHint" id="tvHint">▶ 영상이 안 나오면 영상을 한 번 눌러 주세요</div></div>
       <div class="mcCol">
         <div class="mc"><figure class="mcPic" id="mcBrain"><img id="mcImg" src="img/mc-sunhi.jpg" alt=""><figcaption id="mcName">선희</figcaption></figure><div class="bubble" id="bubble">가보자고!</div></div>
         <div class="phase wait" id="phase">준비…</div>
@@ -151,6 +151,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script src="../../auth.js"></script>
 <script src="../../sheets.js"></script>
+<script type="module" src="anat3d.js"></script>
 <script>
 /* 구글 시트 '딴딴딴_용어' 탭이 있으면 words2.js 대신 그 용어를 써요 (map | english | korean | reading).
  * 새 용어의 읽기 조각에 녹음 파일(audio/<목소리>/k-<조각>.mp3)이 없으면 나레이터는 조용하고 박자 판정만 해요. */
@@ -208,12 +209,50 @@ const WORDS = WORD_DATA.map(([en, ko, map, ps]) => {
   return w;
 });
 // more terms (words2.js): one piece per "/" chunk, judged by the timing of the shout (no recogniser words)
+/* Split one English word into as many chunks as the Korean reading has beats (fasciculus → FASCI / CULUS):
+ * cut near each beat's share of the (romanised) reading, at a vowel→consonant spot or a common prefix. */
+const EN_PREFIX = ['inter', 'intra', 'supra', 'infra', 'trans', 'retro', 'hyper', 'hypo', 'post', 'para', 'peri', 'epi', 'sub', 'pre'];
+function romLen(s) {
+  let n = 0;
+  for (const ch of s) {
+    const c = ch.charCodeAt(0) - 0xac00; if (c < 0 || c > 11171) continue;
+    n += [1, 2, 1, 1, 2, 1, 1, 1, 2, 1, 2, 0, 1, 1, 2, 1, 1, 1, 1][Math.floor(c / 588)]
+       + [1, 2, 2, 3, 2, 2, 2, 3, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1, 2, 1][Math.floor((c % 588) / 28)] + (c % 28 ? 1 : 0);
+  }
+  return n;
+}
+function splitEnglish(word, reads) {
+  if (reads.length <= 1 || !word) return reads.map((_, i) => (i ? '' : word));
+  const w = reads.map(r => Math.max(1, romLen(r))), total = w.reduce((a, b) => a + b, 0), V = /[aeiouy]/i, cuts = [];
+  for (let i = 2; i < word.length - 1; i++) {
+    const a = V.test(word[i - 1]), b = V.test(word[i]);
+    if (a && !b) cuts.push([i, 0]);
+    else if (!a && !b && word[i - 1] !== word[i] && !/(ch|ph|th|sh|ck|gh)/i.test(word.slice(i - 1, i + 1))) cuts.push([i, 0.6]);
+  }
+  const pre = EN_PREFIX.find(p => word.toLowerCase().startsWith(p) && word.length > p.length + 2);
+  if (pre) cuts.push([pre.length, -2]);
+  const out = []; let from = 0, acc = 0;
+  for (let k = 0; k < reads.length - 1; k++) {
+    acc += w[k];
+    const want = word.length * acc / total;
+    const ok = cuts.filter(c => c[0] > from + 1 && c[0] < word.length - 1);
+    const at = ok.length ? ok.reduce((a, b) => (Math.abs(b[0] - want) + b[1]) < (Math.abs(a[0] - want) + a[1]) ? b : a)[0] : Math.round(want);
+    out.push(word.slice(from, at)); from = at;
+  }
+  out.push(word.slice(from));
+  return out;
+}
 for (const line of (window.WORDS2_TEXT || '').trim().split('\n')) {
   const [map, en, ko, reading] = line.split('|').map(x => x.trim());
   if (!reading) continue;
   const w = { en, ko, map };
   // " ; " separates English words (a group each, so 3-piece words rest before the last word), "/" separates beats
-  w.pieces = reading.split(';').flatMap((part, g) => part.split('/').map(r => ({ id: '', read: r.trim(), says: [], mean: '', group: g, beats: 1, clip: 'k-' + r.trim(), word: w })));
+  const enWords = en.split(/\s+/);
+  w.pieces = reading.split(';').flatMap((part, g) => {
+    const reads = part.split('/').map(r => r.trim());
+    const ens = splitEnglish(enWords[g] || '', reads);   // 박스마다 영어 조각 (예: CERULEO / SPINAL)
+    return reads.map((r, i) => ({ id: '', en: ens[i], read: r, says: [], mean: '', group: g, beats: 1, clip: 'k-' + r, word: w }));
+  });
   w.beats = w.pieces.length;
   WORDS.push(w);
 }
@@ -733,6 +772,7 @@ function frame() {
       run.curKey = key;
       const b = document.body;
       b.classList.remove('beat'); void b.offsetWidth; b.classList.add('beat');
+      if (window.Anat3D) Anat3D.beat();
       const bar = c >= 0 ? run.bars[c] : null;
       $('beats').querySelectorAll('i').forEach((el, k) => { el.classList.toggle('on', k === beatIdx % 4); el.classList.toggle('resp', !!bar && bar.type === 'resp'); });
       if (c < 0) preroll(-(c * 4 + beatIdx)); else $('count').textContent = '';
@@ -787,6 +827,9 @@ function highlightSlot(bar, beatIdx) {
   const els = slotEls();
   if (!bar || !bar.phrase) { els.forEach(e => e.classList.remove('now')); return; }
   bar.phrase.slots.forEach((b, k) => { if (els[k]) els[k].classList.toggle('now', beatIdx >= b && beatIdx < b + bar.phrase.pieces[k].beats); });
+  const k = bar.phrase.slots.findIndex((b, j) => beatIdx >= b && beatIdx < b + bar.phrase.pieces[j].beats);
+  const w = k >= 0 && bar.phrase.pieces[k].word;
+  if (w && window.Anat3D && w !== run.anatWord) { run.anatWord = w; Anat3D.focus(w, els[k] ? els[k].style.getPropertyValue('--ws') : ''); }
 }
 function enterBar(i) {
   const bar = run.bars[i], prev = run.bars[i - 1];
@@ -815,7 +858,7 @@ function drawSlots(phrase, kind) {
   box.innerHTML = P.map((p, k) => {
     const [wc, ws] = WORD_COLORS[wo[k] % 4], joinR = same(k, k + 1), joinL = same(k, k - 1);
     const gc = joinR ? S[k + 1] - S[k] - p.beats : 0;
-    return `<div class="slot ${kind}${joinR ? ' joinR' : ''}${joinL ? ' joinL' : ''}" style="grid-row:1;grid-column:${S[k] + 1} / span ${p.beats};--wc:${wc};--ws:${ws};--gc:${gc};--b:${p.beats}"><span class="judge"></span><div class="ko">${p.read}!</div>${p.id ? `<div class="en">${p.id.toUpperCase()}</div>` : ''}</div>`;
+    return `<div class="slot ${kind}${joinR ? ' joinR' : ''}${joinL ? ' joinL' : ''}" style="grid-row:1;grid-column:${S[k] + 1} / span ${p.beats};--wc:${wc};--ws:${ws};--gc:${gc};--b:${p.beats}"><span class="judge"></span><div class="ko">${p.read}!</div>${(p.id || p.en) ? `<div class="en">${(p.id || p.en).toUpperCase()}</div>` : ''}</div>`;
   }).join('') + groups.map(ks => {
     if (!P[ks[0]].mean) return '';   // no meaning label (words2 terms): the word bracket names it
     const [wc] = WORD_COLORS[wo[ks[0]] % 4];
@@ -954,7 +997,7 @@ addEventListener('keydown', (e) => { if (e.code === 'Escape' && run) quit(); if 
 
 /* ── flow ── */
 function show(id) { document.querySelectorAll('.screen').forEach(s => s.classList.toggle('on', s.id === id)); }
-function openSetup() { show('setup'); document.body.classList.remove('video'); refreshPlay(); }
+function openSetup() { show('setup'); document.body.classList.remove('video', 'anat', 'ytmode'); refreshPlay(); }
 function resetHud() {
   $('score').textContent = '0'; $('combo').textContent = '0'; $('combo').classList.remove('hot'); $('level').textContent = '1'; drawSlots(null);
   $('count').textContent = ''; $('prog').style.width = '0';
@@ -984,7 +1027,9 @@ async function play() {
   trackSrc.start(at, offset);
   resetHud();
   $('phase').className = 'phase wait'; $('phase').textContent = '🎵 전주 중~ 몸 풀기!'; bubble('전주 끝나면 시작~!');
+  document.body.classList.add('video', 'anat'); document.body.classList.remove('ytmode');
   show('play');
+  if (window.Anat3D) Anat3D.start($('anatBox'), opt.map);
   run.timer = setInterval(tickRun, 25); tickRun();
   requestAnimationFrame(frame);
   refreshPlay();
@@ -1016,7 +1061,8 @@ async function playYT() {
     const s = ac.createBufferSource(); s.buffer = buf; await live.connect(s); s.start(ac.currentTime, 15); capture = { getTracks: () => [{ stop: () => { try { s.stop(); } catch {} } }] }; run.live = true;
   }
   resetHud();
-  document.body.classList.add('video');
+  document.body.classList.add('video', 'anat', 'ytmode');
+  if (window.Anat3D) Anat3D.start($('anatBox'), opt.map);
   $('listen').classList.add('on'); $('lbar').style.width = '0'; $('tvHint').classList.remove('on');
   $('phase').className = 'phase wait';
   if (run.live) { $('phase').textContent = '🎧 박자 듣는 중'; $('ltext').textContent = '🎧 박자 듣는 중…'; bubble('노래 들으면서 몸 풀기~'); $('tapSync').classList.remove('on'); }
@@ -1037,12 +1083,13 @@ function stopRun() {
   if (live) live.disconnect();
   if (capture) { capture.getTracks().forEach(t => t.stop()); capture = null; }
   $('stickers').innerHTML = ''; $('tapSync').classList.remove('on'); $('listen').classList.remove('on');
+  if (window.Anat3D) Anat3D.stop();
 }
 function quit() { stopRun(); run = null; openSetup(); }
 function showResult() {
   if (!run || run.ended) return;
   stopRun();
-  document.body.classList.remove('video');
+  document.body.classList.remove('video', 'anat', 'ytmode');
   const c = run.counts, total = c.perfect + c.good + c.miss || 1;
   const acc = Math.round((c.perfect + c.good * 0.6) / total * 100);
   const g = acc >= 92 ? 'S' : acc >= 80 ? 'A' : acc >= 65 ? 'B' : acc >= 45 ? 'C' : 'D';
