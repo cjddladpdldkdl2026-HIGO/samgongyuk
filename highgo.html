@@ -532,6 +532,7 @@
   .bgm-list button.on::before { content: "♪ "; }
   @media (max-width: 600px) { .bgm-panel { width: min(250px, calc(100vw - 60px)); } }
 </style>
+<link rel="stylesheet" href="account.css">
 </head>
 <body>
 
@@ -759,6 +760,7 @@ const esc = (s) => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<":
 const glow = (a) => a.glow || "#7c6a9c";
 
 function launch(a) {
+  if (window.Account && a.url) Account.logPlay(a);   // 이용자 현황: 게임 연 기록 (account.js)
   if (!a.url) { alert("아직 실행 주소(url)가 없어요. APPS 목록에 url을 넣어주세요!"); return; }
   if (a.needsServer && location.protocol === "file:") {
     // 컴퓨터에 있는 파일로 열었을 때: 마이크·음성 모델이 안 되니까 공개 사이트의 같은 게임으로 바로 이동
@@ -1136,5 +1138,8 @@ addEventListener("load", () => { if (window.Samgongyuk && Samgongyuk.enabled) Sa
   render();
 })();
 </script>
+<!-- 계정 · 사이드바 · 관리 페이지 (Supabase) -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="account.js"></script>
 </body>
 </html>
