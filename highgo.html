@@ -531,6 +531,46 @@
   .bgm-list button.on { color: var(--cyan-soft); }
   .bgm-list button.on::before { content: "♪ "; }
   @media (max-width: 600px) { .bgm-panel { width: min(250px, calc(100vw - 60px)); } }
+
+  /* ── 로그인 (auth.js): 오른쪽 위 버튼 + 가입 창 ── */
+  .acct { position: relative; flex-shrink: 0; }
+  .acct-btn {
+    padding: 7px 14px; border-radius: 999px; white-space: nowrap; font: 700 14px var(--font-ui);
+    color: var(--ink); background: rgba(45,226,230,.12); border: 1px solid var(--cyan); box-shadow: 0 0 12px rgba(45,226,230,.3);
+  }
+  .acct-btn:hover { box-shadow: var(--glow-cyan); }
+  .acct-btn[hidden] { display: none; }
+  .acct-menu {
+    position: absolute; right: 0; top: calc(100% + 8px); min-width: 180px; padding: 6px; display: none; flex-direction: column;
+    background: linear-gradient(160deg, rgba(29,7,66,.97), rgba(11,4,30,.98)); border: 1px solid var(--line); border-radius: 12px; z-index: 60;
+  }
+  .acct-menu.open { display: flex; }
+  .acct-menu p { padding: 6px 10px; font-size: 12px; color: var(--ink-faint); }
+  .acct-menu button { text-align: left; padding: 8px 10px; border: 0; border-radius: 8px; background: none; color: var(--ink); font: 14px var(--font-ui); }
+  .acct-menu button:hover { background: rgba(155,92,255,.18); }
+  .join-bg { position: fixed; inset: 0; z-index: 250; display: none; place-items: center; padding: 16px; background: rgba(7,1,15,.82); backdrop-filter: blur(8px); }
+  .join-bg.open { display: grid; }
+  .join-card {
+    width: min(420px, 100%); padding: 26px 24px; border: 1px solid var(--line); border-radius: 16px; display: flex; flex-direction: column; gap: 12px;
+    background: linear-gradient(160deg, rgba(29,7,66,.97), rgba(11,4,30,.98));
+  }
+  .join-card h2 { font-size: 22px; }
+  .join-card .sub { font-size: 13px; color: var(--ink-dim); }
+  .join-card label { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: var(--ink-dim); }
+  .join-card input[type=text] {
+    padding: 10px 12px; border-radius: 10px; font: 15px var(--font-ui); color: var(--ink);
+    background: rgba(255,255,255,.06); border: 1px solid var(--line); outline: none;
+  }
+  .join-card input[type=text]:focus { border-color: var(--cyan); }
+  .join-card .agree { flex-direction: row; align-items: flex-start; gap: 8px; line-height: 1.5; }
+  .join-card .agree input { margin-top: 3px; accent-color: var(--cyan); }
+  .join-card .agree a { color: var(--cyan-soft); text-decoration: underline; }
+  .join-card .err { min-height: 1.2em; font-size: 13px; color: var(--pink); }
+  .join-card .row { display: flex; gap: 8px; justify-content: flex-end; }
+  .join-card .row button { padding: 10px 16px; border-radius: 10px; font: 700 14px var(--font-ui); border: 1px solid var(--line); background: none; color: var(--ink-dim); }
+  .join-card .row .go { border: 0; color: #0a0118; background: linear-gradient(180deg, var(--cyan-soft), var(--cyan)); }
+  .join-card .row .go:disabled { opacity: .5; }
+  @media (max-width: 820px) { .acct-btn { padding: 6px 10px; font-size: 13px; } }
 </style>
 </head>
 <body>
@@ -546,7 +586,30 @@
   <button class="rank-btn" id="rankBtn" aria-describedby="rankHint">🏆 랭킹</button>
   <span class="sr-only" id="rankHint">누르고 있는 동안 랭킹이 보여요</span>
   <input class="search" id="search" placeholder="🔍 검색">
+  <div class="acct" id="acct">
+    <button class="acct-btn" id="acctBtn" type="button">로그인</button>
+    <div class="acct-menu" id="acctMenu" role="menu">
+      <p id="acctWho"></p>
+      <button type="button" id="acctNick" role="menuitem">닉네임 바꾸기</button>
+      <button type="button" id="acctOut" role="menuitem">로그아웃</button>
+      <button type="button" id="acctLeave" role="menuitem" style="color:var(--pink)">탈퇴하기</button>
+    </div>
+  </div>
 </header>
+
+<!-- 처음 로그인한 학생: 학번 + 닉네임 + 동의 (auth.js → join_club) -->
+<div class="join-bg" id="joinBg">
+  <form class="join-card" id="joinForm" autocomplete="off">
+    <h2 id="joinTitle">삼공육 가입</h2>
+    <p class="sub" id="joinSub">처음 한 번만 하면 돼요. 랭킹에는 닉네임만 보여요.</p>
+    <label id="joinSnoWrap">학번<input type="text" id="joinSno" inputmode="numeric" maxlength="12" placeholder="예: 2026123456"></label>
+    <label>닉네임 (2~12자)<input type="text" id="joinNick" maxlength="12" placeholder="랭킹에 보일 이름"></label>
+    <label class="agree" id="joinAgreeWrap"><input type="checkbox" id="joinAgree">
+      <span>학생 확인을 위해 <b>학번</b>을 수집·이용하는 데 동의해요. 학번은 운영진만 볼 수 있고 탈퇴하면 지워져요. <a href="privacy.html" target="_blank">개인정보 처리방침</a></span></label>
+    <p class="err" id="joinErr" role="alert"></p>
+    <div class="row"><button type="button" id="joinCancel">나중에</button><button type="submit" class="go" id="joinGo">가입하기</button></div>
+  </form>
+</div>
 
 <!-- 랭킹: 버튼을 누르고 있는 동안만 보여요 -->
 <div class="rank-panel" id="rankPanel" aria-hidden="true">
@@ -563,7 +626,7 @@
 <main id="rows"></main>
 
 <footer>
-  청암대학교 물리치료과 PTX+AI 동아리 · 팀 삼공육 · 우리가 만든 게임과 학습 도구 모음
+  청암대학교 물리치료과 PTX+AI 동아리 · 팀 삼공육 · 우리가 만든 게임과 학습 도구 모음 · <a href="privacy.html" style="text-decoration:underline">개인정보 처리방침</a>
   <div class="credit">3D 뼈·근육 모델: BodyParts3D © 2008 DBCLS (CC BY-SA 2.1 JP) · 3D 엔진: three.js (MIT) · LandMark 코드 원본: LUCASDREYER/aim-trainer-game (MIT) · 음성 인식: Vosk (Apache 2.0) · 폰트: Pretendard, Galmuri (OFL)</div>
 </footer>
 
@@ -610,7 +673,75 @@
   </div>
 </aside>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="auth.js"></script>
 <script src="sheets.js"></script>
+<script>
+/* ── 로그인 버튼 · 가입 창 (auth.js) ── */
+(function () {
+  const $ = (id) => document.getElementById(id);
+  const btn = $('acctBtn'), menu = $('acctMenu'), bg = $('joinBg'), form = $('joinForm'), err = $('joinErr');
+  let mode = 'join';   // join | nick
+  let dismissed = false;
+
+  function openJoin(m) {
+    mode = m; err.textContent = '';
+    const nick = m === 'nick';
+    $('joinTitle').textContent = nick ? '닉네임 바꾸기' : '삼공육 가입';
+    $('joinSub').textContent = nick ? '랭킹에 보일 이름을 바꿔요.' : '처음 한 번만 하면 돼요. 랭킹에는 닉네임만 보여요.';
+    $('joinSnoWrap').hidden = $('joinAgreeWrap').hidden = nick;
+    $('joinGo').textContent = nick ? '바꾸기' : '가입하기';
+    $('joinNick').value = nick && SamAuth.profile ? SamAuth.profile.nickname : '';
+    bg.classList.add('open');
+    (nick ? $('joinNick') : $('joinSno')).focus();
+  }
+  const closeJoin = () => bg.classList.remove('open');
+
+  function render(A) {
+    if (!A.loggedIn) { btn.textContent = '로그인'; menu.classList.remove('open'); return; }
+    if (!A.joined) {
+      btn.textContent = '가입 마치기';
+      if (!dismissed) openJoin('join');
+      return;
+    }
+    btn.textContent = '👤 ' + A.profile.nickname;
+    $('acctWho').textContent = (A.user.email || '') + (A.profile.banned ? ' · 이용 정지' : '');
+  }
+
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (!SamAuth.loggedIn) return SamAuth.signIn();
+    if (!SamAuth.joined) return openJoin('join');
+    menu.classList.toggle('open');
+  });
+  document.addEventListener('click', (e) => { if (!menu.contains(e.target)) menu.classList.remove('open'); });
+  $('acctNick').addEventListener('click', () => { menu.classList.remove('open'); openJoin('nick'); });
+  $('acctOut').addEventListener('click', () => { menu.classList.remove('open'); SamAuth.signOut(); });
+  $('acctLeave').addEventListener('click', async () => {
+    menu.classList.remove('open');
+    if (!confirm('탈퇴하면 학번·닉네임·게임 기록이 모두 지워지고 되돌릴 수 없어요. 탈퇴할까요?')) return;
+    const r = await SamAuth.leave();
+    if (!r.ok) alert(r.error);
+  });
+  $('joinCancel').addEventListener('click', () => { dismissed = true; closeJoin(); });
+  bg.addEventListener('click', (e) => { if (e.target === bg) { dismissed = true; closeJoin(); } });
+  form.addEventListener('keydown', (e) => e.stopPropagation());   // 허브 단축키가 입력을 가로채지 않게
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const go = $('joinGo'); go.disabled = true; err.textContent = '';
+    const nick = $('joinNick').value.trim();
+    const r = mode === 'nick' ? await SamAuth.setNickname(nick)
+      : await SamAuth.join($('joinSno').value.trim(), nick, $('joinAgree').checked);
+    go.disabled = false;
+    if (!r || !r.ok) { err.textContent = (r && r.error) || '다시 시도해 주세요'; return; }
+    try { localStorage.setItem('samgongyuk-nickname', r.nickname); localStorage.setItem('landmark-nickname', r.nickname); } catch { /* private mode */ }
+    closeJoin();
+  });
+
+  SamAuth.onChange(render);
+})();
+</script>
 <script>
 /* ============================================================
    ✏️ 여기만 고치면 됩니다!

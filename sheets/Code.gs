@@ -14,6 +14,10 @@
  * 코드를 고친 뒤에는 배포 → 배포 관리 → ✏️ → 버전: 새 버전 → 배포 (주소는 그대로예요)
  */
 
+// 시트 밖(script.google.com)에서 만든 스크립트면 시트 주소의 /d/…/edit 사이 ID를 넣어요. 시트 안에서 만들었으면 비워 둬도 돼요.
+const SHEET_ID = '1MwGZkFaDAW_h1-WwFeUSQwXSKkeXtroDAitb1v7GB48';
+function book() { return SpreadsheetApp.getActive() || SpreadsheetApp.openById(SHEET_ID); }
+
 const SITE = 'https://samgongyuk.vercel.app/sheets/';
 const TABS = {
   // seed: 예전 Supabase 에 있던 LandMark 기록 (11-17 옮김)
@@ -26,7 +30,7 @@ const GAMES = ['landmark', 'ddan', 'wizard', 'neoege'];
 
 /* ── 처음 한 번: 탭 만들고 지금 용어 채우기 ───────────────────────────── */
 function setup() {
-  const ss = SpreadsheetApp.getActive();
+  const ss = book();
   Object.keys(TABS).forEach(function (k) {
     const t = TABS[k];
     let sh = ss.getSheetByName(t.name);
@@ -116,7 +120,7 @@ function rank(game, mode, nick) {
 
 /* ── 도우미 ────────────────────────────────────────────────────────── */
 function sheet(k) {
-  const sh = SpreadsheetApp.getActive().getSheetByName(TABS[k].name);
+  const sh = book().getSheetByName(TABS[k].name);
   if (!sh) throw new Error('탭이 없어요: ' + TABS[k].name + ' (setup 을 먼저 실행해 주세요)');
   return sh;
 }
