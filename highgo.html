@@ -570,13 +570,12 @@
   .join-card .row button { padding: 10px 16px; border-radius: 10px; font: 700 14px var(--font-ui); border: 1px solid var(--line); background: none; color: var(--ink-dim); }
   .join-card .row .go { border: 0; color: #0a0118; background: linear-gradient(180deg, var(--cyan-soft), var(--cyan)); }
   .join-card .row .go:disabled { opacity: .5; }
-  /* 팀원 사이드바 버튼(☰, account.js)과 한 줄에 들어가게: 검색창이 먼저 줄어들어요 */
+  /* 좁은 화면: 로그인 버튼 자리를 만들려고 검색창이 먼저 줄어들어요 */
   header .search { flex: 0 1 220px; width: auto; min-width: 60px; }
   @media (max-width: 1100px) { header { gap: 14px; } }
   @media (max-width: 820px) { .acct-btn { padding: 6px 10px; font-size: 13px; } }
-  @media (max-width: 600px) { .acct-btn .lbl { display: none; } }
+  @media (max-width: 600px) { .acct-btn { max-width: 96px; overflow: hidden; text-overflow: ellipsis; } }
 </style>
-<link rel="stylesheet" href="account.css">
 </head>
 <body>
 
@@ -592,7 +591,7 @@
   <span class="sr-only" id="rankHint">누르고 있는 동안 랭킹이 보여요</span>
   <input class="search" id="search" placeholder="🔍 검색">
   <div class="acct" id="acct">
-    <button class="acct-btn" id="acctBtn" type="button" title="구글로 로그인하면 게임 기록·랭킹이 내 계정에 저장돼요">🎮 <span class="lbl">기록 로그인</span></button>
+    <button class="acct-btn" id="acctBtn" type="button" title="구글로 로그인하면 게임 기록·랭킹이 내 계정에 저장돼요"><span class="lbl">로그인</span></button>
     <div class="acct-menu" id="acctMenu" role="menu">
       <p id="acctWho"></p>
       <button type="button" id="acctNick" role="menuitem">닉네임 바꾸기</button>
@@ -703,14 +702,14 @@
   const closeJoin = () => bg.classList.remove('open');
 
   function render(A) {
-    const set = (t) => { btn.innerHTML = '🎮 <span class="lbl"></span>'; btn.querySelector('.lbl').textContent = t; };
-    if (!A.loggedIn) { set('기록 로그인'); menu.classList.remove('open'); return; }
+    const set = (t) => { btn.innerHTML = '<span class="lbl"></span>'; btn.querySelector('.lbl').textContent = t; };
+    if (!A.loggedIn) { set('로그인'); menu.classList.remove('open'); return; }
     if (!A.joined) {
       set('가입 마치기');
       if (!dismissed) openJoin('join');
       return;
     }
-    set(A.profile.nickname);
+    set('👤 ' + A.profile.nickname);
     $('acctWho').textContent = (A.user.email || '') + (A.profile.banned ? ' · 이용 정지' : '');
   }
 
@@ -896,7 +895,6 @@ const esc = (s) => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<":
 const glow = (a) => a.glow || "#7c6a9c";
 
 function launch(a) {
-  if (window.Account && a.url) Account.logPlay(a);   // 이용자 현황: 게임 연 기록 (account.js)
   if (!a.url) { alert("아직 실행 주소(url)가 없어요. APPS 목록에 url을 넣어주세요!"); return; }
   if (a.needsServer && location.protocol === "file:") {
     // 컴퓨터에 있는 파일로 열었을 때: 마이크·음성 모델이 안 되니까 공개 사이트의 같은 게임으로 바로 이동
@@ -1274,8 +1272,5 @@ addEventListener("load", () => { if (window.Samgongyuk && Samgongyuk.enabled) Sa
   render();
 })();
 </script>
-<!-- 계정 · 사이드바 · 관리 페이지 (Supabase) -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
-<script src="account.js"></script>
 </body>
 </html>
