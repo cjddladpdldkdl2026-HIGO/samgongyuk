@@ -697,6 +697,7 @@ body.cursor-aim #canvas { cursor: none; }
     }
   }
   </script>
+  <script src="sheets.js"></script>
 </head>
 <body>
   <canvas id="canvas"></canvas>
@@ -3436,6 +3437,8 @@ const Ranking = (() => {
   const URL_ = 'https://suqndhxtsmvtwkggsbpx.supabase.co/rest/v1';
   const KEY_ = 'sb_publishable_9QwH5S7HRMQ0O7_lBqamag_PMsGo75x';
   const NICK = 'landmark-nickname';
+  // sheets.js 에 구글 시트 주소가 있으면 랭킹을 시트로, 없으면 예전처럼 Supabase 로
+  const SHEET = !!(window.Samgongyuk && Samgongyuk.enabled);
   const LABEL = { easy: '쉬움', medium: '보통', hard: '어려움' };
   const fmt = (n) => Number(n).toLocaleString('en-US');
   const H = { apikey: KEY_, 'Content-Type': 'application/json' };
@@ -3486,15 +3489,25 @@ const Ranking = (() => {
     const render = async (msg = '') => {
       box.innerHTML = head + `<p class="rank-note">랭킹 불러오는 중…</p>`;
       try {
-        const rows = await top(d);
-        let me = '';
+        let rows, me = '';
         let myRank = 0, myBest = null;
-        if (posted) {
-          const mine = await api(`landmark_best?select=score&difficulty=eq.${d}&nickname=eq.${encodeURIComponent(nick)}`).then(r => r.json());
-          myBest = mine[0]?.score ?? run.score;
-          const [above, all] = await Promise.all([countAbove(d, myBest), total(d)]);
-          myRank = above + 1;
-          me = `<p class="rank-me">이번 점수 <strong>${fmt(run.score)}</strong> · 내 순위 <strong>${myRank}위</strong> / ${all}명</p>`;
+        if (SHEET) {
+          // 구글 시트 '기록' 탭에서 계산한 랭킹 (sheets.js / sheets/Code.gs)
+          const r = await Samgongyuk.rank('landmark', d, posted ? nick : '');
+          rows = r.top;
+          if (posted) {
+            myBest = r.myBest ?? run.score; myRank = r.myRank || 1;
+            me = `<p class="rank-me">이번 점수 <strong>${fmt(run.score)}</strong> · 내 순위 <strong>${myRank}위</strong> / ${r.total}명</p>`;
+          }
+        } else {
+          rows = await top(d);
+          if (posted) {
+            const mine = await api(`landmark_best?select=score&difficulty=eq.${d}&nickname=eq.${encodeURIComponent(nick)}`).then(r => r.json());
+            myBest = mine[0]?.score ?? run.score;
+            const [above, all] = await Promise.all([countAbove(d, myBest), total(d)]);
+            myRank = above + 1;
+            me = `<p class="rank-me">이번 점수 <strong>${fmt(run.score)}</strong> · 내 순위 <strong>${myRank}위</strong> / ${all}명</p>`;
+          }
         }
         const form = canPost && !posted ? `
           <form class="rank-form"><input maxlength="12" placeholder="닉네임 (12자까지)" value="${esc(nick)}" aria-label="닉네임">
@@ -3511,7 +3524,13 @@ const Ranking = (() => {
       name = name.trim().slice(0, 12);
       if (!name) return render('닉네임을 입력해 주세요.');
       nick = name; setNick(name);
-      try { await submit(name, run); posted = true; await render(); }
+      if (SHEET) Samgongyuk.setNickname(name);   // 다른 게임 기록에도 같은 닉네임
+      try {
+        if (SHEET) await Samgongyuk.submit({ game: 'landmark', nickname: name, mode: d, score: run.score,
+          accuracy: run.accuracy, detail: { hits: run.hits, stages: run.stages } });
+        else await submit(name, run);
+        posted = true; await render();
+      }
       catch { await render('등록하지 못했어요. 잠시 후 다시 시도해 주세요.'); }
     };
 

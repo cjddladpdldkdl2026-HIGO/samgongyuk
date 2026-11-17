@@ -595,6 +595,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 
   <p class="credit">3D 모델: BodyParts3D © 2008 DBCLS · CC BY-SA 2.1 JP</p>
 
+  <script src="sheets.js"></script>
   <script type="module">
 import * as THREE from 'three';
 const __mods = {};
@@ -2026,6 +2027,19 @@ const { Atlas } = __mods['src/atlas.js'];
 const { Sfx } = __mods['src/sfx.js'];
 const { Storage } = __mods['src/storage.js'];
 
+/* 구글 시트 '너에게_근육' 탭 (id | english | korean | action | nerve): 같은 id 근육의 이름·작용·신경만 바꿔요.
+ * 부착점·3D 모양은 게임 파일에 있어요 (시트로 근육을 새로 추가할 수는 없어요). */
+(() => {
+  const rows = window.Samgongyuk && Samgongyuk.terms('neoege');
+  if (!rows) return;
+  const byId = new Map(rows.filter(r => r.id).map(r => [r.id, r]));
+  for (const reg of REGIONS) for (const m of reg.muscles || []) {
+    const r = byId.get(m.id); if (!r) continue;
+    if (r.english) m.name = r.english; if (r.korean) m.ko = r.korean;
+    if (r.action) m.action = r.action; if (r.nerve) m.nerve = r.nerve;
+  }
+})();
+
 const $ = (id) => document.getElementById(id);
 const quiz = new Quiz();
 const atlas = new Atlas(REGIONS);
@@ -2104,6 +2118,8 @@ quiz.onEnd = (r) => {
     return li;
   }));
   show('result');
+  if (window.Samgongyuk) Samgongyuk.record({ game: 'neoege', mode: `${r.region.id}:${r.difficulty}`, score: r.score, accuracy: r.accuracy,
+    detail: { stars, bestCombo: r.bestCombo, muscles: r.muscles.map(({ m, hit, of }) => `${m.ko} ${hit}/${of}`) } });
 };
 $('r-again').addEventListener('click', () => lastRegion && startQuiz(lastRegion));
 $('quiz-quit').addEventListener('click', () => show('regions'));

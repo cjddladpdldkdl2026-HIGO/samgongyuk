@@ -148,6 +148,18 @@
 <script src="../Vertebral_Wizard/lib/vosk.js"></script>
 <script src="beat.js"></script>
 <script src="words2.js"></script>
+<script src="../../sheets.js"></script>
+<script>
+/* 구글 시트 '딴딴딴_용어' 탭이 있으면 words2.js 대신 그 용어를 써요 (map | english | korean | reading).
+ * 새 용어의 읽기 조각에 녹음 파일(audio/<목소리>/k-<조각>.mp3)이 없으면 나레이터는 조용하고 박자 판정만 해요. */
+(function () {
+  const rows = window.Samgongyuk && Samgongyuk.terms('ddan');
+  if (!rows) return;
+  const ok = rows.filter(r => r.map && r.english && r.korean && r.reading)
+    .map(r => [r.map, r.english, r.korean, r.reading].map(x => String(x).replace(/[|\n]/g, ' ').trim()).join('|'));
+  if (ok.length) window.WORDS2_TEXT = ok.join('\n');
+})();
+</script>
 <script>
 'use strict';
 /* ── words, chopped into beat-sized pieces ────────────────────────────────────
@@ -1046,6 +1058,8 @@ function showResult() {
   }).join('') : '<p class="missNone">놓친 용어 없음! 완벽해요 🎉</p>';
   $('result').dataset.mc = opt.voice === 'injoon' ? 'injoon' : 'sunhi';   // result art follows the narration voice
   show('result');
+  if (window.Samgongyuk) Samgongyuk.record({ game: 'ddan', mode: opt.map, score: run.score, accuracy: acc,
+    detail: { grade: g, ...c, maxCombo: run.maxCombo, missed: miss.slice(0, 10).map(w => w.en) } });
   if (acc >= 65) { party(1.6, { x: .3, y: .5 }); setTimeout(() => party(1.6, { x: .7, y: .5 }), 300); }
 }
 $('startBtn').addEventListener('click', () => { audio(); ac.resume(); openSetup(); });

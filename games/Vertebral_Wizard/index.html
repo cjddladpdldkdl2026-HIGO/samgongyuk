@@ -413,6 +413,7 @@
 <audio id="bgm" src="https://cdn.freesound.org/previews/464/464906_6142149-lq.mp3" loop preload="auto"></audio>
 
 <script src="lib/vosk.js"></script>
+<script src="../../sheets.js"></script>
 <script>
 (function(){
   "use strict";
@@ -458,6 +459,18 @@
              ['Medial reticulospinal tract','안쪽그물척수로',4,'medial wreck tick you low spinal tract'],['Lateral reticulospinal tract','가쪽그물척수로',4,'lateral wreck tick you low spinal tract'],['Anterior reticulospinal tract','앞그물척수로',4,'anterior wreck tick you low spinal tract'],
              ['Fasciculus gracilis','널판다발',5,'fa sick you less grass ill is'],['Fasciculus cuneatus','쐐기다발',5,'fa sick you less cue knee ate us']] }
   ];
+  // 구글 시트 '뭐라구요_용어' 탭 (skill | english | korean | tier | hear): 시트에 줄이 있는 기술만 그 용어로 바꿔요
+  (function(){
+    const rows = window.Samgongyuk && Samgongyuk.terms('wizard');
+    if (!rows) return;
+    SKILLS.forEach(function(sk){
+      const ws = rows.filter(function(r){ return r.skill === sk.key && r.english && r.korean; }).map(function(r){
+        const t = Math.max(1, Math.min(5, parseInt(r.tier, 10) || 1));
+        return r.hear ? [r.english, r.korean, t, r.hear] : [r.english, r.korean, t];
+      });
+      if (ws.some(function(w){ return w[2] === 1; })) sk.words = ws;   // 1단계 용어가 하나도 없으면 튜토리얼이 막히니 원래 용어 유지
+    });
+  })();
   function wordTier(i){ return Math.max(1, Math.min(5, i)); }   // 스테이지 번호 → 용어 단계 (튜토리얼은 1)
   function wordsAt(sk, i){ return sk.words.filter(function(w){ return w[2] <= wordTier(i); }); }
   function countWords(i){ return SKILLS.reduce(function(n, sk){ return n + wordsAt(sk, i).length; }, 0); }
@@ -1092,6 +1105,10 @@
   }
   function showResult(title, isWin, rewardHTML){
     state = 'end';
+    if (window.Samgongyuk) Samgongyuk.record({ game:'wizard', mode: MON.title, score: isWin ? 1 : 0,
+      accuracy: stats.tries ? Math.round(stats.hits / stats.tries * 100) : '',
+      detail: { result: isWin ? 'win' : 'lose', lv: save.lv, diff: opt.diff, input: opt.input,
+                tries: stats.tries, hits: stats.hits, wrong: stats.wrong, silent: stats.silent } });
     guide(null); pulse(null);
     $('result-title').textContent = title;
     $('result-reward').innerHTML = rewardHTML || '';

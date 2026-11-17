@@ -610,6 +610,7 @@
   </div>
 </aside>
 
+<script src="sheets.js"></script>
 <script>
 /* ============================================================
    ✏️ 여기만 고치면 됩니다!
@@ -1030,6 +1031,9 @@ renderRows();
 if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
   addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
 }
+
+// 구글 시트: 허브에 들어오면 게임 용어를 미리 받아 둬요 (sheets.js 에 주소가 있을 때만)
+addEventListener("load", () => { if (window.Samgongyuk && Samgongyuk.enabled) Samgongyuk.refreshAll(); });
 
 /* ── 배경음악: 오른쪽 옆 ♪ 버튼 → 패널에서 켜고 끄기 ─────────────────────
    곡 추가: audio/ 폴더에 mp3 를 넣고 아래 TRACKS 에 한 줄 추가.
