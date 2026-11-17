@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "git fetch --all -q 2>/dev/null; n=$(git rev-list --count HEAD..@{u} 2>/dev/null || echo ?); echo \"[samgongyuk auto-check] new commits on GitHub not pulled yet: $n (see CLAUDE.md: report them to the user in Korean, then merge before any work)\"; git log --oneline --format='  %h %an %ad %s' --date=format:'%m-%d %H:%M' HEAD..@{u} 2>/dev/null | head -20; git status --short 2>/dev/null | head -10",
+            "timeout": 30
+          }
+        ]
+      }
+    ]
+  }
+}

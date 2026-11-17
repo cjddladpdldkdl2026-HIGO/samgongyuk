@@ -4,8 +4,10 @@
 /도구/
 /문서/
 /*.md
+!/CLAUDE.md
 /*.bat
-.claude/
+.claude/*
+!.claude/settings.json
 
 # 원본 그림(작업용)은 올리지 않아요
 /*.jpg
