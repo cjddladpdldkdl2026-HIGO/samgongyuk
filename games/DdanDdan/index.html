@@ -103,8 +103,9 @@
   <div class="prog"><i id="prog"></i></div>
   <div class="stage">
     <div class="topRow">
-      <div class="tv" id="tv"><div id="anatBox" class="anatBox"></div><div id="ytBox"></div><div class="tvHint" id="tvHint">▶ 영상이 안 나오면 영상을 한 번 눌러 주세요</div></div>
+      <div class="tv" id="tv"><div id="anatBox" class="anatBox"></div><div class="tvHint" id="tvHint">▶ 영상이 안 나오면 영상을 한 번 눌러 주세요</div></div>
       <div class="mcCol">
+        <div class="ytSlot" id="ytSlot"><div id="ytBox"></div></div>
         <div class="mc"><figure class="mcPic" id="mcBrain"><img id="mcImg" src="img/mc-sunhi.jpg" alt=""><figcaption id="mcName">선희</figcaption></figure><div class="bubble" id="bubble">가보자고!</div></div>
         <div class="phase wait" id="phase">준비…</div>
         <div class="listen" id="listen"><div class="lbar"><i id="lbar"></i></div><span id="ltext">🎧 박자 듣는 중…</span></div>
@@ -451,7 +452,7 @@ function ytId(text) {
 /** load the video into the game's TV (paused) to check it can be embedded and get its title */
 async function cueYT(id) {
   await loadYTApi();
-  if (yt) { try { yt.destroy(); } catch {} yt = null; $('tv').insertAdjacentHTML('afterbegin', '<div id="ytBox"></div>'); }
+  if (yt) { try { yt.destroy(); } catch {} yt = null; $('ytSlot').insertAdjacentHTML('afterbegin', '<div id="ytBox"></div>'); }
   return new Promise((resolve) => {
     let done = false; const finish = (r) => { if (!done) { done = true; resolve(r); } };
     yt = new YT.Player('ytBox', {
