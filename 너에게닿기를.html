@@ -135,6 +135,8 @@ button { font: inherit; color: inherit; cursor: pointer; }
   box-shadow: 3px 3px 0 var(--black); transition: transform .08s, box-shadow .08s;
 }
 .btn-back:hover { background: var(--yellow); }
+.gm-btn { box-shadow: 3px 3px 0 var(--black) !important; font-weight: 400 !important; letter-spacing: .02em; cursor: pointer !important; }
+.gm-btn:hover { background: var(--yellow) !important; filter: none !important; }
 .btn-back:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--black); }
 .kicker {
   display: inline-block; padding: 3px 10px 1px; background: var(--black); color: var(--yellow);
@@ -532,7 +534,6 @@ button { font: inherit; color: inherit; cursor: pointer; }
     <!-- ── Quiz ──────────────────────────────────────────────────────────── -->
     <section id="screen-quiz" class="screen">
       <aside class="q-side">
-        <button class="btn-back" id="quiz-quit">← 그만하기</button>
         <div class="bubble q-card">
           <p class="q-en" id="q-en"></p>
           <h2 class="q-name" id="q-name"></h2>
@@ -545,7 +546,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
           <div><span>콤보</span><strong id="q-combo">0</strong></div>
           <div><span>문제</span><strong id="q-count">0/0</strong></div>
         </div>
-        <p class="q-help">마우스 조준 · 클릭 발사<br>우클릭 드래그로 뼈 돌리기 · M 소리 · Esc 그만</p>
+        <p class="q-help">마우스 조준 · 클릭 발사<br>우클릭 드래그로 뼈 돌리기 · M 소리 · Esc 일시정지</p>
       </aside>
       <div class="q-stage">
         <canvas id="quiz-canvas"></canvas>
@@ -598,6 +599,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
   <script src="auth.js"></script>
   <script src="sheets.js"></script>
+  <script src="game-menu.js"></script>
   <script type="module">
 import * as THREE from 'three';
 const __mods = {};
@@ -1626,7 +1628,8 @@ class Quiz {
     this._bind();
   }
 
-  async start(region, difficulty) {
+  async start(region, difficulty, saved = null) {
+    this.paused = 0;
     this.region = region;
     this.difficulty = difficulty;
     this.d = DIFF[difficulty];
@@ -1637,7 +1640,8 @@ class Quiz {
     this.keyOf = new Map(Object.entries(region.points).map(([k, p]) => [p, k]));
     this.pool = [...Object.values(region.points), ...region.decoys];
 
-    const muscles = shuffle([...region.muscles]).slice(0, MUSCLES_PER_RUN);
+    const fromSave = saved && saved.muscles.map(id => region.muscles.find(m => m.id === id)).filter(Boolean);
+    const muscles = fromSave && fromSave.length ? fromSave : shuffle([...region.muscles]).slice(0, MUSCLES_PER_RUN);
     // 3D muscles; if they can't load, the quiz falls back to the old bands.
     await Promise.all(muscles.map(m => loadMuscleParts(region, m).catch(() => null)));
     this.queue = muscles.flatMap(m => [
@@ -1648,10 +1652,67 @@ class Quiz {
     this.asked = 0;
     this.score = 0; this.shots = 0; this.hits = 0; this.combo = 0; this.bestCombo = 0;
     this.muscle = null;
+    if (fromSave && fromSave.length) this._restore(saved);
     this.running = true;
     this.setAim(this.viewer.rect.width / 2, this.viewer.rect.height / 2);
     this._stats();
     this._next();
+  }
+
+  /* ── 삼공육 게임 메뉴: 저장·불러오기·일시정지 ───────────────────────────── */
+
+  /** Where to pick up from: the question on screen (or the next one if it's already answered). */
+  snapshot() {
+    if (!this.running || !this.queue) return null;
+    const at = this.revealUntil ? this.asked : this.asked - 1;
+    if (at >= this.queue.length) return null;
+    const q = this.queue[at], same = q.m === this.muscle;
+    return {
+      region: this.region.id, difficulty: this.difficulty, muscles: [...this.results.keys()].map(m => m.id),
+      asked: at, total: this.queue.length,
+      score: this.score, shots: this.shots, hits: this.hits, combo: this.combo, bestCombo: this.bestCombo,
+      results: Object.fromEntries([...this.results].map(([m, r]) => [m.id, r.hit])),
+      found: same ? [...this.found] : [], marks: same ? { ...(this.stepMarks || {}) } : {},
+    };
+  }
+
+  _restore(d) {
+    this.asked = Math.max(0, Math.min(d.asked, this.queue.length - 1));
+    Object.assign(this, { score: d.score | 0, shots: d.shots | 0, hits: d.hits | 0, combo: d.combo | 0, bestCombo: d.bestCombo | 0 });
+    for (const [m, r] of this.results) r.hit = (d.results && d.results[m.id]) | 0;
+    // Pins and half-grown heads of the muscle that was in progress.
+    const m = this.queue[this.asked].m;
+    this.muscle = m; this.found = new Set(); this.stepsFor = m; this.stepMarks = { ...(d.marks || {}) };
+    this.viewer.clearFx();
+    for (const k of d.found || []) {
+      const p = this.region.points[k]; if (!p) continue;
+      const origin = m.origins.includes(k);
+      this.found.add(k);
+      this.viewer.addPin(p, origin ? COLORS.origin : COLORS.insertion, this.radius * 0.5);
+      if (origin && m._parts && m.origins.length + m.insertions.length > 2)
+        m._parts.filter(x => x.from === k).forEach(x => this.viewer.growMuscle(x.geometry, HEAD_PART));
+    }
+  }
+
+  pause() {
+    if (!this.running || this.paused) return true;
+    this.paused = performance.now();
+    if (!this.revealUntil) this._timer(false);   // stop the time bar where it is
+    return true;
+  }
+
+  resume() {
+    if (!this.paused) return;
+    const now = performance.now(), gap = now - this.paused;
+    this.paused = 0;
+    this.born += gap;
+    if (this.revealUntil) this.revealUntil += gap;
+    else if (!this.overtime) {                    // run the bar on for the time that was left
+      const bar = $('q-timer');
+      const left = Math.max(0, this.d.life - Math.max(0, now - this.born));
+      bar.style.transition = `transform ${left}ms linear ${Math.max(0, this.born - now)}ms`;
+      bar.style.transform = 'scaleX(0)';
+    }
   }
 
   stop() {
@@ -1720,7 +1781,7 @@ class Quiz {
   }
 
   shoot() {
-    if (!this.running || this.revealUntil || performance.now() < this.born) return;
+    if (!this.running || this.paused || this.revealUntil || performance.now() < this.born) return;
     Sfx.shot();
     const ch = $('crosshair');   // recoil kick on every trigger pull
     ch.classList.remove('kick'); void ch.offsetWidth; ch.classList.add('kick');
@@ -1791,7 +1852,7 @@ class Quiz {
   /* ── per-frame ──────────────────────────────────────────────────────────── */
 
   frame(now) {
-    if (this.running) {
+    if (this.running && !this.paused) {
       if (this.revealUntil && now >= this.revealUntil) this._next();
       else if (!this.revealUntil && !this.overtime && now - this.born >= this.d.life) {
         // Time's up: no answer is given away — the player keeps choosing until they hit it.
@@ -2095,16 +2156,23 @@ function renderRegions() {
 }
 
 async function startQuiz(region) {
-  lastRegion = region;
   Sfx.unlock();
+  let saved = null;
+  if (window.GameMenu) {
+    saved = await GameMenu.askResume();
+    const r = saved && REGIONS.find(x => x.id === saved.region && !x.locked);
+    if (r && DIFF[saved.difficulty]) region = r; else saved = null;
+  }
+  lastRegion = region;
   Sfx.stage();
   show('quiz');
-  await quiz.start(region, difficulty);
+  await quiz.start(region, saved ? saved.difficulty : difficulty, saved);
 }
 
 /* ── result ──────────────────────────────────────────────────────────────── */
 
 quiz.onEnd = (r) => {
+  if (window.GameMenu) GameMenu.clear();
   const stars = r.accuracy >= 90 ? 3 : r.accuracy >= 70 ? 2 : r.accuracy >= 40 ? 1 : 0;
   const isBest = Storage.best(r.region.id, r.difficulty, r.score);
   (stars >= 2 ? Sfx.win : stars ? Sfx.clear : Sfx.fail)();
@@ -2124,12 +2192,11 @@ quiz.onEnd = (r) => {
     detail: { stars, bestCombo: r.bestCombo, muscles: r.muscles.map(({ m, hit, of }) => `${m.ko} ${hit}/${of}`) } });
 };
 $('r-again').addEventListener('click', () => lastRegion && startQuiz(lastRegion));
-$('quiz-quit').addEventListener('click', () => show('regions'));
 
 /* ── keys, petals, loop ──────────────────────────────────────────────────── */
 
 window.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && screen === 'quiz') show('regions');
+  if (e.key === 'Escape' && screen === 'quiz' && !window.GameMenu) show('regions');   // 보통은 ⏸ 메뉴가 Esc 를 받아요
   if (e.key === 'm' || e.key === 'M') Sfx.toggle();
 });
 window.addEventListener('resize', () => { quiz.viewer.resize(); atlas.viewer.resize(); });
@@ -2152,6 +2219,24 @@ function wave() {
     box.append(b);
   }
 }
+
+if (window.GameMenu) GameMenu.mount({
+  game: 'neoege',
+  parent: document.querySelector('#screen-quiz .q-stage'), style: { top: '12px', right: '14px' },
+  btnText: '일시정지',
+  theme: { font: "'Black Han Sans', 'IBM Plex Sans KR', sans-serif", bg: '#fff8fb', ink: '#0d0d0f',
+    accent: '#ff1f8e', accentInk: '#fff8fb', line: '3px solid #0d0d0f', radius: '4px', btnSize: '38px',
+    shadow: '6px 6px 0 #ff1f8e', overlay: 'rgba(13,13,15,.62)', title: "400 30px 'Black Han Sans', sans-serif" },
+  playing: () => screen === 'quiz' && quiz.running,
+  pause: () => quiz.pause(),
+  resume: () => quiz.resume(),
+  quit: () => show('regions'),
+  snapshot: () => quiz.snapshot(),
+  label: (d) => {
+    const r = REGIONS.find(x => x.id === d.region) || {};
+    return `${r.emoji || ''} ${r.ko || ''} · ${DIFF[d.difficulty] ? DIFF[d.difficulty].label : ''}<br>${d.asked}/${d.total} 문제까지 · 점수 ${Number(d.score).toLocaleString('ko-KR')}`;
+  },
+});
 
 renderDifficulty();
 wave();

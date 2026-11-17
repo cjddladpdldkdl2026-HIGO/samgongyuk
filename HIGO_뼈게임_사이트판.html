@@ -602,6 +602,12 @@ body.cursor-aim #canvas { cursor: none; }
 @media (max-width: 700px) {
   .arena-top { grid-template-columns: 1fr auto auto; }
 }
+/* 삼공육 게임 메뉴 ⏸ (sound button 옆) */
+.arena-top { grid-template-columns: 1fr minmax(260px, 2fr) 1fr auto auto auto; }
+.gm-btn.gm-lm { width: 40px; padding: 0; border-radius: 50% !important; background: rgba(17, 4, 42, .7) !important;
+  border: 1px solid var(--line) !important; box-shadow: none !important; color: var(--ink) !important; }
+.gm-btn.gm-lm:hover { border-color: var(--cyan) !important; box-shadow: var(--glow-cyan) !important; transform: none; }
+@media (max-width: 700px) { .arena-top { grid-template-columns: 1fr auto auto auto; } }
 
 /* ── Background music widget (bottom-left corner, above every screen) ───── */
 .bgm {
@@ -700,6 +706,7 @@ body.cursor-aim #canvas { cursor: none; }
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
   <script src="auth.js"></script>
   <script src="sheets.js"></script>
+  <script src="game-menu.js"></script>
 </head>
 <body>
   <canvas id="canvas"></canvas>
@@ -2453,7 +2460,8 @@ class Bone3D {
     return mesh;
   }
 
-  async start({ players, difficulty }) {
+  async start({ players, difficulty, saved = null }) {
+    this.paused = 0; this._timers = {};
     this.players = players;
     this.difficulty = difficulty;
     this.root.classList.remove('hide');
@@ -2461,14 +2469,22 @@ class Bone3D {
     this.$('#arena-p2').classList.toggle('hide', players !== 2);
     this.$('#view-2').classList.toggle('hide', players !== 2);
     this.$('#arena-help').textContent = players === 2
-      ? 'P1: mouse aim · click fire · right-drag turn  |  P2: arrows aim · Enter fire · Shift+arrows turn  |  M: sound  |  Esc: quit'
-      : 'Mouse aim · click fire · right-drag to turn the bone · M: sound · Esc: quit';
+      ? 'P1: mouse aim · click fire · right-drag turn  |  P2: arrows aim · Enter fire · Shift+arrows turn  |  M: sound  |  Esc: pause'
+      : 'Mouse aim · click fire · right-drag to turn the bone · M: sound · Esc: pause';
 
     const els = [this.$('#view-1'), this.$('#view-2')].slice(0, players);
     this.views = els.map(el => new View(el));
     this.stats = this.views.map(() => ({ score: 0, hits: 0, shots: 0, streak: 0, bestStreak: 0, react: [] }));
     this.stage = 0;
     this.cleared = new Set();   // stage indexes cleared (replays don't double-count)
+    this._restoreStage = null;
+    if (saved && players === 1 && STAGES[saved.stage]) {   // 삼공육 게임 메뉴: 저장한 곳부터
+      this.stage = saved.stage;
+      this.cleared = new Set(saved.cleared || []);
+      Object.assign(this.stats[0], saved.stats || {});
+      if (!Array.isArray(this.stats[0].react)) this.stats[0].react = [];
+      if (saved.queue) this._restoreStage = saved;
+    }
     this.current = null;
     this.phase = 'card';
     this.running = true;
@@ -2478,9 +2494,10 @@ class Bone3D {
     this._startStage();
   }
 
-  stop(completed = false) {
+  stop(completed = false, silent = false) {
     if (!this.running) return;
     this.running = false;
+    this.paused = 0;
     clearTimeout(this._cardTO);
     this._hideCard();
     this.root.classList.add('hide');
@@ -2494,10 +2511,56 @@ class Bone3D {
       avgReact: s.react.length ? Math.round(s.react.reduce((a, b) => a + b, 0) / s.react.length) : 0,
       bestStreak: s.bestStreak,
     }));
+    if (silent) return;
     this.onEnd({
       players: this.players, difficulty: this.difficulty, scores,
       stagesCleared: this.cleared.size, completed,
     });
+  }
+
+  /* ── 삼공육 게임 메뉴: 일시정지 · 이어하기 · 저장 ──────────────────────── */
+
+  /** setTimeout that the pause menu can hold and pick up again */
+  _later(fn, ms) {
+    const id = setTimeout(() => { delete this._timers[id]; fn(); }, ms);
+    this._timers[id] = { fn, due: performance.now() + ms };
+    return id;
+  }
+
+  pause() {
+    if (!this.running || this.paused) return true;
+    this.paused = performance.now();
+    for (const [id, t] of Object.entries(this._timers)) { clearTimeout(Number(id)); t.left = Math.max(0, t.due - this.paused); }
+    if (this.phase === 'play' && !this.revealUntil) this._freezeBar();
+    return true;
+  }
+
+  resume() {
+    if (!this.paused) return;
+    const now = performance.now(), gap = now - this.paused;
+    this.paused = 0;
+    if (this.born) this.born += gap;
+    if (this.revealUntil) this.revealUntil += gap;
+    const held = Object.values(this._timers); this._timers = {};
+    held.forEach(t => { this._cardTO = this._later(t.fn, t.left); });
+    if (this.phase === 'play' && !this.revealUntil && this.current) {
+      const life = BONE3D_DIFF[this.difficulty].life;
+      const left = Math.max(0, life - Math.max(0, now - this.born));
+      const bar = this.$('#arena-bar-fill');
+      bar.style.transition = `transform ${left}ms linear ${Math.max(0, this.born - now)}ms`;
+      bar.style.transform = 'scaleX(0)';
+    }
+  }
+
+  /** 1P only: the stage, the question on screen and the score so far */
+  snapshot() {
+    if (!this.running || this.players !== 1 || this.phase === 'choice') return null;
+    const base = { difficulty: this.difficulty, stage: this.stage, cleared: [...this.cleared],
+      stats: { ...this.stats[0], react: this.stats[0].react.slice(-40) } };
+    if (this.phase !== 'play' || !this.queue) return base;            // stage intro card: start the stage again
+    const at = this.revealUntil ? this.asked : this.asked - 1;
+    if (at >= this.queue.length) return null;
+    return { ...base, queue: this.queue.map(l => l.name), asked: at, stageHits: this.stageHits[0] };
   }
 
   /* ── stages ─────────────────────────────────────────────────────────────── */
@@ -2527,8 +2590,13 @@ class Bone3D {
     this.queue = shuffle([...bone.landmarks]).slice(0, QUESTIONS_PER_STAGE);
     this.asked = 0;
     this.stageHits = this.views.map(() => 0);
+    const r = this._restoreStage; this._restoreStage = null;
+    if (r && r.stage === this.stage) {
+      const q = r.queue.map(n => bone.landmarks.find(l => l.name === n)).filter(Boolean);
+      if (q.length === r.queue.length) { this.queue = q; this.asked = Math.min(r.asked, q.length - 1); this.stageHits = [r.stageHits | 0]; }
+    }
 
-    this._cardTO = setTimeout(() => {
+    this._cardTO = this._later(() => {
       if (!this.running) return;
       this._hideCard();
       this.phase = 'play';
@@ -2552,7 +2620,7 @@ class Bone3D {
       this.cleared.add(this.stage);
       (last ? Sfx.win : Sfx.clear)();
       this._showCard(`Stage ${this.stage + 1} done`, `P1 ${a} : ${b} P2`, last ? 'Final results next' : `다음: ${next.ko}`);
-      if (last) this._cardTO = setTimeout(() => this.stop(true), CARD_MS);
+      if (last) this._cardTO = this._later(() => this.stop(true), CARD_MS);
       else this._offer([goNext, again('한 번 더', 'R'), quit]);
       return;
     }
@@ -2568,7 +2636,7 @@ class Bone3D {
               : `Need ${Math.ceil(asked * CLEAR_RATE)} to clear`,
       cleared ? 'good' : 'bad'
     );
-    if (cleared && last) this._cardTO = setTimeout(() => this.stop(true), CARD_MS + 400);
+    if (cleared && last) this._cardTO = this._later(() => this.stop(true), CARD_MS + 400);
     else if (cleared) this._offer([goNext, again('한 번 더', 'R'), quit]);
     else this._offer([again('다시 도전', 'Enter'), quit]);
   }
@@ -2664,7 +2732,7 @@ class Bone3D {
 
   _shoot(i) {
     const v = this.views[i], s = this.stats[i];
-    if (!v || !this.running || this.phase !== 'play' || this.revealUntil
+    if (!v || !this.running || this.paused || this.phase !== 'play' || this.revealUntil
         || performance.now() < this.born) return;
     Sfx.shot();   // every trigger pull bangs, on a target or not
     if (v.cross) { v.cross.classList.remove('kick'); void v.cross.offsetWidth; v.cross.classList.add('kick'); }   // recoil (upgrade 1)
@@ -2725,7 +2793,7 @@ class Bone3D {
     const dt = Math.min(0.05, (now - this.last) / 1000);
     this.last = now;
 
-    if (this.phase === 'play') {
+    if (this.phase === 'play' && !this.paused) {
       if (this.revealUntil && now >= this.revealUntil) this._next();
       else if (!this.revealUntil && now - this.born >= BONE3D_DIFF[this.difficulty].life) {
         this.stats.forEach(s => { s.streak = 0; s.shots++; });   // unanswered counts as a miss
@@ -2818,7 +2886,8 @@ class Bone3D {
         const c = this.choices.find(c => c.key === key);
         if (c && !e.repeat) { e.preventDefault(); this._choose(c); return; }
       }
-      if (e.key === 'Escape') { this.stop(); return; }
+      if (e.key === 'Escape') { if (!window.GameMenu) this.stop(); return; }   // 보통은 ⏸ 메뉴가 Esc 를 받아요
+      if (this.paused) return;
       if (e.key === 'm' || e.key === 'M') { Sfx.toggle(); showMute(); return; }
       if (this.players !== 2) return;
       if (e.key.startsWith('Arrow') || e.key === 'Shift') {
@@ -3573,6 +3642,7 @@ const Ranking = (() => {
 /* The 3D bone stages run in their own overlay with their own loop; the FPS
  * world just idles behind them until the run ends. */
 bone3d.onEnd = ({ players, difficulty, scores, stagesCleared, completed }) => {
+  if (players === 1 && window.GameMenu) GameMenu.clear();
   ui.showMenu();
   const progress = completed ? 'All 5 bones cleared' : `${stagesCleared} / 5 bones cleared`;
   if (players === 2) {
@@ -3592,17 +3662,38 @@ bone3d.onEnd = ({ players, difficulty, scores, stagesCleared, completed }) => {
   ui.el.start.textContent = 'Game Start';
 };
 
-function startBone3D() {
+async function startBone3D() {
   // Drop focus from the start button so P2's Enter/Space can't re-click it.
   document.activeElement?.blur();
+  const players = state.players === '2' ? 2 : 1;
+  // 삼공육 게임 메뉴: 저장해 둔 판이 있으면 이어할지 물어봐요 (1P)
+  const saved = players === 1 && window.GameMenu ? await GameMenu.askResume() : null;
   ui.hideMenu();
   ui.el.hud.classList.add('hide');
   ui.clearResults();
   bone3d.start({
-    players: state.players === '2' ? 2 : 1,
-    difficulty: state.difficulty,
+    players,
+    difficulty: saved && ['easy', 'medium', 'hard'].includes(saved.difficulty) ? saved.difficulty : state.difficulty,
+    saved,
   });
 }
+
+if (window.GameMenu) GameMenu.mount({
+  game: 'landmark',
+  parent: document.querySelector('#arena .arena-top'), style: { position: 'static' },
+  btnClass: 'gm-lm',
+  theme: { font: "'Chakra Petch', 'Pretendard Variable', 'Segoe UI', sans-serif", bg: 'rgba(17,4,42,.96)', ink: '#f4ecff',
+    accent: '#2de2e6', accentInk: '#0a0420', line: '1px solid rgba(149,92,255,.55)', radius: '14px', btnSize: '40px',
+    shadow: '0 0 0 1px rgba(45,226,230,.25), 0 20px 60px rgba(0,0,0,.6), 0 0 30px rgba(45,226,230,.2)',
+    overlay: 'rgba(7,1,15,.72)', title: "700 24px 'Orbitron', 'Pretendard Variable', sans-serif" },
+  playing: () => bone3d.running && bone3d.phase !== 'choice',
+  pause: () => bone3d.pause(),
+  resume: () => bone3d.resume(),
+  quit: () => bone3d.stop(),
+  saveQuit: () => { bone3d.stop(false, true); ui.showMenu(); ui.el.start.textContent = 'Game Start'; },
+  snapshot: () => bone3d.snapshot(),
+  label: (d) => `Stage ${d.stage + 1} / 5${d.queue ? ` · ${d.asked + 1}번째 문제` : ''} · ${(d.stats && d.stats.score || 0).toLocaleString('en-US')}점`,
+});
 
 function startGame() {
   if (BONE3D_SCENARIOS.has(state.scenario)) { startBone3D(); return; }
