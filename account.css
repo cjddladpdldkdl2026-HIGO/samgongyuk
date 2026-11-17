@@ -188,3 +188,10 @@
 
 .empty2 { padding: 28px 12px; text-align: center; color: var(--ink-faint); }
 .note { margin-top: 10px; font-size: 12px; color: var(--ink-faint); }
+
+/* 사이트 안 확인 창 (account.js dialog) — 브라우저 confirm 이 안 뜨는 앱 안 브라우저용 */
+.acc-dlg { position: fixed; inset: 0; z-index: 400; display: grid; place-items: center; padding: 16px; background: rgba(7,1,15,.72); backdrop-filter: blur(4px); }
+.acc-dlg-card { width: min(380px, 100%); padding: 22px 20px; border: 1px solid var(--line); border-radius: 16px;
+  background: linear-gradient(160deg, rgba(29,7,66,.98), rgba(11,4,30,.99)); box-shadow: 0 20px 60px rgba(0,0,0,.5); }
+.acc-dlg-card p { color: var(--ink); line-height: 1.6; font-size: 15px; }
+.acc-dlg-card .row { justify-content: flex-end; }

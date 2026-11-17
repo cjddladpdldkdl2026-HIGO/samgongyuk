@@ -21,6 +21,28 @@
   const S = { session: null, me: null, loginRequired: false, page: null, tab: 'login', openPosts: 0 };
   const $ = (s, r = document) => r.querySelector(s);
   const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+  /* 확인 창: 브라우저 confirm/prompt/alert 는 앱 안 브라우저·카톡 인앱 브라우저에서 안 뜨고 바로 취소돼요.
+   * 그래서 사이트 안에 직접 그려요.  ask(글) → true/false,  askText(글) → 입력값 또는 null,  say(글) */
+  function dialog(msg, { input = false, cancel = true } = {}) {
+    return new Promise((resolve) => {
+      const bg = document.createElement('div');
+      bg.className = 'acc-dlg';
+      bg.innerHTML = `<form class="acc-dlg-card acc-form"><p>${esc(msg).replace(/\n/g, '<br>')}</p>
+        ${input ? '<input class="acc-in" name="v" type="text" autocomplete="off">' : ''}
+        <div class="row">${cancel ? '<button class="abtn" type="button" data-no>취소</button>' : ''}<button class="abtn pri" type="submit">확인</button></div></form>`;
+      document.body.appendChild(bg);
+      const f = bg.querySelector('form'), inp = f.querySelector('input');
+      const done = (v) => { bg.remove(); resolve(v); };
+      f.addEventListener('submit', (e) => { e.preventDefault(); done(input ? inp.value : true); });
+      f.addEventListener('keydown', (e) => { e.stopPropagation(); if (e.key === 'Escape') done(input ? null : false); });
+      bg.querySelector('[data-no]')?.addEventListener('click', () => done(input ? null : false));
+      (inp || f.querySelector('button[type=submit]')).focus();
+    });
+  }
+  const ask = (m) => dialog(m);
+  const askText = (m) => dialog(m, { input: true });
+  const say = (m) => dialog(m, { cancel: false });
   const isAdmin = () => !!(S.me && S.me.kind === 'admin' && S.me.approved);
   const fmtDate = (t, time) => {
     if (!t) return '-';
@@ -486,9 +508,9 @@
       const ed = $('#editPost', pg); if (ed) ed.addEventListener('click', () => openPage('write', id));
       const del = $('#delPost', pg);
       if (del) del.addEventListener('click', async () => {
-        if (!confirm('이 글을 지울까요? 되살릴 수 없어요.')) return;
+        if (!await ask('이 글을 지울까요? 되살릴 수 없어요.')) return;
         const { error } = await sb.from('posts').delete().eq('id', id);
-        if (error) return alert(KO_ERR(error));
+        if (error) return say(KO_ERR(error));
         openPage('board');
       });
       const f = $('#fAdminPost', pg);
@@ -520,11 +542,11 @@
       const tog = $('#togLogin', pg);
       tog.addEventListener('click', async () => {
         const next = !S.loginRequired;
-        if (!confirm(next
+        if (!await ask(next
           ? '로그인 필수를 켤까요?\n\n· 로그인 안 한 사람은 사이트에 들어오면 로그인 화면만 보여요.\n· 랭킹 초기화는 따로 해요 (자동으로 지우지 않아요).'
           : '로그인 필수를 끌까요?\n\n누구나 로그인 없이 사이트를 쓸 수 있게 돼요.')) return;
         const { error } = await sb.from('settings').update({ value: next, updated_at: new Date().toISOString() }).eq('key', 'login_required');
-        if (error) return alert(KO_ERR(error));
+        if (error) return say(KO_ERR(error));
         S.loginRequired = next; renderSide(); openPage('members');
       });
       pg.querySelectorAll('tr[data-uid]').forEach(tr => {
@@ -532,28 +554,28 @@
         const g = $('[data-grade]', tr);
         if (g) g.addEventListener('change', async () => {
           const { error } = await sb.from('profiles').update({ grade_override: g.value ? +g.value : null }).eq('id', uid);
-          if (error) alert(KO_ERR(error)); else openPage('members');
+          if (error) say(KO_ERR(error)); else openPage('members');
         });
         const ap = $('[data-approve]', tr);
         if (ap) ap.addEventListener('click', async () => {
           const on = ap.dataset.approve === '1';
-          if (!confirm(on ? `${name}님을 관리자로 승인할까요?` : `${name}님의 관리자 권한을 해제할까요?`)) return;
+          if (!await ask(on ? `${name}님을 관리자로 승인할까요?` : `${name}님의 관리자 권한을 해제할까요?`)) return;
           const { error } = await sb.from('profiles').update({ approved: on }).eq('id', uid);
-          if (error) alert(KO_ERR(error)); else openPage('members');
+          if (error) say(KO_ERR(error)); else openPage('members');
         });
         const rs = $('[data-reset]', tr);
         if (rs) rs.addEventListener('click', async () => {
-          const pw = prompt(`${name}님의 임시 비밀번호를 정해 주세요 (6자 이상).\n로그인한 뒤 '내 정보'에서 바꾸라고 알려 주세요.`);
+          const pw = await askText(`${name}님의 임시 비밀번호를 정해 주세요 (6자 이상).\n로그인한 뒤 '내 정보'에서 바꾸라고 알려 주세요.`);
           if (pw == null) return;
-          if (pw.length < 6) return alert('6자 이상이어야 해요.');
+          if (pw.length < 6) return say('6자 이상이어야 해요.');
           const { error } = await sb.rpc('admin_reset_password', { p_user: uid, p_password: pw });
-          alert(error ? KO_ERR(error) : '바꿨어요. 학생에게 직접 알려 주세요.');
+          say(error ? KO_ERR(error) : '바꿨어요. 학생에게 직접 알려 주세요.');
         });
         const del = $('[data-del]', tr);
         if (del) del.addEventListener('click', async () => {
-          if (!confirm(`${name}님 계정을 삭제할까요?\n계정, 기록, 쓴 글이 모두 지워지고 되살릴 수 없어요.`)) return;
+          if (!await ask(`${name}님 계정을 삭제할까요?\n계정, 기록, 쓴 글이 모두 지워지고 되살릴 수 없어요.`)) return;
           const { error } = await sb.rpc('admin_delete_user', { p_user: uid });
-          if (error) alert(KO_ERR(error)); else openPage('members');
+          if (error) say(KO_ERR(error)); else openPage('members');
         });
       });
     },
@@ -569,11 +591,11 @@
         if (!error) f.reset();
       });
       $('#leave', pg).addEventListener('click', async () => {
-        if (!confirm('정말 탈퇴할까요?\n계정과 기록, 내가 쓴 글이 지워지고 되살릴 수 없어요.')) return;
+        if (!await ask('정말 탈퇴할까요?\n계정과 기록, 내가 쓴 글이 지워지고 되살릴 수 없어요.')) return;
         const { error } = await sb.rpc('delete_me');
-        if (error) return alert(KO_ERR(error));
+        if (error) return say(KO_ERR(error));
         await sb.auth.signOut();
-        alert('탈퇴했어요. 그동안 고마웠어요!');
+        say('탈퇴했어요. 그동안 고마웠어요!');
       });
     },
   };
