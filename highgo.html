@@ -570,7 +570,11 @@
   .join-card .row button { padding: 10px 16px; border-radius: 10px; font: 700 14px var(--font-ui); border: 1px solid var(--line); background: none; color: var(--ink-dim); }
   .join-card .row .go { border: 0; color: #0a0118; background: linear-gradient(180deg, var(--cyan-soft), var(--cyan)); }
   .join-card .row .go:disabled { opacity: .5; }
+  /* 팀원 사이드바 버튼(☰, account.js)과 한 줄에 들어가게: 검색창이 먼저 줄어들어요 */
+  header .search { flex: 0 1 220px; width: auto; min-width: 60px; }
+  @media (max-width: 1100px) { header { gap: 14px; } }
   @media (max-width: 820px) { .acct-btn { padding: 6px 10px; font-size: 13px; } }
+  @media (max-width: 600px) { .acct-btn .lbl { display: none; } }
 </style>
 <link rel="stylesheet" href="account.css">
 </head>
@@ -588,7 +592,7 @@
   <span class="sr-only" id="rankHint">누르고 있는 동안 랭킹이 보여요</span>
   <input class="search" id="search" placeholder="🔍 검색">
   <div class="acct" id="acct">
-    <button class="acct-btn" id="acctBtn" type="button">로그인</button>
+    <button class="acct-btn" id="acctBtn" type="button" title="구글로 로그인하면 게임 기록·랭킹이 내 계정에 저장돼요">🎮 <span class="lbl">기록 로그인</span></button>
     <div class="acct-menu" id="acctMenu" role="menu">
       <p id="acctWho"></p>
       <button type="button" id="acctNick" role="menuitem">닉네임 바꾸기</button>
@@ -699,13 +703,14 @@
   const closeJoin = () => bg.classList.remove('open');
 
   function render(A) {
-    if (!A.loggedIn) { btn.textContent = '로그인'; menu.classList.remove('open'); return; }
+    const set = (t) => { btn.innerHTML = '🎮 <span class="lbl"></span>'; btn.querySelector('.lbl').textContent = t; };
+    if (!A.loggedIn) { set('기록 로그인'); menu.classList.remove('open'); return; }
     if (!A.joined) {
-      btn.textContent = '가입 마치기';
+      set('가입 마치기');
       if (!dismissed) openJoin('join');
       return;
     }
-    btn.textContent = '👤 ' + A.profile.nickname;
+    set(A.profile.nickname);
     $('acctWho').textContent = (A.user.email || '') + (A.profile.banned ? ' · 이용 정지' : '');
   }
 
