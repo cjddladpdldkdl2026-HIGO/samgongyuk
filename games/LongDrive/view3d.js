@@ -866,4 +866,6 @@ function frame(now, dt) {
   updateCamera(now, dt);
   composer.render(dt);
 }
-window.GolfView = { frame, ready: true, debugCam: (pos, look) => { DBG = pos ? { pos: V(...pos), look: V(...look) } : null; } };
+// 확인용: 지금 화면을 그림 파일(data URL)로 (허브 배너·썸네일 만들 때 씀)
+function snapshot(type = 'image/jpeg', q = .88) { composer.render(); return renderer.domElement.toDataURL(type, q); }
+window.GolfView = { frame, ready: true, snapshot, debugCam: (pos, look) => { DBG = pos ? { pos: V(...pos), look: V(...look) } : null; } };
