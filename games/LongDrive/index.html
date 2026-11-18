@@ -257,6 +257,11 @@ button { font: inherit; color: inherit; cursor: pointer; border: 0; background: 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script src="../../auth.js"></script>
 <script src="questions.js"></script>
+<script type="importmap">
+{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+               "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/" } }
+</script>
+<script type="module" src="view3d.js"></script>
 <script>
 "use strict";
 /* ═══════════════════════════════════════════════════════════════
@@ -389,196 +394,13 @@ function snd(type) {
 }
 
 /* ═══════════════════════════════════════════════════════════════
- *  연습장 그리기 (캔버스, 원근 투영)
- *  좌표: x = 옆(오른쪽 +), y = 위, z = 앞(티에서 멀어지는 쪽), 단위 m
- * ═══════════════════════════════════════════════════════════════ */
-const cv = $("scene"), ctx = cv.getContext("2d");
-let W = 0, H = 0, DPR = 1, F = 600, HOR = 300;
-function resize() {
-  DPR = Math.min(window.devicePixelRatio || 1, 2);
-  W = innerWidth; H = innerHeight; cv.width = W * DPR; cv.height = H * DPR; ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
-  F = Math.max(W, H * 1.1) * 0.75; HOR = H * 0.44;
-}
-addEventListener("resize", resize); resize();
-
-const cam = { x: 0, y: 2.3, z: -9.5 };
-function proj(x, y, z) {
-  const dz = z - cam.z; if (dz < 0.3) return null;
-  const s = F / dz; return { x: W / 2 + (x - cam.x) * s, y: HOR - (y - cam.y) * s, s };
-}
-// 고정된 무작위 (나무·관중석 위치가 매번 같게)
-let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
-const PROPS = [];
-for (let z = 20; z < 900; z += 18 + rnd() * 20) {
-  for (const side of [-1, 1]) if (rnd() < .8) PROPS.push({ type: "tree", x: side * (OB_X + 8 + rnd() * 50), z: z + rnd() * 10, h: 7 + rnd() * 8, hue: rnd() < .5 ? 150 : 170 });
-}
-for (let z = 60; z < 900; z += 120) for (const side of [-1, 1]) PROPS.push({ type: "light", x: side * (OB_X + 4), z, h: 22 });
-const STARS = Array.from({ length: 120 }, () => ({ x: rnd(), y: rnd() * .9, r: rnd() * 1.3 + .3, t: rnd() * 6 }));
-
-function lerpColor(a, b, t) { return `rgb(${Math.round(a[0] + (b[0] - a[0]) * t)},${Math.round(a[1] + (b[1] - a[1]) * t)},${Math.round(a[2] + (b[2] - a[2]) * t)})`; }
-const HAZE = [58, 20, 92];
-function drawSky(time) {
-  const g = ctx.createLinearGradient(0, 0, 0, HOR);
-  g.addColorStop(0, "#07011a"); g.addColorStop(.55, "#2a0a55"); g.addColorStop(.9, "#7a1a78"); g.addColorStop(1, "#ff2e88");
-  ctx.fillStyle = g; ctx.fillRect(0, 0, W, HOR + 2);
-  for (const s of STARS) { ctx.globalAlpha = .4 + .4 * Math.sin(time / 700 + s.t); ctx.fillStyle = "#fff"; ctx.fillRect(s.x * W, s.y * HOR * .8, s.r, s.r); }
-  ctx.globalAlpha = 1;
-  // 줄무늬 네온 태양
-  const R = Math.min(W, H) * .17, cx = W / 2 - cam.x * 0.4, cy = HOR - R * .25;
-  ctx.save(); ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2); ctx.clip();
-  const sg = ctx.createLinearGradient(0, cy - R, 0, cy + R); sg.addColorStop(0, "#ffd23f"); sg.addColorStop(.6, "#ff2e88"); sg.addColorStop(1, "#9b1d8a");
-  ctx.fillStyle = sg; ctx.fillRect(cx - R, cy - R, R * 2, R * 2);
-  ctx.fillStyle = "#3a0c5c"; for (let i = 0; i < 6; i++) { const yy = cy + R * (.05 + i * .16); ctx.fillRect(cx - R, yy, R * 2, 2 + i * 1.6); }
-  ctx.restore();
-  ctx.shadowColor = "#ff2e88"; ctx.shadowBlur = 40; ctx.fillStyle = "rgba(255,46,136,.08)"; ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2); ctx.fill(); ctx.shadowBlur = 0;
-  // 멀리 보이는 도시 실루엣
-  ctx.fillStyle = "#1a0638";
-  seed = 99;
-  for (let x = -40; x < W + 40;) { const w = 16 + rnd() * 40, h = 10 + rnd() * 50; ctx.fillRect(x - cam.x * .2, HOR - h, w, h + 2); x += w + 2; }
-  ctx.fillStyle = "rgba(45,226,230,.5)"; seed = 123;
-  for (let i = 0; i < 70; i++) ctx.fillRect(rnd() * W - cam.x * .2, HOR - rnd() * 40, 2, 2);
-}
-function drawGround() {
-  // 지평선 근처 안개
-  ctx.fillStyle = lerpColor([20, 70, 40], HAZE, 1); ctx.fillRect(0, HOR, W, H - HOR);
-  const far = 1100, step = 10;
-  const z0 = Math.floor((cam.z + 0.5) / step) * step;
-  for (let z = Math.floor(Math.min(far + cam.z, 2000) / step) * step; z >= z0; z -= step) {
-    const zn = Math.max(z, cam.z + .5), zf = z + step;
-    const a = proj(0, 0, zf), b = proj(0, 0, zn); if (!a || !b) continue;
-    const fog = Math.min(1, Math.max(0, (zf - cam.z) / 700));
-    const stripe = (Math.floor(z / step) & 1) === 0;
-    const yTop = a.y, yBot = Math.min(H + 2, b.y);
-    if (yBot - yTop < .3 && fog > .98) continue;
-    ctx.fillStyle = lerpColor(stripe ? [18, 74, 34] : [22, 86, 40], HAZE, fog);   // 러프
-    ctx.fillRect(0, yTop, W, yBot - yTop + 1);
-    // 페어웨이 (가운데 넓은 잔디길)
-    const fw = 32, l1 = proj(-fw, 0, zf), r1 = proj(fw, 0, zf), l2 = proj(-fw, 0, zn), r2 = proj(fw, 0, zn);
-    ctx.fillStyle = lerpColor(stripe ? [64, 190, 70] : [86, 214, 84], HAZE, fog);
-    ctx.beginPath(); ctx.moveTo(l1.x, l1.y); ctx.lineTo(r1.x, r1.y); ctx.lineTo(r2.x, r2.y); ctx.lineTo(l2.x, l2.y); ctx.fill();
-    // OB 선 (빨간 네온)
-    for (const sx of [-OB_X, OB_X]) {
-      const p1 = proj(sx, 0, zf), p2 = proj(sx, 0, zn);
-      ctx.strokeStyle = `rgba(255,46,136,${.9 - fog * .8})`; ctx.lineWidth = Math.max(1, 0.4 * p2.s); ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.stroke();
-    }
-    // 50m 마다 흰 선
-    if (z % 50 === 0 && z > 0) {
-      const p1 = proj(-fw, 0, z), p2 = proj(fw, 0, z);
-      if (p1) { ctx.strokeStyle = `rgba(255,255,255,${.75 - fog * .7})`; ctx.lineWidth = Math.max(1, .25 * p1.s); ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.stroke(); }
-    }
-  }
-}
-function drawSigns(list) {
-  for (let z = 50; z <= 1000; z += 50) {
-    const big = z % 100 === 0;
-    list.push({ z, draw: () => {
-      const p = proj(-38, 0, z), top = proj(-38, big ? 7 : 5, z); if (!p || !top) return;
-      const fog = Math.min(1, (z - cam.z) / 700); if (fog >= 1) return;
-      const w = (big ? 8 : 6) * p.s, h = (big ? 3.2 : 2.4) * p.s;
-      ctx.globalAlpha = 1 - fog;
-      ctx.fillStyle = "#222"; ctx.fillRect(p.x - .15 * p.s, top.y, .3 * p.s, p.y - top.y);
-      ctx.fillStyle = "rgba(10,2,30,.9)"; ctx.strokeStyle = big ? "#ffd23f" : "#2de2e6"; ctx.lineWidth = Math.max(1, .25 * p.s);
-      ctx.shadowColor = ctx.strokeStyle; ctx.shadowBlur = 12;
-      ctx.beginPath(); ctx.rect(p.x - w / 2, top.y - h, w, h); ctx.fill(); ctx.stroke(); ctx.shadowBlur = 0;
-      if (h > 6) { ctx.fillStyle = ctx.strokeStyle; ctx.font = `700 ${Math.round(h * .72)}px Rajdhani, sans-serif`; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(z + "m", p.x, top.y - h / 2 + 1); }
-      ctx.globalAlpha = 1;
-    } });
-  }
-}
-function drawProp(o) {
-  const p = proj(o.x, 0, o.z); if (!p) return;
-  const fog = Math.min(1, (o.z - cam.z) / 750); if (fog >= 1 || p.x < -200 || p.x > W + 200) return;
-  ctx.globalAlpha = 1 - fog * .9;
-  if (o.type === "tree") {
-    const t = proj(o.x, o.h, o.z), w = o.h * .32 * p.s;
-    ctx.fillStyle = `hsl(${o.hue},70%,${14 + (1 - fog) * 10}%)`;
-    ctx.beginPath(); ctx.moveTo(p.x, t.y); ctx.lineTo(p.x + w, p.y - .15 * (p.y - t.y)); ctx.lineTo(p.x - w, p.y - .15 * (p.y - t.y)); ctx.fill();
-    ctx.strokeStyle = `hsla(${o.hue},100%,60%,.6)`; ctx.lineWidth = Math.max(.5, .12 * p.s); ctx.stroke();
-  } else {
-    const t = proj(o.x, o.h, o.z);
-    ctx.strokeStyle = "#2b2140"; ctx.lineWidth = Math.max(1, .35 * p.s); ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(t.x, t.y); ctx.stroke();
-    ctx.fillStyle = "#fff8d0"; ctx.shadowColor = "#fff2a0"; ctx.shadowBlur = 30; ctx.fillRect(t.x - 1.6 * p.s, t.y - .8 * p.s, 3.2 * p.s, 1.2 * p.s); ctx.shadowBlur = 0;
-  }
-  ctx.globalAlpha = 1;
-}
-
-/* 골퍼 (뒤에서 본 실루엣) */
-function drawGolfer() {
-  const base = proj(-0.55, 0, 0); if (!base) return;
-  const s = base.s, X = (x) => base.x + x * s, Y = (y) => base.y - y * s;
-  // 클럽 각도: 0 = 어드레스(아래), 백스윙은 오른쪽 위로, 피니시는 왼쪽 위로
-  const ang = golferAngle();
-  ctx.lineCap = "round";
-  ctx.strokeStyle = "#140a2a"; ctx.fillStyle = "#140a2a";
-  ctx.lineWidth = .16 * s; ctx.beginPath(); ctx.moveTo(X(-.18), Y(0)); ctx.lineTo(X(-.1), Y(.85)); ctx.moveTo(X(.18), Y(0)); ctx.lineTo(X(.1), Y(.85)); ctx.stroke();
-  ctx.lineWidth = .36 * s; ctx.beginPath(); ctx.moveTo(X(0), Y(.85)); ctx.lineTo(X(.02), Y(1.42)); ctx.stroke();
-  ctx.beginPath(); ctx.arc(X(.03), Y(1.6), .13 * s, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = "#ff2e88"; ctx.beginPath(); ctx.ellipse(X(.03), Y(1.66), .15 * s, .07 * s, 0, Math.PI, 0); ctx.fill();   // 모자
-  const sh = { x: X(.02), y: Y(1.38) }, armL = .62 * s, clubL = 1.05 * s;
-  const hx = sh.x + Math.sin(ang) * armL, hy = sh.y + Math.cos(ang) * armL;
-  ctx.strokeStyle = "#140a2a"; ctx.lineWidth = .1 * s; ctx.beginPath(); ctx.moveTo(sh.x, sh.y); ctx.lineTo(hx, hy); ctx.stroke();
-  const ca = ang * 1.35;
-  ctx.strokeStyle = "#c9c9d9"; ctx.lineWidth = .035 * s; ctx.beginPath(); ctx.moveTo(hx, hy); ctx.lineTo(hx + Math.sin(ca) * clubL, hy + Math.cos(ca) * clubL); ctx.stroke();
-  ctx.lineCap = "butt";
-}
-function golferAngle() {
-  // 0 → 0.3 (멈춤) / 파워 게이지 동안 뒤로 / 친 뒤에는 앞으로 휘둘러 피니시
-  if (phase === "power") return -meterPos * 2.6;
-  if (phase === "accuracy") return -setPower * 2.6;
-  if (phase === "fly" || phase === "roll" || phase === "done") { const t = Math.min(1, (performance.now() - hitAt) / 280); return -setPower * 2.6 + t * (setPower * 2.6 + 2.6); }
-  return 0;
-}
-
-function drawBall() {
-  if (!ball) return;
-  // 지나온 길 (빛나는 꼬리)
-  if (trail.length > 1) {
-    ctx.lineCap = "round";
-    for (let i = 1; i < trail.length; i++) {
-      if (trail[i - 1][2] - cam.z < 10) continue;   // 카메라 바로 앞·뒤 점은 화면 밖으로 튀어서 건너뛰기
-      const a = proj(...trail[i - 1]), b = proj(...trail[i]); if (!a || !b) continue;
-      ctx.strokeStyle = `rgba(45,226,230,${.15 + .6 * i / trail.length})`; ctx.lineWidth = Math.max(1.5, .09 * b.s);
-      ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
-    }
-    ctx.lineCap = "butt";
-  }
-  const sh = proj(ball.x, 0, ball.z), p = proj(ball.x, ball.y, ball.z); if (!p) return;
-  const r = Math.max(3.5, .09 * p.s);
-  if (sh) { ctx.fillStyle = "rgba(0,0,0,.35)"; ctx.beginPath(); ctx.ellipse(sh.x, sh.y, r * 1.2, r * .45, 0, 0, Math.PI * 2); ctx.fill(); }
-  ctx.fillStyle = "#fff"; ctx.shadowColor = BALLS[S.ball].ic === "☄️" ? "#ff9f1c" : "#bff"; ctx.shadowBlur = 14;
-  ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, Math.PI * 2); ctx.fill(); ctx.shadowBlur = 0;
-  if (phase === "done" && lastShot && !lastShot.ob) {
-    const t = (performance.now() / 600) % 1;
-    ctx.strokeStyle = `rgba(182,255,59,${1 - t})`; ctx.lineWidth = 3;
-    ctx.beginPath(); ctx.ellipse(sh.x, sh.y, (8 + t * 30), (3 + t * 11), 0, 0, Math.PI * 2); ctx.stroke();
-  }
-}
-function drawTee() {
-  const p = proj(0, 0, 0); if (!p) return;
-  ctx.fillStyle = "rgba(255,255,255,.12)"; ctx.beginPath(); ctx.ellipse(p.x, p.y, 2.4 * p.s, .5 * p.s, 0, 0, Math.PI * 2); ctx.fill();
-  if (phase !== "fly" && phase !== "roll" && phase !== "done") {
-    ctx.fillStyle = "#ff2e88"; ctx.fillRect(p.x - .02 * p.s, p.y - .05 * p.s, .04 * p.s, .05 * p.s);
-  }
-}
-
-function render(time) {
-  ctx.clearRect(0, 0, W, H);
-  drawSky(time);
-  drawGround();
-  const list = PROPS.map(o => ({ z: o.z, draw: () => drawProp(o) }));
-  drawSigns(list);
-  list.push({ z: 0.01, draw: drawTee });
-  list.push({ z: -0.2, draw: drawGolfer });
-  if (ball) list.push({ z: ball.z - .01, draw: drawBall });
-  list.filter(o => o.z > cam.z + .3).sort((a, b) => b.z - a.z).forEach(o => o.draw());
-}
-
-/* ═══════════════════════════════════════════════════════════════
  *  스윙 · 공 날리기
  *  1번 탭: 게이지 시작 → 2번 탭: 파워 결정 → 3번 탭: 임팩트(노란 칸에 맞출수록 똑바로)
  * ═══════════════════════════════════════════════════════════════ */
-let phase = "idle";            // idle | ready | power | accuracy | fly | roll | done
-let meterPos = 0, meterDir = 1, setPower = 0, hitAt = 0;
+let phase = "idle";            // idle | ready | power | accuracy | down | fly | roll | done
+let meterPos = 0, meterDir = 1, setPower = 0, hitAt = 0, downAt = 0;
+const DOWN_MS = 170;           // 백스윙 꼭대기 → 임팩트까지 (다운스윙 동작 시간)
+let pending = null;            // 다운스윙 중에 기다리는 샷
 let ball = null, trail = [], lastShot = null, wind = { x: 0, z: 0 }, rollTo = null;
 const ZONE = { at: .08, nice: .07, sweet: .022 };   // 임팩트 칸 위치·너비 (게이지 비율)
 
@@ -619,8 +441,12 @@ function hit(pos) {
   ball.spin = acc * 2.2;          // 휘어 나가는 정도 (훅/슬라이스)
   ball.drag = DRAG_K * b.drag; ball.wind = b.wind; ball.roll = b.roll;
   lastShot = { acc, power: setPower, v0, perfect: acc === 0 };
+  phase = "down"; downAt = performance.now();   // 캐릭터가 내려 치는 동안 잠깐 기다렸다가 공이 날아가요
+  $("swing").classList.add("hidden");
+}
+function launch() {
   phase = "fly"; hitAt = performance.now(); trail = [[0, 0.02, 0]];
-  $("swing").classList.add("hidden"); $("flyDist").classList.add("on");
+  $("flyDist").classList.add("on");
   snd("hit");
   if (lastShot.perfect) toast("✨ 나이스 임팩트!");
 }
@@ -632,6 +458,7 @@ function step(dt) {
     if (phase === "power" && meterPos <= 0 && meterDir < 0) { meterPos = 0; meterDir = 1; }
     if (phase === "accuracy" && meterPos <= 0) hit(0);   // 못 누르면 헛스윙에 가까운 샷
   }
+  if (phase === "down" && performance.now() - downAt >= DOWN_MS) launch();
   if (phase === "fly") {
     const sub = 6, h = dt * 1.6 / sub;   // 1.6배 빨리 감기
     for (let i = 0; i < sub && phase === "fly"; i++) {
@@ -649,7 +476,7 @@ function step(dt) {
       }
     }
     if (trail.length === 0 || Math.hypot(ball.z - trail[trail.length - 1][2], ball.y - trail[trail.length - 1][1]) > 2) trail.push([ball.x, ball.y, ball.z]);
-    if (trail.length > 160) trail.shift();
+    if (trail.length > 260) trail.shift();
   } else if (phase === "roll") {
     rollTo.t += dt * 1.3;
     const k = Math.min(1, rollTo.t / rollTo.dur), e = 1 - Math.pow(1 - k, 3);
@@ -657,12 +484,6 @@ function step(dt) {
     ball.y = Math.abs(Math.sin(k * Math.PI * 2)) * (1 - k) * 1.2;   // 통통 튀기
     if (k >= 1) { ball.y = 0; finishShot(); }
   }
-  // 카메라
-  let tx = 0, ty = 2.3, tz = -9.5;
-  if (ball && (phase === "fly" || phase === "roll" || phase === "done")) { tx = ball.x * .8; tz = Math.max(-9.5, ball.z - 18); ty = 2.5 + Math.max(0, ball.y) * .9; }
-  const kf = Math.min(1, dt * (phase === "fly" ? 5 : 3));
-  cam.x += (tx - cam.x) * kf; cam.y += (ty - cam.y) * kf; cam.z += (tz - cam.z) * kf;
-  if (phase === "ready" || phase === "idle") { cam.x = tx; cam.y = ty; cam.z = tz; }
   // HUD
   if (ball) {
     const d = Math.hypot(ball.x, ball.z);
@@ -729,7 +550,7 @@ function show(id) {
   if (id === "sRank") renderRank();
   if (id === "sHome") refreshHome();
 }
-function play() { show(null); if (phase !== "fly" && phase !== "roll") setupShot(); }
+function play() { show(null); if (phase !== "fly" && phase !== "roll" && phase !== "down") setupShot(); }
 function refreshHome() {
   $("hBest").textContent = S.best ? S.best.toFixed(0) : "0";
   $("hCash").textContent = fmt(S.cash);
@@ -881,7 +702,7 @@ $("mPlay").onclick = play; $("mQuiz").onclick = startQuiz; $("mShop").onclick = 
 $("bQuiz").onclick = startQuiz; $("bShop").onclick = () => show("sShop"); $("bRank").onclick = () => show("sRank"); $("bMenu").onclick = () => show("sHome");
 $("shopQuiz").onclick = startQuiz; $("shopPlay").onclick = play;
 document.querySelectorAll("[data-close]").forEach(b => b.onclick = () => show(phase === "idle" ? "sHome" : null));
-cv.addEventListener("pointerdown", (e) => { e.preventDefault(); tap(); });
+$("scene").addEventListener("pointerdown", (e) => { e.preventDefault(); tap(); });
 addEventListener("keydown", (e) => {
   if (e.code === "Space" || e.code === "Enter") { if (document.activeElement && document.activeElement.tagName === "BUTTON" && e.code === "Enter") return; e.preventDefault(); tap(); }
   if (e.code === "Escape") show($("sHome").classList.contains("hidden") ? "sHome" : null);
@@ -896,7 +717,8 @@ $("meterSweet").style.left = ((ZONE.at - ZONE.sweet / 2) * 100) + "%"; $("meterS
 let last = performance.now();
 function loop(now) {
   const dt = Math.min(.05, (now - last) / 1000); last = now;
-  step(dt); render(now);
+  step(dt);
+  if (window.GolfView) GolfView.frame(now, dt);   // 3D 화면 (view3d.js)
   requestAnimationFrame(loop);
 }
 S = fix(readLocal(localKey()));
