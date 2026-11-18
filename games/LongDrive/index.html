@@ -431,7 +431,7 @@ let ball = null, trail = [], lastShot = null, wind = { x: 0, z: 0 }, rollTo = nu
  *    폭탄: 펑! 위로 튀면서 앞으로 더 날아가요
  *    대포: 공을 빨아들여 똑바로 멀리 쏴 줘요 (드물지만 세요, 옆으로 휜 공도 가운데로) */
 const BOOST_FROM = 70, BOOST_TO = 1600;      // 이 거리 사이에 깔아요 (m)
-const BOOST_GAP = [35, 65];                  // 부스터 사이 간격 (m)
+const BOOST_GAP = [27, 50];                  // 부스터 사이 간격 (m) — 2026-11-18 1.3배 많게 (예전 35~65)
 const CANNON_RATE = .2;                      // 대포가 나올 확률
 const BOMB = { r: 7, up: [18, 25], fwd: [16, 24] };
 const CANNON = { r: 6.3, speed: [46, 56], deg: 33 };

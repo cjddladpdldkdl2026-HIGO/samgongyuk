@@ -194,7 +194,7 @@ mat.position.set(-.45, .015, .1); mat.receiveShadow = true; scene.add(mat);
   tee.position.set(0, .05, 0); scene.add(tee);
 }
 
-/* ── 거리 표지판 · 목표 그린 · 나무 · 조명탑 ─────────────────────── */
+/* ── 거리 표지판 · 나무 · 조명탑 ─────────────────────── */
 {
   const postMat = new THREE.MeshStandardMaterial({ color: 0x241c38, roughness: .7 });
   for (let z = 50; z <= RANGE; z += 50) {
@@ -211,18 +211,6 @@ mat.position.set(-.45, .015, .1); mat.receiveShadow = true; scene.add(mat);
       const post = new THREE.Mesh(new THREE.CylinderGeometry(.18, .18, top, 6), postMat); post.position.set(side * 38, top / 2 - hh / 2, -z); scene.add(post);
     }
   }
-  // 목표 그린 + 깃발
-  const greenMat = new THREE.MeshStandardMaterial({ color: 0x7ef07a, roughness: .8 });
-  const ringMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: .55 });
-  const flagCols = [0xff2e88, 0xffd23f, 0x2de2e6, 0xb6ff3b, 0xff9f1c];
-  [[100, -9], [175, 12], [250, -6], [350, 9], [450, 0], [560, -10], [660, 11], [770, -5], [880, 8], [1000, 0], [1150, -9], [1300, 10], [1450, -4], [1600, 7], [1800, -8], [2000, 0]].forEach(([z, x], i) => {
-    const R = 9 + Math.min(i, 7);
-    const gr = new THREE.Mesh(new THREE.CircleGeometry(R, 40), greenMat); gr.rotation.x = -Math.PI / 2; gr.position.set(x, .025, -z); gr.receiveShadow = true; scene.add(gr);
-    const ring = new THREE.Mesh(new THREE.RingGeometry(R - .25, R, 48), ringMat); ring.rotation.x = -Math.PI / 2; ring.position.set(x, .03, -z); scene.add(ring);
-    const pole = new THREE.Mesh(new THREE.CylinderGeometry(.06, .06, 4, 6), new THREE.MeshStandardMaterial({ color: 0xeeeeee })); pole.position.set(x, 2, -z); scene.add(pole);
-    const flag = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 1), new THREE.MeshBasicMaterial({ color: glow(flagCols[i % flagCols.length], 1.8), toneMapped: false, side: THREE.DoubleSide }));
-    flag.position.set(x + .8, 3.45, -z); scene.add(flag);
-  });
   // 나무
   let s = 5; const r = () => (s = (s * 16807) % 2147483647) / 2147483647;
   const treeGeo = new THREE.ConeGeometry(1, 1, 7); treeGeo.translate(0, .5, 0);
@@ -243,6 +231,40 @@ mat.position.set(-.45, .015, .1); mat.receiveShadow = true; scene.add(mat);
   }
 }
 
+/* ── 스폰서 광고: 청암대학교 광고판 2개 (페어웨이 양옆 높이) · 티 옆 "물리치료과" 바닥 간판 ── */
+{
+  const logo = new THREE.TextureLoader().load('img/cheongam-logo.png');   // 청암대학교 로고 (흰 바탕)
+  logo.colorSpace = THREE.SRGBColorSpace; logo.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+  const frameMat = new THREE.MeshStandardMaterial({ color: 0x0d3b66, roughness: .5, metalness: .3 });
+  const trimMat = new THREE.MeshStandardMaterial({ color: 0x3fb54a, emissive: 0x3fb54a, emissiveIntensity: .35, roughness: .4 });
+  const legMat = new THREE.MeshStandardMaterial({ color: 0x3a3f4a, roughness: .6, metalness: .5 });
+  const W = 24, H = W * 183 / 502, BOTTOM = 9;
+  for (const side of [-1, 1]) {
+    const g = new THREE.Group(); g.position.set(side * 31, 0, -115); g.rotation.y = side * -.25; scene.add(g);
+    const frame = new THREE.Mesh(new THREE.BoxGeometry(W + 1.2, H + 1.2, .6), frameMat); frame.position.y = BOTTOM + H / 2; frame.castShadow = true; g.add(frame);
+    const trim = new THREE.Mesh(new THREE.BoxGeometry(W + 1.4, .35, .7), trimMat); trim.position.y = BOTTOM - .45; g.add(trim);
+    const face = new THREE.Mesh(new THREE.PlaneGeometry(W, H), new THREE.MeshBasicMaterial({ map: logo, color: new THREE.Color(.84, .84, .84) /* 블룸(빛 번짐) 기준보다 살짝 어둡게 → 로고가 또렷 */ }));
+    face.position.set(0, BOTTOM + H / 2, .31); g.add(face);
+    for (const lx of [-W * .25, W * .25]) { const leg = new THREE.Mesh(new THREE.BoxGeometry(.6, BOTTOM, .6), legMat); leg.position.set(lx, BOTTOM / 2, -.1); leg.castShadow = true; g.add(leg); }
+  }
+  // 티 옆 바닥 간판 (뒤로 비스듬히 누운 세모 간판)
+  const tex = canvasTex(512, 200, (c, w, h) => {
+    const gr = c.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, '#16285e'); gr.addColorStop(1, '#0b1638');
+    c.fillStyle = gr; c.fillRect(0, 0, w, h);
+    c.fillStyle = '#2de2e6'; c.fillRect(0, 0, w, 10); c.fillRect(0, h - 10, w, 10);
+    c.textAlign = 'center'; c.textBaseline = 'middle';
+    c.fillStyle = '#ffffff'; c.font = '400 96px "Black Han Sans", sans-serif'; c.fillText('물리치료과', w / 2, h / 2 + 6);
+    c.fillStyle = 'rgba(45,226,230,.9)'; c.font = '700 22px Rajdhani, Arial, sans-serif'; c.fillText('CHEONGAM UNIV. PHYSICAL THERAPY', w / 2, h - 28);
+  });
+  const sg = new THREE.Group(); sg.position.set(-1.8, 0, -11); sg.rotation.y = .12; scene.add(sg);   // 타석 바로 앞 잔디 (공은 위로 넘어가요)
+  const SW = 3.2, SH = 1.25, tilt = .55;   // 폭 · 경사면 길이 · 뒤로 누운 각도
+  const d = Math.sin(tilt) * SH, h = Math.cos(tilt) * SH;   // 옆에서 본 세모: 앞 아래 (0,0) · 뒤 아래 (-d,0) · 뒤 위 (-d,h)
+  const wedge = new THREE.Shape([new THREE.Vector2(0, 0), new THREE.Vector2(-d, 0), new THREE.Vector2(-d, h)]);
+  const body = new THREE.Mesh(new THREE.ExtrudeGeometry(wedge, { depth: SW, bevelEnabled: false }), new THREE.MeshStandardMaterial({ color: 0x0b1638, roughness: .6 }));
+  body.rotation.y = -Math.PI / 2; body.position.x = SW / 2; body.castShadow = true; sg.add(body);
+  const face = new THREE.Mesh(new THREE.PlaneGeometry(SW, SH), new THREE.MeshBasicMaterial({ map: tex, toneMapped: false }));
+  face.rotation.x = -tilt; face.position.set(0, h / 2 + Math.sin(tilt) * .012, -d / 2 + Math.cos(tilt) * .012); sg.add(face);
+}
 /* ── 멀리 있는 볼거리: 500m 마다 네온 아치 · 연못 · 열기구 ─────────────── */
 {
   const gateCols = { 500: 0x2de2e6, 1000: 0xffd23f, 1500: 0xff2e88, 2000: 0xb6ff3b };
