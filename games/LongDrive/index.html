@@ -99,7 +99,12 @@ button { font: inherit; color: inherit; cursor: pointer; border: 0; background: 
 .menu .btn small { display: block; font-weight: 600; font-size: 12px; opacity: .8; }
 .who { margin-top: 12px; text-align: center; font-size: 13px; color: var(--sub); }
 .who b { color: var(--cyan); }
-.back { display: block; text-align: center; margin-top: 10px; color: var(--sub); font-size: 13px; text-decoration: none; }
+.back { display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 12px; padding: 12px; border-radius: 14px; font-weight: 800; font-size: 15px; color: var(--ink); text-decoration: none; background: rgba(255, 255, 255, .08); border: 2px solid var(--line); }
+.back:hover { border-color: var(--cyan); }
+.escHint { text-align: center; margin-top: 8px; font-size: 12px; color: var(--sub); }
+.escHint kbd { font: 700 11px var(--num); padding: 1px 6px; border-radius: 5px; border: 1px solid var(--line); background: rgba(255, 255, 255, .08); }
+.chip.homeBtn { color: var(--ink); text-decoration: none; font-size: 13px; background: rgba(13, 59, 102, .75); border-color: rgba(45, 226, 230, .45); }
+.chip.homeBtn:hover { border-color: var(--cyan); }
 
 /* 문제 */
 .qtop { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; margin-right: 44px; font-weight: 800; }
@@ -182,6 +187,7 @@ button { font: inherit; color: inherit; cursor: pointer; border: 0; background: 
     <div class="ticks" id="ticks"></div>
   </div>
   <div id="chips">
+    <a class="chip homeBtn" id="bHome" href="../../highgo.html" title="삼공육 홈으로 (ESC = 메뉴)">← 삼공육</a>
     <div class="chip">💰 <b id="cashChip">0</b></div>
     <div class="chip gear" id="gearChip"></div>
   </div>
@@ -218,7 +224,8 @@ button { font: inherit; color: inherit; cursor: pointer; border: 0; background: 
       <button class="btn" id="mRank"><em>🏆</em><span>랭킹<small>삼공육 회원 비거리 TOP 10</small></span></button>
     </div>
     <div class="who" id="whoLine"></div>
-    <a class="back" href="../../highgo.html">← 삼공육으로 돌아가기</a>
+    <a class="back" href="../../highgo.html">🏠 삼공육 홈으로</a>
+    <div class="escHint">게임 중 <kbd>ESC</kbd> 를 누르면 이 메뉴가 열려요 · 기록과 캐쉬는 자동 저장돼요</div>
   </div>
 </div>
 
