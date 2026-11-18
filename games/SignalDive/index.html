@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>시그널 다이브 — 신경 신호를 타고</title>
+<meta name="theme-color" content="#031018">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@600;700&family=Black+Han+Sans&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<style>
+:root {
+  --deep: #031018; --deep2: #062433; --ink: #eafcff; --dim: #8fb9c4; --faint: #4f7884;
+  --mint: #5effc4; --coral: #ff7a59; --sky: #7fd4ff; --sun: #ffd166; --rose: #ff6b6b;
+  --glass: rgba(6, 36, 51, .66); --edge: rgba(127, 212, 255, .38);
+  --ui: 'Pretendard Variable', 'Malgun Gothic', sans-serif; --num: 'Rajdhani', 'Pretendard Variable', sans-serif;
+  --title: 'Black Han Sans', 'Pretendard Variable', sans-serif;
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { margin: 0; height: 100%; overflow: hidden; background: var(--deep); color: var(--ink); font-family: var(--ui);
+  -webkit-user-select: none; user-select: none; touch-action: none; }
+#gl { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+button { font-family: var(--ui); color: var(--ink); cursor: pointer; }
+
+/* ── screens ── */
+.screen { position: fixed; inset: 0; display: none; z-index: 5; padding: max(18px, env(safe-area-inset-top)) max(18px, env(safe-area-inset-right)) max(18px, env(safe-area-inset-bottom)) max(18px, env(safe-area-inset-left)); }
+.screen.on { display: flex; }
+.glass { background: var(--glass); border: 1px solid var(--edge); border-radius: 18px; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, .35), inset 0 1px 0 rgba(255, 255, 255, .06); }
+.btn { padding: 14px 22px; border-radius: 14px; border: 1px solid var(--edge); background: rgba(127, 212, 255, .08); font-size: 17px; font-weight: 700; transition: transform .1s, background .15s, border-color .15s; }
+.btn:hover { background: rgba(127, 212, 255, .16); border-color: var(--sky); }
+.btn:active { transform: scale(.97); }
+.btn.main { background: linear-gradient(135deg, var(--mint), #36d6c8); color: #032a24; border: 0; box-shadow: 0 8px 26px rgba(94, 255, 196, .35); }
+.btn.main:hover { filter: brightness(1.06); }
+.btn.ghost { background: transparent; }
+
+/* title */
+#title { align-items: center; justify-content: flex-start; padding-left: max(6vw, 24px); }
+.tbox { max-width: 540px; display: flex; flex-direction: column; gap: 16px; padding: 26px 28px; border-radius: 22px;
+  background: linear-gradient(120deg, rgba(2, 11, 17, .78), rgba(2, 11, 17, .35)); backdrop-filter: blur(4px); }
+.kicker { font-family: var(--num); font-size: 14px; letter-spacing: .4em; color: var(--mint); }
+.logo { margin: 0; font-family: var(--num); font-weight: 700; font-size: clamp(56px, 10vw, 112px); line-height: .86; letter-spacing: .02em;
+  background: linear-gradient(180deg, #ffffff, #b9f6ff 55%, var(--mint)); -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter: drop-shadow(0 0 22px rgba(94, 255, 196, .35)); }
+.logo small { display: block; font-family: var(--title); font-size: .34em; letter-spacing: .06em; -webkit-text-fill-color: var(--coral); color: var(--coral); margin-top: 10px; }
+.lead { margin: 0; font-size: 17px; line-height: 1.6; color: var(--dim); }
+.lead b { color: var(--ink); }
+.tbtns { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 6px; }
+.tnote { font-size: 13px; color: var(--faint); }
+.who { position: fixed; right: max(18px, env(safe-area-inset-right)); top: max(14px, env(safe-area-inset-top)); z-index: 6; font-size: 13px; color: var(--dim);
+  padding: 7px 12px; border-radius: 999px; border: 1px solid var(--edge); background: var(--glass); }
+.home { position: fixed; left: max(18px, env(safe-area-inset-left)); top: max(14px, env(safe-area-inset-top)); z-index: 6; font-size: 13px; color: var(--dim); text-decoration: none;
+  padding: 7px 12px; border-radius: 999px; border: 1px solid var(--edge); background: var(--glass); }
+body.playing .home, body.playing .who { display: none; }
+
+/* stage select */
+#stages { flex-direction: column; align-items: center; justify-content: center; gap: 16px; }
+#stages h2, #how h2 { margin: 0; font-family: var(--title); font-weight: 400; font-size: 30px; }
+.grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; width: min(1000px, 100%); }
+@media (max-width: 860px) { .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.stg { position: relative; text-align: left; padding: 16px 16px 14px; border-radius: 16px; border: 1px solid var(--edge); background: var(--glass); min-height: 128px;
+  display: flex; flex-direction: column; gap: 4px; transition: transform .12s, border-color .15s; overflow: hidden; }
+.stg::before { content: ''; position: absolute; inset: 0 0 auto 0; height: 3px; background: var(--c); box-shadow: 0 0 14px var(--c); }
+.stg:hover { transform: translateY(-3px); border-color: var(--c); }
+.stg .no { font-family: var(--num); font-size: 13px; letter-spacing: .2em; color: var(--c); }
+.stg b { font-size: 19px; }
+.stg span { font-size: 13px; color: var(--dim); }
+.stg .stars { margin-top: auto; font-size: 15px; letter-spacing: 2px; color: var(--sun); }
+.stg.boss { background: linear-gradient(160deg, rgba(255, 107, 107, .18), var(--glass)); }
+
+/* how to */
+#how { align-items: center; justify-content: center; }
+.howbox { width: min(640px, 100%); padding: 26px 26px 22px; display: flex; flex-direction: column; gap: 14px; }
+.howbox ol { margin: 0; padding-left: 20px; line-height: 1.75; color: var(--dim); }
+.howbox ol b { color: var(--ink); }
+.keys { display: flex; gap: 8px; flex-wrap: wrap; font-size: 13px; color: var(--dim); }
+.keys kbd { font-family: var(--num); font-weight: 700; padding: 2px 8px; border: 1px solid var(--edge); border-radius: 6px; color: var(--ink); }
+
+/* HUD */
+#hud { position: fixed; inset: 0; z-index: 4; pointer-events: none; display: none; }
+body.playing #hud { display: block; }
+.hTop { position: absolute; left: 50%; top: max(12px, env(safe-area-inset-top)); transform: translateX(-50%); width: min(780px, calc(100% - 200px)); text-align: center; }
+.qcard { padding: 12px 20px 14px; border-radius: 16px; background: rgba(3, 16, 24, .72); border: 1px solid var(--edge); backdrop-filter: blur(8px);
+  opacity: 0; transform: translateY(-8px); transition: opacity .25s, transform .25s; }
+.qcard.on { opacity: 1; transform: none; }
+.qcard small { display: block; font-family: var(--num); font-size: 13px; letter-spacing: .25em; color: var(--qc, var(--mint)); }
+.qcard b { display: block; margin-top: 2px; font-size: clamp(19px, 2.6vw, 28px); line-height: 1.3; }
+.qOpts { display: flex; justify-content: center; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+.qOpts span { padding: 6px 12px; border-radius: 999px; font-size: clamp(13px, 1.6vw, 16px); font-weight: 700; color: var(--dim); border: 1px solid rgba(255,255,255,.14); background: rgba(255,255,255,.04); transition: all .12s; }
+.qOpts span.near { color: #032a24; background: var(--qc, var(--mint)); border-color: transparent; box-shadow: 0 0 16px var(--qc, var(--mint)); }
+.hStage { position: absolute; left: max(16px, env(safe-area-inset-left)); top: max(64px, calc(env(safe-area-inset-top) + 52px)); font-size: 13px; color: var(--dim); }
+.hStage b { display: block; font-size: 17px; color: var(--ink); }
+.hScore { position: absolute; right: max(16px, env(safe-area-inset-right)); top: max(14px, env(safe-area-inset-top)); text-align: right; }
+.hScore b { display: block; font-family: var(--num); font-size: 34px; line-height: 1; }
+.hScore span { font-family: var(--num); font-size: 15px; color: var(--sun); letter-spacing: .1em; }
+.hBottom { position: absolute; left: 50%; bottom: max(18px, env(safe-area-inset-bottom)); transform: translateX(-50%); width: min(520px, calc(100% - 40px)); }
+.meter { display: flex; align-items: center; gap: 10px; font-family: var(--num); font-size: 13px; letter-spacing: .15em; color: var(--dim); }
+.meter .bar { flex: 1; height: 10px; border-radius: 999px; background: rgba(255, 255, 255, .08); overflow: hidden; border: 1px solid rgba(255, 255, 255, .12); }
+.meter .bar i { display: block; height: 100%; width: 60%; border-radius: inherit; background: linear-gradient(90deg, var(--coral), var(--sun), var(--mint)); transition: width .2s; }
+.dots { display: flex; justify-content: center; gap: 6px; margin-top: 8px; }
+.dots i { width: 22px; height: 5px; border-radius: 3px; background: rgba(255, 255, 255, .14); }
+.dots i.ok { background: var(--mint); box-shadow: 0 0 8px var(--mint); } .dots i.ng { background: var(--rose); } .dots i.now { background: var(--sun); }
+.toast { position: absolute; left: 50%; top: 40%; transform: translate(-50%, -50%) scale(.9); opacity: 0; transition: opacity .2s, transform .2s;
+  padding: 14px 20px; border-radius: 16px; max-width: min(560px, calc(100% - 40px)); text-align: center; background: rgba(3, 16, 24, .8); border: 1px solid var(--edge); }
+.toast.on { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+.toast h3 { margin: 0 0 4px; font-family: var(--title); font-weight: 400; font-size: 30px; }
+.toast.ok h3 { color: var(--mint); } .toast.ng h3 { color: var(--rose); }
+.toast p { margin: 0; font-size: 15px; line-height: 1.5; color: var(--dim); }
+.toast p b { color: var(--ink); }
+.combo { position: absolute; right: max(16px, env(safe-area-inset-right)); top: 96px; font-family: var(--num); font-size: 22px; color: var(--mint); opacity: 0; transition: opacity .2s; }
+.combo.on { opacity: 1; }
+.flash { position: fixed; inset: 0; pointer-events: none; z-index: 3; opacity: 0; transition: opacity .35s; }
+.flash.ok { background: radial-gradient(ellipse at center, transparent 45%, rgba(94, 255, 196, .35)); opacity: 1; transition: none; }
+.flash.ng { background: radial-gradient(ellipse at center, transparent 40%, rgba(255, 107, 107, .45)); opacity: 1; transition: none; }
+.touchHint { position: absolute; bottom: 70px; left: 0; right: 0; display: flex; justify-content: space-between; padding: 0 22px; font-family: var(--num); font-size: 28px; color: rgba(255, 255, 255, .25); }
+@media (hover: hover) { .touchHint { display: none; } }
+
+/* intro card & result */
+#intro, #result { align-items: center; justify-content: center; z-index: 7; background: rgba(3, 16, 24, .45); }
+.card { width: min(560px, 100%); padding: 26px 26px 22px; display: flex; flex-direction: column; gap: 12px; }
+.card .no { font-family: var(--num); letter-spacing: .3em; color: var(--c, var(--mint)); font-size: 14px; }
+.card h2 { margin: 0; font-family: var(--title); font-weight: 400; font-size: 34px; }
+.card p { margin: 0; color: var(--dim); line-height: 1.6; }
+.row { display: flex; gap: 10px; flex-wrap: wrap; }
+.big3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.big3 div { padding: 10px 12px; border-radius: 12px; background: rgba(255, 255, 255, .05); border: 1px solid rgba(255, 255, 255, .08); }
+.big3 small { display: block; font-size: 12px; color: var(--dim); }
+.big3 b { font-family: var(--num); font-size: 26px; }
+.rstars { font-size: 34px; letter-spacing: 6px; color: var(--sun); text-shadow: 0 0 18px rgba(255, 209, 102, .5); }
+.rstars .off { color: rgba(255, 255, 255, .15); text-shadow: none; }
+.wrong { max-height: 34vh; overflow-y: auto; display: grid; gap: 8px; }
+.wrong div { padding: 10px 12px; border-radius: 12px; background: rgba(255, 107, 107, .08); border: 1px solid rgba(255, 107, 107, .25); font-size: 14px; line-height: 1.5; }
+.wrong div b { color: var(--mint); }
+.rnote { font-size: 13px; color: var(--faint); }
+.credit { position: fixed; right: 10px; bottom: 6px; z-index: 2; font-size: 10px; color: rgba(255, 255, 255, .35); pointer-events: none; }
+</style>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+<canvas id="gl"></canvas>
+<a class="home" href="../../highgo.html">← 삼공육</a>
+<div class="who" id="who">로그인 안 함</div>
+
+<!-- title -->
+<section class="screen on" id="title">
+  <div class="tbox">
+    <div class="kicker">PTX+AI · 삼공육</div>
+    <h1 class="logo">SIGNAL<br>DIVE<small>시그널 다이브</small></h1>
+    <p class="lead">나는 Na⁺ 이온 <b>나리</b>. 신경섬유 속으로 뛰어들어 신호를 끝까지 전달해야 해요.
+      다가오는 <b>정답 게이트</b>로 들어가면 도약전도처럼 슝! 틀리면 신호가 약해져요.</p>
+    <div class="tbtns">
+      <button class="btn main" id="goStages">▶ 다이브 시작</button>
+      <button class="btn" id="goHow">조작 방법</button>
+    </div>
+    <p class="tnote">해부학 용어: 대한의사협회 의학용어 6판 · 키보드 ← → / 화면 왼쪽·오른쪽 누르기</p>
+  </div>
+</section>
+
+<!-- stage select -->
+<section class="screen" id="stages">
+  <h2>어디로 다이브할까요?</h2>
+  <div class="grid" id="grid"></div>
+  <button class="btn ghost" data-back>← 처음으로</button>
+</section>
+
+<!-- how to -->
+<section class="screen" id="how">
+  <div class="glass howbox">
+    <h2>조작 방법</h2>
+    <ol>
+      <li><b>좌우로 움직여요.</b> 터널 벽을 따라 빙 돌면서 이동해요.</li>
+      <li>위에 <b>문제</b>가 뜨면, 앞에서 다가오는 게이트 중 <b>정답 게이트</b>로 들어가요.</li>
+      <li>민트색 <b>Na⁺</b> 를 모으면 신호 세기가 올라가요. 빨간 <b>억제 신호</b>는 피해요.</li>
+      <li>정답이면 <b>도약전도 부스트</b>, 오답이면 해설을 보고 다시 달려요. 끝나면 오답 노트가 나와요.</li>
+    </ol>
+    <div class="keys"><span><kbd>←</kbd><kbd>→</kbd> 또는 <kbd>A</kbd><kbd>D</kbd> 이동</span><span><kbd>Esc</kbd> 일시정지</span><span>휴대폰·태블릿: 화면 왼쪽/오른쪽을 누르고 있기</span></div>
+    <button class="btn main" data-back>알겠어요</button>
+  </div>
+</section>
+
+<!-- stage intro -->
+<section class="screen" id="intro">
+  <div class="glass card" id="introCard">
+    <div class="no" id="iNo"></div>
+    <h2 id="iTitle"></h2>
+    <p id="iText"></p>
+    <div class="row"><button class="btn main" id="iGo">▶ 출발</button><button class="btn ghost" id="iBack">구역 선택</button></div>
+  </div>
+</section>
+
+<!-- result -->
+<section class="screen" id="result">
+  <div class="glass card">
+    <div class="no" id="rNo"></div>
+    <h2 id="rTitle"></h2>
+    <div class="rstars" id="rStars"></div>
+    <div class="big3"><div><small>점수</small><b id="rScore">0</b></div><div><small>정답률</small><b id="rAcc">0%</b></div><div><small>최고 콤보</small><b id="rCombo">0</b></div></div>
+    <div id="rWrongWrap"><p style="margin-bottom:8px">📝 오답 노트</p><div class="wrong" id="rWrong"></div></div>
+    <p class="rnote" id="rNote"></p>
+    <div class="row"><button class="btn main" id="rNext">다음 구역 ▶</button><button class="btn" id="rAgain">다시 하기</button><button class="btn ghost" id="rStages">구역 선택</button></div>
+  </div>
+</section>
+
+<!-- HUD -->
+<div id="hud">
+  <div class="hTop"><div class="qcard" id="qcard"><small id="qNo"></small><b id="qText"></b><div class="qOpts" id="qOpts"></div></div></div>
+  <div class="hStage" id="hStage"></div>
+  <div class="hScore"><b id="hScore">0</b><span id="hSpeed">0 m/s</span></div>
+  <div class="combo" id="hCombo"></div>
+  <div class="toast" id="toast"><h3 id="tHead"></h3><p id="tText"></p></div>
+  <div class="touchHint"><span>◀</span><span>▶</span></div>
+  <div class="hBottom"><div class="meter"><span>신호 세기</span><div class="bar"><i id="hEnergy"></i></div></div><div class="dots" id="hDots"></div></div>
+</div>
+<div class="flash" id="flash"></div>
+<div class="credit">SIGNAL DIVE · PTX+AI 삼공육 · three.js (MIT)</div>
+
+<script src="stages.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="../../auth.js"></script>
+<script src="../../game-menu.js"></script>
+<script type="module" src="game.js"></script>
+</body>
+</html>
