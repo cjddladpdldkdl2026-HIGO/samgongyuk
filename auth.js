@@ -17,7 +17,7 @@
 (function () {
   const URL_ = 'https://ptlhjxtvwcoyrhemimjw.supabase.co';
   const KEY_ = 'sb_publishable_cuv4DoFYqHSJFiL2FF28aQ_B03qGNkl';
-  const GAMES = ['landmark', 'ddan', 'wizard', 'neoege', 'signal'];
+  const GAMES = ['landmark', 'ddan', 'wizard', 'neoege'];
 
   const listeners = [];
   const mask = (p) => p.length <= 1 ? p : p.length === 2 ? p[0] + '*' : p[0] + '*'.repeat(p.length - 2) + p[p.length - 1];

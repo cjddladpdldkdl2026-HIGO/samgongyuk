@@ -9,7 +9,7 @@
  * its body with a worker that clears CACHE and calls self.registration.unregister(),
  * and drop the register line in highgo.html.
  */
-const CACHE = 'samgongyuk-v20';   // bump on every game update so phones drop the old copy
+const CACHE = 'samgongyuk-v21';   // bump on every game update so phones drop the old copy
 const HUB = /\/(highgo\.html|index\.html)?$/;
 
 self.addEventListener('install', () => self.skipWaiting());

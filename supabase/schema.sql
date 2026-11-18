@@ -167,7 +167,7 @@ create policy "설정: 관리자만 고치기" on public.settings for update to 
 create table if not exists public.runs (
   id         bigint generated always as identity primary key,
   user_id    uuid not null default auth.uid() references public.profiles(id) on delete cascade,
-  game       text not null check (game in ('landmark', 'ddan', 'wizard', 'neoege', 'signal')),
+  game       text not null check (game in ('landmark', 'ddan', 'wizard', 'neoege')),
   mode       text not null default '' check (char_length(mode) <= 30),
   score      integer not null check (abs(score) <= 10000000),
   accuracy   numeric check (accuracy between 0 and 100),
