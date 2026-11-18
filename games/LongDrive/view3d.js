@@ -385,7 +385,21 @@ function flat(g, pts, depth, mat = BONE) {   // (x, 위) 점들로 만든 납작
   const m = new THREE.Mesh(geo, mat); m.castShadow = true; g.add(m); return m;
 }
 const P = (x, up, z = 0) => V(x, -up, z);   // 헤드 좌표에서 "위"는 -y
+function buildBasicClub() {   // 0번: 기본 드라이버 (검은 그립 · 은색 샤프트 · 까만 헤드)
+  const g = new THREE.Group(), head = new THREE.Group();
+  head.rotation.z = Math.atan2(.47, .88); g.add(head);
+  const L = CLUB_LEN + .08;
+  bone(g, V(0, -L, 0), V(0, -L + .28, 0), .016, .014, M(0x111111, { roughness: .9 }));
+  bone(g, V(0, -L + .28, 0), V(0, -.01, 0), .007, .006, M(0xc9ccd6, { metalness: .9, roughness: .25 }));
+  const h = new THREE.Mesh(new RoundedBoxGeometry(.12, .05, .09, 3, .02), M(0x1b1b1f, { metalness: .6, roughness: .3 }));
+  h.position.set(.055, -.008, -.008); h.castShadow = true; head.add(h);
+  const face = new THREE.Mesh(new THREE.PlaneGeometry(.1, .04), M(0x9aa0aa, { metalness: .8, roughness: .35 }));
+  face.position.set(.055, -.008, .038); head.add(face);
+  golfer.add(g); return g;
+}
 function buildClub(i) {
+  if (i === 0) return buildBasicClub();
+  i -= 1;   // 1~4번: 뼈 골프채 (아래 0~3)
   const g = new THREE.Group(), head = new THREE.Group();
   head.rotation.z = Math.atan2(.47, .88);   // 샤프트가 기울어져도 헤드 바닥은 땅과 나란히
   g.add(head);
@@ -452,7 +466,7 @@ function buildClub(i) {
   golfer.add(g); return g;
 }
 function applyClubLook(i) {
-  i = Math.max(0, Math.min(3, i | 0));
+  i = Math.max(0, Math.min(4, i | 0));
   if (!clubGroups[i]) clubGroups[i] = buildClub(i);
   clubGroups.forEach((g, k) => { if (g) g.visible = k === i; });
   lookClub = i;
@@ -558,11 +572,20 @@ const fireTex = canvasTex(64, 64, (c, w, h) => {
   c.fillStyle = gr; c.fillRect(0, 0, w, h);
 });
 const ballModels = [];
-const BALL_TRAIL = [0xbfe9ff, 0xd9ff9a, 0x6aa8ff, 0xff7a1a];
+const BALL_TRAIL = [0x2de2e6, 0xbfe9ff, 0xd9ff9a, 0x6aa8ff, 0xff7a1a];   // 공마다 꼬리 색
 let lookBall = -1, trailCol = new THREE.Color(BALL_TRAIL[0]);
 function buildBall(i) {
   const g = new THREE.Group(), R = BALL_R;
   const add = (geo, mat, x = 0, y = 0, z = 0) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.castShadow = true; g.add(m); return m; };
+  if (i === 0) {   // 0번: 기본 하얀 골프공 (딤플 무늬)
+    const dimples = canvasTex(256, 128, (c, w, h) => {
+      c.fillStyle = '#ffffff'; c.fillRect(0, 0, w, h); c.fillStyle = 'rgba(0,0,0,.09)';
+      for (let y = 6; y < h; y += 9) for (let x = (y / 9 % 2) * 5; x < w; x += 10) { c.beginPath(); c.arc(x, y, 2.6, 0, Math.PI * 2); c.fill(); }
+    });
+    add(new THREE.SphereGeometry(R * .85, 28, 20), new THREE.MeshStandardMaterial({ map: dimples, roughness: .35, emissive: 0xffffff, emissiveIntensity: .12 }));
+    ballSpin.add(g); return g;
+  }
+  i -= 1;   // 1~4번: 해부학 공 (아래 0~3)
   if (i === 0) {
     // 무릎뼈: 위는 둥글고 아래(무릎뼈끝)는 뾰족, 앞뒤로 납작
     const geo = new THREE.SphereGeometry(R, 28, 20), p = geo.attributes.position;
@@ -617,7 +640,7 @@ function buildBall(i) {
   ballSpin.add(g); return g;
 }
 function applyBallLook(i) {
-  i = Math.max(0, Math.min(3, i | 0));
+  i = Math.max(0, Math.min(4, i | 0));
   if (!ballModels[i]) ballModels[i] = buildBall(i);
   ballModels.forEach((m, k) => { if (m) m.visible = k === i; });
   ballSpin.rotation.set(0, 0, 0);
@@ -813,20 +836,20 @@ function frame(now, dt) {
     if (dt > 0) ballVel.subVectors(ballMesh.position, prevBall).multiplyScalar(1 / dt);
     prevBall.copy(ballMesh.position);
     const moving = !onTee && ballVel.lengthSq() > .04;
-    if (lookBall === 2) {   // 눈알: 날아가는 쪽, 타석에서는 카메라를 쳐다봐요
+    if (lookBall === 3) {   // 눈알: 날아가는 쪽, 타석에서는 카메라를 쳐다봐요
       const tgt = moving ? ballMesh.position.clone().add(ballVel) : onTee ? camera.position.clone() : ballMesh.position.clone().add(V(0, 0, -1));
       ballSpin.lookAt(tgt);
-    } else if (lookBall === 3) {
+    } else if (lookBall === 4) {   // 파이어볼
       ballSpin.rotation.set(0, 0, 0);
-      const m = ballModels[3]; if (m) m.userData.halo.scale.setScalar(BALL_R * (4.5 + Math.sin(now / 40) * .6));
+      const m = ballModels[4]; if (m) m.userData.halo.scale.setScalar(BALL_R * (4.5 + Math.sin(now / 40) * .6));
     } else if (moving) {
       ballSpin.rotation.x -= Math.min(30, ballVel.length() * .5) * dt;   // 데굴데굴
     } else if (onTee) ballSpin.rotation.set(0, 0, 0);
-    if (lookBall === 3) updateFire(dt, ballMesh.position, moving ? ballVel : V(), sc, moving ? (MOBILE ? 70 : 110) : 14);
+    if (lookBall === 4) updateFire(dt, ballMesh.position, moving ? ballVel : V(), sc, moving ? (MOBILE ? 70 : 110) : 14);
     blob.position.set(b.x, .035, -b.z); const hh = Math.max(0, b.y);
     blob.scale.setScalar(BALL_R * sc * (1.3 + hh * .02)); blob.material.opacity = .35 / (1 + hh * .08);
   }
-  if (lookBall !== 3 || !b) updateFire(dt, V(), V(), 1, 0);   // 남은 불꽃 정리
+  if (lookBall !== 4 || !b) updateFire(dt, V(), V(), 1, 0);   // 남은 불꽃 정리
   if (prevPhase === 'fly' && ph === 'roll' && b) { landAt = now; landPos.set(b.x, .05, -b.z); }
   prevPhase = ph;
   // 떨어진 자리 고리: 땅에 닿을 때 한 번 퍼지고, 멈춘 뒤에는 계속 반짝
