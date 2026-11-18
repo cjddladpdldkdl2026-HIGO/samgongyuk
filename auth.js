@@ -10,6 +10,7 @@
  *  SamAuth.record({ game, mode, score, accuracy, detail })  → 로그인한 사람만 저장, 실패해도 게임은 그대로
  *  SamAuth.ranking(game, mode)  → { top: [{ nickname, score, accuracy }], myBest, myRank, total }
  *  SamAuth.onChange(fn)
+ *  (part3) 화면을 보는 동안 1분마다 ops_ping — 지금 접속자 수 (supabase/ops.sql)
  *
  *  키는 Supabase 의 공개용(publishable) 키예요. 웹 페이지에 넣는 용도이고, 표마다 RLS 로 막혀 있어요.
  *  DB 구조: supabase/schema.sql
@@ -91,4 +92,34 @@
     if (error) throw error;
     return data;
   };
+
+  /* 지금 접속 중 알리기 (part3 · supabase/ops.sql) — 화면을 보고 있을 때 1분마다 한 번.
+   * 관리자 '데이터 관리'의 동시 접속 숫자와 자동 백업 기준(동시 접속 4만 명)에 쓰여요.
+   * 창(탭)마다 번호 하나. ops.sql 을 아직 안 돌렸으면 한 번 실패하고 조용히 멈춰요. */
+  (function heartbeat() {
+    let sid;
+    try {
+      sid = sessionStorage.getItem('samgongyuk-sid');
+      if (!sid) { sid = crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2) + Date.now().toString(36); sessionStorage.setItem('samgongyuk-sid', sid); }
+    } catch { sid = 'tmp-' + Math.random().toString(36).slice(2) + Date.now().toString(36); }
+    const PAGE_KO = { highgo: 'hub', index: 'hub', '': 'hub', DdanDdan: '딴딴/딴', Vertebral_Wizard: '뭐라구요!?',
+      'HIGO_뼈게임_사이트판': 'LandMark', '너에게닿기를': '너에게 닿기를' };
+    let path = location.pathname;
+    try { path = decodeURIComponent(path); } catch { /* keep */ }
+    const raw = (/\/games\/([^/]+)/.exec(path) || /([^/]*?)(?:\.html)?$/.exec(path) || [])[1] || '';
+    const page = (PAGE_KO[raw] || raw || 'hub').slice(0, 60);
+    let stop = false, last = 0;
+    const ping = async () => {
+      if (stop || document.visibilityState === 'hidden' || Date.now() - last < 50000) return;
+      last = Date.now();
+      try {
+        await A.ready;
+        const { error } = await sb.rpc('ops_ping', { p_sid: sid, p_page: page });
+        if (error && (error.code === 'PGRST202' || error.code === '42883')) stop = true;   // 함수가 아직 없음
+      } catch { /* offline */ }
+    };
+    setTimeout(ping, 2000);
+    setInterval(ping, 60000);
+    document.addEventListener('visibilitychange', ping);
+  })();
 })();

@@ -1,0 +1,55 @@
+/* 삼공육 part3 — 랭킹 · 데이터 관리 · 서버 점검 (ops.js 와 짝). 나머지 모양은 account.css 를 같이 써요. */
+
+.filt.sm button { padding: 4px 10px; font-size: 12px; }
+.ops-my { margin: 4px 0 10px; font-size: 14px; color: var(--ink-dim); }
+.ops-my b { color: var(--gold); font-size: 16px; }
+.ops-sel { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--ink-dim); margin-bottom: 8px; }
+.ops-sel select { padding: 7px 10px; border-radius: 10px; border: 1px solid var(--line); background: rgba(7,1,15,.7); color: var(--ink); font: 14px var(--font-ui); }
+
+/* 랭킹 표 */
+.ops-rank td.rk { width: 56px; text-align: center; font-family: 'Orbitron', var(--font-ui); font-weight: 900; font-size: 16px; }
+.ops-rank tbody tr:nth-child(-n+3) td.rk { font-size: 20px; }
+.tbl tr.me td { background: rgba(253,231,76,.08); }
+.tbl tr.me td:first-child { box-shadow: inset 3px 0 0 var(--gold); }
+
+/* 긴 표: 위 제목 줄 고정, 안에서 스크롤 */
+.ops-tall { max-height: 460px; overflow: auto; }
+.tbl th.num { text-align: right; }
+.tbl td.num { text-align: right; }
+.tbl td.we { color: #ff8ab8; }
+.tbl tfoot td { position: sticky; bottom: 0; background: #1a0745; font-weight: 700; border-top: 1px solid var(--line); }
+.tbl tr.click { cursor: pointer; }
+.tbl tr.click:hover td { background: rgba(45,226,230,.08); }
+
+/* 세로 막대 (시간대 · 24시간) */
+.ops-cols { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 3px; align-items: end; height: 150px; padding: 8px 4px 0;
+  border: 1px solid var(--line); border-radius: 12px; background: rgba(255,255,255,.03); }
+.ops-cols .c { display: grid; grid-template-rows: 1fr 18px; height: 100%; min-width: 0; }
+.ops-cols .c i { align-self: end; display: block; min-height: 2px; border-radius: 4px 4px 0 0;
+  background: linear-gradient(180deg, var(--cyan), #2b6bff); box-shadow: 0 0 8px rgba(45,226,230,.3); }
+.ops-cols .c span { font-size: 10px; color: var(--ink-faint); text-align: center; line-height: 18px; overflow: hidden; }
+
+/* 점검 상태 */
+.lv { display: inline-block; min-width: 40px; padding: 1px 8px; border-radius: 999px; font-size: 11px; font-weight: 800; text-align: center; vertical-align: 2px; }
+.lv.ok { background: rgba(61,220,132,.16); color: #6ff0a8; }
+.lv.warn { background: rgba(253,231,76,.16); color: var(--gold); }
+.lv.bad { background: rgba(255,46,136,.2); color: #ff8ab8; }
+.ops-checks { display: grid; gap: 6px; }
+.ops-checks .ck { display: grid; grid-template-columns: auto 150px 1fr; gap: 10px; align-items: center; padding: 10px 14px; border-radius: 12px;
+  border: 1px solid var(--line); background: rgba(255,255,255,.03); font-size: 13px; }
+.ops-checks .ck.warn { border-color: rgba(253,231,76,.4); }
+.ops-checks .ck.bad { border-color: rgba(255,46,136,.5); background: rgba(255,46,136,.06); }
+.ops-checks .ck span { color: var(--ink-dim); }
+@media (max-width: 600px) { .ops-checks .ck { grid-template-columns: auto 1fr; } .ops-checks .ck span { grid-column: 1 / -1; } }
+
+/* DB 용량 막대 */
+.ops-meter { position: relative; height: 28px; border-radius: 8px; background: rgba(255,255,255,.05); border: 1px solid var(--line); overflow: hidden; }
+.ops-meter i { display: block; height: 100%; background: linear-gradient(90deg, #2b6bff, var(--cyan)); }
+.ops-meter.warn i { background: linear-gradient(90deg, #c9a400, var(--gold)); }
+.ops-meter.bad i { background: linear-gradient(90deg, #b3135c, var(--pink, #ff2e88)); }
+.ops-meter span { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); font-size: 12px; font-weight: 700; text-shadow: 0 1px 3px #000; white-space: nowrap; }
+
+/* 설정 칸 */
+.pg .ops-set { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; max-width: none; margin-top: 12px; }
+.pg .ops-set label { flex: 1 1 200px; }
+.pg .ops-set .acc-msg { flex-basis: 100%; }

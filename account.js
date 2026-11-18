@@ -19,6 +19,10 @@
   const sb = SamAuth.client, URL_ = SamAuth.url, KEY = SamAuth.key;
 
   const S = { session: null, me: null, loginRequired: false, page: null, tab: 'login', openPosts: 0 };
+  // 다른 파일이 붙이는 메뉴·페이지 (Account.addPage, 예: ops.js 의 랭킹 · 데이터 관리 · 서버 점검)
+  const EXTRA = [];
+  const extra = (id) => EXTRA.find(p => p.id === id);
+  const extraOk = (p) => p.admin ? isAdmin() : (!p.login || !!S.me);
   const $ = (s, r = document) => r.querySelector(s);
   const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
@@ -132,8 +136,10 @@
       '<li class="sec">COMMUNITY</li>',
       menu('board', '📢', '공지사항 · 이용자 게시판'),
       S.me ? menu('mine', '🙋', '내 정보 · 랭킹') : '',
+      ...EXTRA.filter(p => !p.admin && extraOk(p)).map(p => menu(p.id, p.ic, p.label)),
     ];
-    if (isAdmin()) items.push('<li class="sec">ADMIN</li>', menu('stats', '📊', '이용자 현황'), menu('members', '👥', '회원 관리', S.openPosts ? '' : ''));
+    if (isAdmin()) items.push('<li class="sec">ADMIN</li>', menu('stats', '📊', '이용자 현황'), menu('members', '👥', '회원 관리', S.openPosts ? '' : ''),
+      ...EXTRA.filter(p => p.admin).map(p => menu(p.id, p.ic, p.label)));
     body.innerHTML = `${me}${auth}<ul class="acc-menu">${items.join('')}</ul>
       <div class="acc-foot">${S.me ? '<button class="abtn sm" type="button" id="accOut">↩ 로그아웃</button>' : ''}
         <small>삼공육 계정 ${VERSION}${S.loginRequired ? ' · 🔒 로그인 필수' : ''}</small></div>`;
@@ -293,16 +299,18 @@
   async function openPage(id, arg) {
     if ((id === 'stats' || id === 'members') && !isAdmin()) id = 'board';
     if (id === 'mine' && !S.me) id = 'board';
+    if (extra(id) && !extraOk(extra(id))) id = 'board';
     S.page = id;
     body.querySelectorAll('[data-page]').forEach(b => b.classList.toggle('on', b.dataset.page === id));
     pg.innerHTML = '<button class="pg-x" type="button" aria-label="닫기">✕</button><p class="empty2">불러오는 중…</p>';
     pgWrap.classList.add('open');
     if (innerWidth < 820) closeSide();
     try {
-      const html = await PAGES[id](arg);
+      const ex = extra(id);
+      const html = ex ? await ex.render(arg) : await PAGES[id](arg);
       if (S.page !== id) return;
       pg.innerHTML = '<button class="pg-x" type="button" aria-label="닫기">✕</button>' + html;
-      if (BIND[id]) BIND[id](arg);
+      if (ex) { if (ex.bind) ex.bind(arg); } else if (BIND[id]) BIND[id](arg);
     } catch (e) {
       pg.innerHTML = `<button class="pg-x" type="button" aria-label="닫기">✕</button><p class="empty2">${esc(KO_ERR(e))}</p>`;
     }
@@ -604,6 +612,10 @@
   window.Account = {
     logPlay(app) { logVisit(app && app.title ? app.title : 'unknown'); },
     open: openSide, page: openPage,
+    /* 메뉴·페이지 붙이기: { id, ic, label, admin?, login?, render(arg) → html, bind?(arg) }
+     * admin: 승인된 관리자만 (ADMIN 칸), login: 로그인한 사람만, 둘 다 없으면 누구나 (COMMUNITY 칸) */
+    addPage(p) { if (!extra(p.id)) EXTRA.push(p); renderSide(); },
+    kit: { sb, pg, $, esc, n, fmtDate, ask, askText, say, KO_ERR, isAdmin, me: () => S.me, current: () => S.page },
   };
   (async () => {
     renderSide();
