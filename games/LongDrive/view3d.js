@@ -15,7 +15,8 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 
 const canvas = document.getElementById('scene');
 const MOBILE = Math.min(innerWidth, innerHeight) < 600;
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
+// logarithmicDepthBuffer: 멀리서 · 높은 데서 봐도 잔디 겹(러프 · 페어웨이 · 선)이 깨지지 않게 (깊이 계산을 거리에 맞게 정밀하게)
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance', logarithmicDepthBuffer: true });
 renderer.setPixelRatio(Math.min(devicePixelRatio || 1, MOBILE ? 1.5 : 1.75));
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -26,7 +27,7 @@ const scene = new THREE.Scene();
 const HAZE = new THREE.Color(0xbdd9f5);
 scene.fog = new THREE.Fog(HAZE, 220, 1500);
 scene.background = HAZE;
-const camera = new THREE.PerspectiveCamera(52, innerWidth / innerHeight, 0.05, 4000);
+const camera = new THREE.PerspectiveCamera(52, innerWidth / innerHeight, 0.1, 4000);
 
 const composer = new EffectComposer(renderer);
 composer.addPass(new RenderPass(scene, camera));
@@ -150,7 +151,7 @@ const fairTex = canvasTex(256, 512, (g, w, h) => {
   g.fillStyle = '#63d466'; g.fillRect(0, h / 2, w, h / 2);
   noise(g, w, h, 4000, .25, () => Math.random() < .5 ? '#8ae67e' : '#3a9a44');
 }, [3, 230]);
-const fairway = new THREE.Mesh(new THREE.PlaneGeometry(64, 2300), new THREE.MeshStandardMaterial({ map: fairTex, roughness: .95 }));
+const fairway = new THREE.Mesh(new THREE.PlaneGeometry(64, 2300), new THREE.MeshStandardMaterial({ map: fairTex, roughness: .95, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -2 }));
 fairway.rotation.x = -Math.PI / 2; fairway.position.set(0, 0.01, -1150); fairway.receiveShadow = true; scene.add(fairway);
 
 // 50m 마다 흰 선 · OB 선 (네온 분홍)
