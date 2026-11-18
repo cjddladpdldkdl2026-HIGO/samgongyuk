@@ -248,3 +248,36 @@ body.ytmode .ytSlot { display: block; }
 .anatLabel span { font-size: 15px; font-weight: 700; color: #bfe6ff; }
 .anatLabel i { font-style: normal; font-size: 11px; color: #ffd28a; }
 .anatCredit { position: absolute; right: 8px; top: 6px; z-index: 2; font-size: 10px; color: rgba(255, 255, 255, .55); pointer-events: none; }
+
+/* 2026-11-18: labels under the cards were too small — meaning tags (하부 · 시상) and the word name tag (Hypothalamus 시상하부) */
+body.video .meanTag span, .meanTag span { font-size: 19px; padding: 3px 14px; line-height: 1.35; }
+.wordTag, body.video .wordTag { font-size: 20px; padding-top: 8px; }
+.wordTag span { padding: 4px 16px; line-height: 1.35; }
+.wordTag i { margin-left: 8px; }
+/* term text bigger everywhere in play (cards · English · 3D label), without covering anything */
+body.video .slot .ko { font-size: clamp(26px, 4.2vh, 42px); }
+body.video .slot .en { font-size: 15px; letter-spacing: .12em; margin-top: 6px; }
+body.video .slot { padding: 16px 6px 14px; }
+.anatLabel { padding: 8px 14px 9px; }
+.anatLabel b { font-size: 24px; }
+.anatLabel span { font-size: 19px; }
+.anatLabel i { font-size: 13px; }
+/* short screens (laptops): the 3D screen shrinks a little so every card, tag and beat dot stays on screen */
+@media (max-height: 800px) { body.video .tv { --tvw: min(calc(58vh * 16 / 9), calc(100vw - 500px)); } }
+@media (max-height: 700px) { body.video .tv { --tvw: min(calc(52vh * 16 / 9), calc(100vw - 500px)); } }
+/* narrower screens (641–1100px): the narrator stays small on the left (instead of a tall row under the 3D screen),
+ * so the 3D screen, cards and tags all fit on screen */
+@media (min-width: 641px) and (max-width: 1100px) {
+  body.video .topRow { flex-direction: row; }
+  body.video .mcCol { position: fixed; left: 10px; top: 50%; transform: translateY(-50%); width: 170px; flex-direction: column; gap: 8px; }
+  body.video .mcCol .bubble { min-width: 0; font-size: 15px; padding: 6px 10px; }
+  body.video .mcPic { width: 110px; }
+  body.video .ytSlot { width: 160px; }
+  body.video .phase { font-size: 22px; }
+  body.video .mc { flex-direction: column; align-items: center; gap: 8px; }
+  body.video .mcCol .bubble::before { left: 50%; top: -15px; transform: translateX(-50%) rotate(135deg); }
+  body.video .mcCol .bubble { width: 100%; text-align: center; }
+  body.video .tv { --tvw: min(calc(54vh * 16 / 9), calc(100vw - 400px)); }
+  body.video .slots { width: calc(100vw - 410px); }
+}
+@media (min-width: 641px) and (max-width: 1100px) and (max-height: 760px) { body.video .tv { --tvw: min(calc(48vh * 16 / 9), calc(100vw - 400px)); } }
