@@ -494,21 +494,119 @@ function poseGolfer(now) {
 }
 
 /* ── 공 · 꼬리 · 그림자 · 떨어진 자리 ─────────────────────────────── */
-const BALL_R = .03, TEE_Y = .03 + .045 + BALL_R;
-const ballMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: .35, emissive: 0xffffff, emissiveIntensity: .15 });
-const ballMesh = new THREE.Mesh(new THREE.SphereGeometry(BALL_R, 24, 16), ballMat); ballMesh.castShadow = true; scene.add(ballMesh);
+const BALL_R = .032, TEE_Y = .03 + .045 + BALL_R;
+/* ═══════════════════════════════════════════════════════════════
+ *  공 4개 (index.html BALLS 와 같은 순서, 약한 → 강한)
+ *    0 무릎뼈 공   무릎뼈만 떼어 만든 세모난 공, 뒤쪽은 파르스름한 연골
+ *    1 머리뼈 공   해골 — 데굴데굴 굴러가며 날아가요
+ *    2 눈알 공     파란 홍채 · 실핏줄, 날아가는 쪽을 쳐다봐요
+ *    3 파이어볼    활활 타는 불덩어리, 뒤로 불꽃이 따라와요
+ * ═══════════════════════════════════════════════════════════════ */
+const ballMesh = new THREE.Group(); scene.add(ballMesh);        // 위치 · 크기
+const ballSpin = new THREE.Group(); ballMesh.add(ballSpin);     // 회전 (구르기 · 쳐다보기)
 const blob = new THREE.Mesh(new THREE.CircleGeometry(1, 20), new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: .35, depthWrite: false }));
 blob.rotation.x = -Math.PI / 2; scene.add(blob);
-const BALL_LOOK = [
-  { c: 0xffffff, e: .12, t: 0x2de2e6 }, { c: 0xffffff, e: .15, t: 0x2de2e6 }, { c: 0xeaffea, e: .2, t: 0xb6ff3b },
-  { c: 0xe6f0ff, e: .25, t: 0x6aa8ff }, { c: 0xd8fbff, e: .6, t: 0x7ffcff }, { c: 0xfff0d0, e: 1.4, t: 0xff9f1c, glow: 0xff9f1c },
-];
-let lookBall = -1, trailCol = new THREE.Color(0x2de2e6);
-function applyBallLook(i) {
-  const L = BALL_LOOK[i] || BALL_LOOK[0];
-  ballMat.color.setHex(L.c); ballMat.emissive.setHex(L.glow || 0xffffff); ballMat.emissiveIntensity = L.e;
-  trailCol = new THREE.Color(L.t); lookBall = i;
+/* 불꽃 조각 그림 (파이어볼 빛 · 꼬리) */
+const fireTex = canvasTex(64, 64, (c, w, h) => {
+  const gr = c.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w / 2);
+  gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(.35, 'rgba(255,255,255,.65)'); gr.addColorStop(1, 'rgba(255,255,255,0)');
+  c.fillStyle = gr; c.fillRect(0, 0, w, h);
+});
+const ballModels = [];
+const BALL_TRAIL = [0xbfe9ff, 0xd9ff9a, 0x6aa8ff, 0xff7a1a];
+let lookBall = -1, trailCol = new THREE.Color(BALL_TRAIL[0]);
+function buildBall(i) {
+  const g = new THREE.Group(), R = BALL_R;
+  const add = (geo, mat, x = 0, y = 0, z = 0) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.castShadow = true; g.add(m); return m; };
+  if (i === 0) {
+    // 무릎뼈: 위는 둥글고 아래(무릎뼈끝)는 뾰족, 앞뒤로 납작
+    const geo = new THREE.SphereGeometry(R, 28, 20), p = geo.attributes.position;
+    for (let k = 0; k < p.count; k++) {
+      let x = p.getX(k), y = p.getY(k) * 1.12, z = p.getZ(k) * .62;
+      if (y < 0) x *= 1 + (y / R) * .5;
+      p.setXYZ(k, x, y, z);
+    }
+    geo.computeVertexNormals();
+    add(geo, new THREE.MeshStandardMaterial({ color: 0xf1e7cf, roughness: .45 }));
+    const back = add(geo, new THREE.MeshStandardMaterial({ color: 0xa9cfe6, roughness: .3 }), 0, 0, -R * .1); back.scale.set(.86, .86, .8);   // 뒤쪽 관절면 연골
+  } else if (i === 1) {
+    const boneM = new THREE.MeshStandardMaterial({ color: 0xf4f0e6, roughness: .5 }), dark = new THREE.MeshStandardMaterial({ color: 0x1b1b22, roughness: .8 });
+    add(new THREE.SphereGeometry(R, 28, 20), boneM, 0, R * .12, -R * .05).scale.set(.95, 1, 1.05);   // 머리덮개
+    add(new RoundedBoxGeometry(R * 1.25, R * .75, R * 1.1, 3, R * .25), boneM, 0, -R * .45, R * .12); // 얼굴 · 위턱
+    add(new RoundedBoxGeometry(R * 1.0, R * .32, R * .9, 3, R * .14), boneM, 0, -R * .9, R * .15);   // 아래턱
+    for (const sx of [-1, 1]) add(new THREE.SphereGeometry(R * .26, 16, 12), dark, sx * R * .33, -R * .05, R * .78).scale.set(1, 1.1, .6);   // 눈확
+    add(new THREE.ConeGeometry(R * .12, R * .22, 3), dark, 0, -R * .38, R * .86).rotation.x = Math.PI;   // 코안
+    const teeth = canvasTex(64, 16, (c, w, h) => { c.fillStyle = '#f4f0e6'; c.fillRect(0, 0, w, h); c.fillStyle = '#3a3a40'; for (let k = 1; k < 8; k++) c.fillRect(k * 8 - 1, 0, 2, h); c.fillRect(0, h / 2 - 1, w, 2); });
+    add(new THREE.PlaneGeometry(R * .9, R * .26), new THREE.MeshStandardMaterial({ map: teeth, roughness: .5 }), 0, -R * .72, R * .69);   // 이
+  } else if (i === 2) {
+    const veins = canvasTex(512, 256, (c, w, h) => {
+      c.fillStyle = '#fbf8f4'; c.fillRect(0, 0, w, h);
+      c.strokeStyle = 'rgba(200,40,40,.55)'; c.lineCap = 'round';
+      for (let k = 0; k < 40; k++) {   // 실핏줄
+        let x = Math.random() * w, y = h * (.5 + (Math.random() - .5) * .9); c.lineWidth = 1 + Math.random() * 1.6; c.beginPath(); c.moveTo(x, y);
+        for (let s = 0; s < 8; s++) { x += (Math.random() - .5) * 26; y += (Math.random() - .5) * 18; c.lineTo(x, y); }
+        c.stroke();
+      }
+    });
+    add(new THREE.SphereGeometry(R, 32, 24), new THREE.MeshStandardMaterial({ map: veins, roughness: .2 }));
+    const iris = canvasTex(256, 256, (c, w, h) => {
+      const cx = w / 2, cy = h / 2;
+      c.fillStyle = '#fbf8f4'; c.fillRect(0, 0, w, h);
+      const gr = c.createRadialGradient(cx, cy, 20, cx, cy, 124); gr.addColorStop(0, '#0d2a55'); gr.addColorStop(.35, '#2f7fd6'); gr.addColorStop(.8, '#5fb2ff'); gr.addColorStop(.93, '#1a3f7a'); gr.addColorStop(1, 'rgba(20,50,100,0)');
+      c.fillStyle = gr; c.beginPath(); c.arc(cx, cy, 124, 0, Math.PI * 2); c.fill();
+      c.strokeStyle = 'rgba(220,240,255,.45)'; c.lineWidth = 1.5;
+      for (let k = 0; k < 90; k++) { const a = k / 90 * Math.PI * 2 + Math.random() * .05; c.beginPath(); c.moveTo(cx + Math.cos(a) * 46, cy + Math.sin(a) * 46); c.lineTo(cx + Math.cos(a) * (80 + Math.random() * 34), cy + Math.sin(a) * (80 + Math.random() * 34)); c.stroke(); }
+      c.fillStyle = '#05070c'; c.beginPath(); c.arc(cx, cy, 44, 0, Math.PI * 2); c.fill();
+      c.fillStyle = 'rgba(255,255,255,.9)'; c.beginPath(); c.ellipse(cx + 34, cy - 40, 20, 13, -.6, 0, Math.PI * 2); c.fill();
+    });
+    // 앞쪽 둥근 뚜껑에 홍채 그림 (+Z = 쳐다보는 방향)
+    const th = .62, cap = new THREE.SphereGeometry(R * 1.004, 40, 12, 0, Math.PI * 2, 0, th), cp = cap.attributes.position, uv = cap.attributes.uv, rs = R * 1.004 * Math.sin(th);
+    for (let k = 0; k < cp.count; k++) uv.setXY(k, .5 + cp.getX(k) / (2 * rs), .5 - cp.getZ(k) / (2 * rs));
+    const capM = add(cap, new THREE.MeshStandardMaterial({ map: iris, roughness: .08, metalness: .1 }));
+    capM.rotation.x = Math.PI / 2;
+  } else {
+    add(new THREE.SphereGeometry(R, 24, 16), new THREE.MeshBasicMaterial({ color: glow(0xffa53a, 2.0), toneMapped: false }));
+    const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: fireTex, color: glow(0xff5a12, 1.8), blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false, transparent: true }));
+    halo.scale.setScalar(R * 5); g.add(halo); g.userData.halo = halo;
+  }
+  ballSpin.add(g); return g;
 }
+function applyBallLook(i) {
+  i = Math.max(0, Math.min(3, i | 0));
+  if (!ballModels[i]) ballModels[i] = buildBall(i);
+  ballModels.forEach((m, k) => { if (m) m.visible = k === i; });
+  ballSpin.rotation.set(0, 0, 0);
+  trailCol = new THREE.Color(BALL_TRAIL[i]); lookBall = i;
+}
+/* 불꽃 (파이어볼 꼬리): 빛 조각을 계속 뿌리고, 커지면서 노랑 → 주황 → 빨강으로 사라져요 */
+const FIRE_N = MOBILE ? 110 : 180, fire = [];
+for (let k = 0; k < FIRE_N; k++) {
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: fireTex, depthWrite: false, toneMapped: false, transparent: true, fog: false }));   // 낮에도 잘 보이게 보통 섞기
+  s.visible = false; scene.add(s); fire.push({ s, life: 0, max: 1, v: V(), size: 0 });
+}
+let fireNext = 0, fireAcc = 0;
+const FIRE_COL = [new THREE.Color(1, .9, .35), new THREE.Color(1, .42, .05), new THREE.Color(.7, .08, .02)];
+function updateFire(dt, pos, vel, sc, rate) {
+  fireAcc += rate * dt;
+  while (fireAcc >= 1) {
+    fireAcc -= 1; const p = fire[fireNext]; fireNext = (fireNext + 1) % FIRE_N;
+    p.life = 0; p.max = .35 + Math.random() * .35; p.s.visible = true;
+    p.s.position.copy(pos).add(V(Math.random() - .5, Math.random() - .5, Math.random() - .5).multiplyScalar(BALL_R * sc * 1.2));
+    p.v.copy(vel).multiplyScalar(.8).add(   // 공보다 조금 느리게 따라와서 꼬리가 길게 늘어나요
+      V((Math.random() - .5) * .6, .4 + Math.random() * .8, (Math.random() - .5) * .6).multiplyScalar(sc * .3));
+    p.size = BALL_R * sc * (2.6 + Math.random() * 1.8);
+  }
+  for (const p of fire) {
+    if (!p.s.visible) continue;
+    p.life += dt; const t = p.life / p.max;
+    if (t >= 1) { p.s.visible = false; continue; }
+    p.s.position.addScaledVector(p.v, dt);
+    p.s.scale.setScalar(p.size * (1 + t * 1.6));
+    const c = t < .4 ? FIRE_COL[0].clone().lerp(FIRE_COL[1], t / .4) : FIRE_COL[1].clone().lerp(FIRE_COL[2], (t - .4) / .6);
+    p.s.material.color.copy(c).multiplyScalar(1.25); p.s.material.opacity = .95 * (1 - t * t);
+  }
+}
+const prevBall = V(), ballVel = V();
 const MAXP = 260;
 const tPos = new Float32Array(MAXP * 2 * 3), tCol = new Float32Array(MAXP * 2 * 3);
 const trailGeo = new THREE.BufferGeometry();
@@ -579,11 +677,26 @@ function frame(now, dt) {
     const y = onTee ? TEE_Y : Math.max(0, b.y) + BALL_R;
     ballMesh.position.set(b.x, y, -b.z);
     const dist = camera.position.distanceTo(ballMesh.position);
-    const sc = Math.max(1, dist / 14);
+    const sc = Math.max(1, dist / 4.5);   // 멀어질수록 크게 그려서 잘 보이게
     ballMesh.scale.setScalar(sc);
+    // 공 속도 → 구르기 · 쳐다보기 · 불꽃 방향
+    if (dt > 0) ballVel.subVectors(ballMesh.position, prevBall).multiplyScalar(1 / dt);
+    prevBall.copy(ballMesh.position);
+    const moving = !onTee && ballVel.lengthSq() > .04;
+    if (lookBall === 2) {   // 눈알: 날아가는 쪽, 타석에서는 카메라를 쳐다봐요
+      const tgt = moving ? ballMesh.position.clone().add(ballVel) : onTee ? camera.position.clone() : ballMesh.position.clone().add(V(0, 0, -1));
+      ballSpin.lookAt(tgt);
+    } else if (lookBall === 3) {
+      ballSpin.rotation.set(0, 0, 0);
+      const m = ballModels[3]; if (m) m.userData.halo.scale.setScalar(BALL_R * (4.5 + Math.sin(now / 40) * .6));
+    } else if (moving) {
+      ballSpin.rotation.x -= Math.min(30, ballVel.length() * .5) * dt;   // 데굴데굴
+    } else if (onTee) ballSpin.rotation.set(0, 0, 0);
+    if (lookBall === 3) updateFire(dt, ballMesh.position, moving ? ballVel : V(), sc, moving ? (MOBILE ? 70 : 110) : 14);
     blob.position.set(b.x, .035, -b.z); const hh = Math.max(0, b.y);
     blob.scale.setScalar(BALL_R * sc * (1.3 + hh * .02)); blob.material.opacity = .35 / (1 + hh * .08);
   }
+  if (lookBall !== 3 || !b) updateFire(dt, V(), V(), 1, 0);   // 남은 불꽃 정리
   if (prevPhase === 'fly' && ph === 'roll' && b) { landAt = now; landPos.set(b.x, .05, -b.z); }
   prevPhase = ph;
   // 떨어진 자리 고리: 땅에 닿을 때 한 번 퍼지고, 멈춘 뒤에는 계속 반짝

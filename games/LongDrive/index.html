@@ -282,15 +282,14 @@ const CLUBS = [
   { name: "척추 레전드 드라이버", ic: "🐉", price: 900, speed: 28, desc: "목뼈를 잡고 엉치뼈 · 꼬리뼈로 쳐요 · 최강" },
 ];
 const OLD_CLUB_PRICES = [0, 60, 150, 300, 550, 900];   // 예전 금속 채 6개 (2026-11-18 까지) — 산 사람에게 캐쉬를 돌려줘요
-// 골프공: drag = 공기 저항(작을수록 멀리), roll = 떨어진 뒤 굴러가는 비율, wind = 바람 영향
+// 골프공 (4개, 약한 순서): drag = 공기 저항(작을수록 멀리), roll = 떨어진 뒤 굴러가는 비율, wind = 바람 영향. 3D 모양은 view3d.js buildBall()
 const BALLS = [
-  { name: "연습장 공",   ic: "⚪", price: 0,   drag: 1.00, roll: .10, wind: 1.00, desc: "딱딱하고 잘 안 굴러요" },
-  { name: "2피스 볼",    ic: "🔘", price: 50,  drag: .88,  roll: .13, wind: .85,  desc: "기본기 탄탄" },
-  { name: "3피스 볼",    ic: "🟢", price: 120, drag: .77,  roll: .16, wind: .70,  desc: "바람에 덜 흔들려요" },
-  { name: "우레탄 투어볼", ic: "🔵", price: 250, drag: .67,  roll: .19, wind: .55,  desc: "쭉 뻗어 나가요" },
-  { name: "다이아 딤플볼", ic: "💎", price: 450, drag: .58,  roll: .22, wind: .40,  desc: "딤플이 공기를 가르는 공" },
-  { name: "혜성볼",       ic: "☄️", price: 800, drag: .50,  roll: .26, wind: .25,  desc: "꼬리를 그리며 날아가요" },
+  { name: "무릎뼈 공",  ic: "🦴", price: 0,   drag: 1.00, roll: .10, wind: 1.00, desc: "무릎뼈만 떼어 만든 세모난 공 · 기본" },
+  { name: "머리뼈 공",  ic: "💀", price: 120, drag: .82,  roll: .15, wind: .72,  desc: "데굴데굴 구르며 날아가는 해골" },
+  { name: "눈알 공",    ic: "👁️", price: 350, drag: .66,  roll: .20, wind: .48,  desc: "날아가는 쪽을 똑바로 쳐다봐요" },
+  { name: "파이어볼",   ic: "🔥", price: 800, drag: .50,  roll: .26, wind: .25,  desc: "치면 불꽃 꼬리를 그리며 날아가요 · 최강" },
 ];
+const OLD_BALL_PRICES = [0, 50, 120, 250, 450, 800];   // 예전 공 6개 (2026-11-18 까지)
 // 파워: 레벨마다 공 속도 +1.8 m/s, 가격은 다음 레벨 값
 const POWER_MAX = 10, POWER_SPEED = 1.8;
 const POWER_PRICE = [40, 60, 90, 120, 160, 210, 270, 340, 420, 520];
@@ -303,7 +302,7 @@ const DRAG_K = 0.0045, LIFT_K = 0.0014, LAUNCH_DEG = 15;
 const $ = (id) => document.getElementById(id);
 const fmt = (n) => Math.round(n).toLocaleString("ko-KR");
 const esc = (s) => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-const blank = () => ({ v: 1, cv: 2, cash: 0, club: 0, ball: 0, power: 0, owned: { club: [0], ball: [0] }, best: 0, sent: 0, shots: 0, solved: 0, correct: 0, updated: 0 });
+const blank = () => ({ v: 1, cv: 2, bv: 2, cash: 0, club: 0, ball: 0, power: 0, owned: { club: [0], ball: [0] }, best: 0, sent: 0, shots: 0, solved: 0, correct: 0, updated: 0 });
 let S = blank();
 const A = () => window.SamAuth;
 const member = () => !!(A() && A().joined && A().user);
@@ -318,6 +317,10 @@ function fix(d) {
   if (d && d.cv !== 2) {   // 골프채가 뼈 채 4개로 바뀜: 예전 채 값을 돌려주고 기본 채부터
     s.cash += [...new Set(s.owned.club || [])].reduce((sum, i) => sum + (OLD_CLUB_PRICES[i] || 0), 0);
     s.owned.club = [0]; s.club = 0; s.cv = 2;
+  }
+  if (d && d.bv !== 2) {   // 골프공이 4개로 바뀜: 예전 공 값을 돌려주고 기본 공부터
+    s.cash += [...new Set(s.owned.ball || [])].reduce((sum, i) => sum + (OLD_BALL_PRICES[i] || 0), 0);
+    s.owned.ball = [0]; s.ball = 0; s.bv = 2;
   }
   return s;
 }
