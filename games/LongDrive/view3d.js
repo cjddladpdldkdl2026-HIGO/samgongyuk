@@ -652,6 +652,91 @@ function updateFire(dt, pos, vel, sc, rate) {
   }
 }
 const prevBall = V(), ballVel = V();
+/* ═══════════════════════════════════════════════════════════════
+ *  부스터 (index.html 의 boosters 배열을 그대로 그려요)
+ *    폭탄 💣: 빨간 동그라미 + 까만 폭탄(불붙은 심지). 닿으면 펑! 불덩이 · 충격파 · 그을린 자국
+ *    대포 💥: 하늘색 동그라미 + 앞을 향한 대포. 닿으면 쾅! 포구 불꽃 · 연기 · 뒤로 밀림
+ * ═══════════════════════════════════════════════════════════════ */
+const BOOST_MAT = {
+  bomb: new THREE.MeshStandardMaterial({ color: 0x15151a, roughness: .25, metalness: .4 }),
+  fuse: new THREE.MeshStandardMaterial({ color: 0xc9a46a, roughness: .9 }),
+  cap: new THREE.MeshStandardMaterial({ color: 0x6b6f7a, roughness: .4, metalness: .7 }),
+  wood: new THREE.MeshStandardMaterial({ color: 0x7a4b25, roughness: .85 }),
+  iron: new THREE.MeshStandardMaterial({ color: 0x2b2e36, roughness: .35, metalness: .8 }),
+  neonC: new THREE.MeshStandardMaterial({ color: 0x2de2e6, emissive: 0x2de2e6, emissiveIntensity: 1.2 }),
+  fire: new THREE.MeshBasicMaterial({ color: glow(0xff8a1a, 2), toneMapped: false, transparent: true, depthWrite: false }),
+  smoke: new THREE.MeshStandardMaterial({ color: 0x9a9aa2, roughness: 1, transparent: true, depthWrite: false }),
+  scorch: new THREE.MeshBasicMaterial({ color: 0x1a140f, transparent: true, opacity: .55, depthWrite: false }),
+};
+const zoneMat = (hex) => new THREE.MeshBasicMaterial({ color: hex, transparent: true, opacity: .22, depthWrite: false });
+const ringMatOf = (hex) => new THREE.MeshBasicMaterial({ color: glow(hex, 1.6), toneMapped: false, transparent: true, opacity: .9, depthWrite: false });
+const BOOST_LOOK = { bomb: { zone: zoneMat(0xff3b3b), ring: ringMatOf(0xff3b3b) }, cannon: { zone: zoneMat(0x2de2e6), ring: ringMatOf(0x2de2e6) } };
+let boosterSrc = null; const boosterObjs = [];
+function makeBoosterObj(b) {
+  const g = new THREE.Group(); g.position.set(b.x, 0, -b.z); scene.add(g);
+  const L = BOOST_LOOK[b.type];
+  const zone = new THREE.Mesh(new THREE.CircleGeometry(b.r, 40), L.zone); zone.rotation.x = -Math.PI / 2; zone.position.y = .05; g.add(zone);
+  const ring = new THREE.Mesh(new THREE.RingGeometry(b.r - .5, b.r, 48), L.ring); ring.rotation.x = -Math.PI / 2; ring.position.y = .06; g.add(ring);
+  const o = { b, g, zone, ring, fx: [] };
+  if (b.type === 'bomb') {
+    const body = new THREE.Group(); g.add(body); o.body = body;
+    const ball = new THREE.Mesh(new THREE.SphereGeometry(1.8, 24, 18), BOOST_MAT.bomb); ball.position.y = 1.8; ball.castShadow = true; body.add(ball);
+    const cap = new THREE.Mesh(new THREE.CylinderGeometry(.5, .6, .5, 12), BOOST_MAT.cap); cap.position.y = 3.65; body.add(cap);
+    const fuse = new THREE.Mesh(new THREE.CylinderGeometry(.09, .09, 1.1, 6), BOOST_MAT.fuse); fuse.position.set(.25, 4.3, 0); fuse.rotation.z = -.45; body.add(fuse);
+    const spark = new THREE.Sprite(new THREE.SpriteMaterial({ map: fireTex, color: glow(0xffc040, 2.5), blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false }));
+    spark.position.set(.5, 4.85, 0); spark.scale.setScalar(1.2); body.add(spark); o.spark = spark;
+    const fb = new THREE.Mesh(new THREE.SphereGeometry(1, 20, 14), BOOST_MAT.fire.clone()); fb.visible = false; fb.position.y = 2; g.add(fb); o.fireball = fb;
+    const wave = new THREE.Mesh(new THREE.RingGeometry(.85, 1, 48), BOOST_MAT.fire.clone()); wave.rotation.x = -Math.PI / 2; wave.position.y = .1; wave.visible = false; g.add(wave); o.wave = wave;
+    const scorch = new THREE.Mesh(new THREE.CircleGeometry(4, 24), BOOST_MAT.scorch); scorch.rotation.x = -Math.PI / 2; scorch.position.y = .07; scorch.visible = false; g.add(scorch); o.scorch = scorch;
+  } else {
+    const base = new THREE.Mesh(new THREE.BoxGeometry(3.2, 1.2, 4), BOOST_MAT.wood); base.position.y = 1.2; base.castShadow = true; g.add(base);
+    for (const sx of [-1, 1]) {
+      const wheel = new THREE.Mesh(new THREE.CylinderGeometry(1.25, 1.25, .45, 18), BOOST_MAT.wood); wheel.rotation.z = Math.PI / 2; wheel.position.set(sx * 1.85, 1.25, .4); wheel.castShadow = true; g.add(wheel);
+      const hub = new THREE.Mesh(new THREE.CylinderGeometry(.35, .35, .5, 10), BOOST_MAT.iron); hub.rotation.z = Math.PI / 2; hub.position.set(sx * 1.9, 1.25, .4); g.add(hub);
+    }
+    const barrel = new THREE.Group(); barrel.position.set(0, 2.3, .6); barrel.rotation.x = -(Math.PI / 2 - 33 * Math.PI / 180); g.add(barrel); o.barrel = barrel;
+    const tube = new THREE.Mesh(new THREE.CylinderGeometry(.75, 1, 5.5, 20), BOOST_MAT.iron); tube.position.y = 2.2; tube.castShadow = true; barrel.add(tube);
+    const muzzle = new THREE.Mesh(new THREE.TorusGeometry(.8, .16, 8, 24), BOOST_MAT.neonC); muzzle.position.y = 4.95; muzzle.rotation.x = Math.PI / 2; barrel.add(muzzle);
+    const stripe = new THREE.Mesh(new THREE.TorusGeometry(.92, .1, 8, 24), BOOST_MAT.neonC); stripe.position.y = .6; stripe.rotation.x = Math.PI / 2; barrel.add(stripe);
+    const back = new THREE.Mesh(new THREE.SphereGeometry(1, 16, 12), BOOST_MAT.iron); back.position.y = -.4; barrel.add(back);
+    const flash = new THREE.Sprite(new THREE.SpriteMaterial({ map: fireTex, color: glow(0xffb040, 3), blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false }));
+    flash.position.y = 5.6; flash.visible = false; barrel.add(flash); o.flash = flash;
+    o.smoke = [];
+    for (let k = 0; k < 6; k++) { const s = new THREE.Mesh(new THREE.SphereGeometry(1, 12, 10), BOOST_MAT.smoke.clone()); s.visible = false; g.add(s); o.smoke.push(s); }
+  }
+  return o;
+}
+function updateBoosters(now) {
+  if (boosterSrc !== boosters) {   // 새 샷 → 새로 깔기
+    boosterObjs.forEach(o => { scene.remove(o.g); o.g.traverse(m => { if (m.geometry) m.geometry.dispose(); }); });
+    boosterObjs.length = 0; boosterSrc = boosters;
+    for (const b of boosters) boosterObjs.push(makeBoosterObj(b));
+  }
+  for (const o of boosterObjs) {
+    const b = o.b, t = b.hitAt ? (now - b.hitAt) / 1000 : -1;
+    o.ring.material.opacity = b.used ? .15 : .7 + .25 * Math.sin(now / 250 + b.id);
+    if (b.type === 'bomb') {
+      if (t < 0) { o.spark.scale.setScalar(1 + .4 * Math.sin(now / 45 + b.id)); o.body.position.y = .1 * Math.sin(now / 400 + b.id); continue; }
+      o.body.visible = false; o.zone.visible = false; o.scorch.visible = true;
+      const k = Math.min(1, t / .7);
+      o.fireball.visible = k < 1; o.fireball.scale.setScalar(2 + k * 12); o.fireball.material.opacity = 1 - k;
+      o.fireball.material.color.copy(glow(0xffd060, 2.4)).lerp(glow(0xff3a10, 1.6), k);
+      const w = Math.min(1, t / .9); o.wave.visible = w < 1; o.wave.scale.setScalar(2 + w * 26); o.wave.material.opacity = (1 - w) * .9;
+    } else {
+      if (t < 0) { o.barrel.rotation.y = .12 * Math.sin(now / 900 + b.id); continue; }
+      o.zone.visible = false;
+      const k = Math.min(1, t / .25);
+      o.barrel.position.z = .6 + Math.sin(k * Math.PI) * .9;   // 뒤로 밀렸다가 제자리
+      o.flash.visible = t < .3; o.flash.scale.setScalar(4 + t * 30); o.flash.material.opacity = 1 - t / .3;
+      o.smoke.forEach((s, i) => {
+        const st = t - i * .05; if (st < 0 || st > 2.2) { s.visible = false; return; }
+        s.visible = true; const q = st / 2.2;
+        s.position.set(Math.sin(i * 2.1) * 1.2, 6 + st * 4 + i * .4, -4 - st * 3 - i * .6);
+        s.scale.setScalar(1 + q * 4); s.material.opacity = .7 * (1 - q);
+      });
+    }
+  }
+}
 const MAXP = 260;
 const tPos = new Float32Array(MAXP * 2 * 3), tCol = new Float32Array(MAXP * 2 * 3);
 const trailGeo = new THREE.BufferGeometry();
@@ -752,6 +837,7 @@ function frame(now, dt) {
     const t = (now / 900) % 1; landRing.visible = true; landRing.position.set(b.x, .05, -b.z);
     landRing.scale.setScalar(.6 + t * 3.5); ringMat.opacity = 1 - t;
   } else landRing.visible = false;
+  updateBoosters(now);
   balloons.forEach(g => { g.position.y += Math.sin(now / 1500 + g.userData.bob) * .01; g.rotation.y += dt * .05; });
   updateTrail();
   updateCamera(now, dt);
