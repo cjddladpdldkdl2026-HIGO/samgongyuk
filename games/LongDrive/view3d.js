@@ -48,6 +48,7 @@ const V = (x = 0, y = 0, z = 0) => new THREE.Vector3(x, y, z);
 const UP = V(0, 1, 0);
 const glow = (hex, k = 2.2) => new THREE.Color(hex).multiplyScalar(k);   // 블룸으로 빛나게 (1보다 밝은 색)
 const OB_X = 70;   // index.html 의 OB_X 와 같은 값
+const RANGE = 2000;  // 연습장 길이(m): 표지판 · 그린 · 나무 · 선이 여기까지 있어요
 
 /* ── 캔버스로 만드는 무늬 ─────────────────────────────────────────── */
 function canvasTex(w, h, draw, repeat) {
@@ -66,6 +67,7 @@ function noise(g, w, h, n, a, colorFn) {
 
 /* ── 낮 하늘 · 해 · 구름 · 산 (카메라를 따라다녀서 아주 멀리 있는 것처럼) ── */
 const far = new THREE.Group(); scene.add(far);
+const balloons = [];   // 열기구 (천천히 오르내려요)
 const sky = new THREE.Mesh(new THREE.SphereGeometry(3000, 32, 20), new THREE.ShaderMaterial({
   side: THREE.BackSide, depthWrite: false, fog: false,
   vertexShader: 'varying vec3 vP; void main(){ vP = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
@@ -139,30 +141,30 @@ rim.position.set(0, 12, -40); scene.add(rim);
 const roughTex = canvasTex(256, 256, (g, w, h) => {
   g.fillStyle = '#1d5a2c'; g.fillRect(0, 0, w, h);
   noise(g, w, h, 3000, .35, () => Math.random() < .5 ? '#2c7a3c' : '#123d1d');
-}, [120, 240]);
-const ground = new THREE.Mesh(new THREE.PlaneGeometry(1200, 2400), new THREE.MeshStandardMaterial({ map: roughTex, roughness: 1 }));
-ground.rotation.x = -Math.PI / 2; ground.position.z = -1100; ground.receiveShadow = true; scene.add(ground);
+}, [140, 480]);
+const ground = new THREE.Mesh(new THREE.PlaneGeometry(1400, 4800), new THREE.MeshStandardMaterial({ map: roughTex, roughness: 1 }));
+ground.rotation.x = -Math.PI / 2; ground.position.z = -2200; ground.receiveShadow = true; scene.add(ground);
 
 const fairTex = canvasTex(256, 512, (g, w, h) => {
   g.fillStyle = '#4fbf55'; g.fillRect(0, 0, w, h / 2);
   g.fillStyle = '#63d466'; g.fillRect(0, h / 2, w, h / 2);
   noise(g, w, h, 4000, .25, () => Math.random() < .5 ? '#8ae67e' : '#3a9a44');
-}, [3, 140]);
-const fairway = new THREE.Mesh(new THREE.PlaneGeometry(64, 1400), new THREE.MeshStandardMaterial({ map: fairTex, roughness: .95 }));
-fairway.rotation.x = -Math.PI / 2; fairway.position.set(0, 0.01, -700); fairway.receiveShadow = true; scene.add(fairway);
+}, [3, 230]);
+const fairway = new THREE.Mesh(new THREE.PlaneGeometry(64, 2300), new THREE.MeshStandardMaterial({ map: fairTex, roughness: .95 }));
+fairway.rotation.x = -Math.PI / 2; fairway.position.set(0, 0.01, -1150); fairway.receiveShadow = true; scene.add(fairway);
 
 // 50m 마다 흰 선 · OB 선 (네온 분홍)
 {
   const lineMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: .75 });
-  for (let z = 50; z <= 1000; z += 50) {
+  for (let z = 50; z <= RANGE; z += 50) {
     const l = new THREE.Mesh(new THREE.PlaneGeometry(64, z % 100 ? .25 : .45), lineMat);
     l.rotation.x = -Math.PI / 2; l.position.set(0, .02, -z); scene.add(l);
   }
   const obMat = new THREE.MeshBasicMaterial({ color: glow(0xff2e88, 2), toneMapped: false });
   for (const sx of [-OB_X, OB_X]) {
-    const l = new THREE.Mesh(new THREE.PlaneGeometry(.5, 1400), obMat);
-    l.rotation.x = -Math.PI / 2; l.position.set(sx, .03, -690); scene.add(l);
-    for (let z = 20; z < 1000; z += 40) {   // OB 말뚝
+    const l = new THREE.Mesh(new THREE.PlaneGeometry(.5, 2300), obMat);
+    l.rotation.x = -Math.PI / 2; l.position.set(sx, .03, -1140); scene.add(l);
+    for (let z = 20; z < RANGE + 100; z += 40) {   // OB 말뚝
       const p = new THREE.Mesh(new THREE.CylinderGeometry(.12, .12, 1.4, 6), obMat); p.position.set(sx, .7, -z); scene.add(p);
     }
   }
@@ -195,7 +197,7 @@ mat.position.set(-.45, .015, .1); mat.receiveShadow = true; scene.add(mat);
 /* ── 거리 표지판 · 목표 그린 · 나무 · 조명탑 ─────────────────────── */
 {
   const postMat = new THREE.MeshStandardMaterial({ color: 0x241c38, roughness: .7 });
-  for (let z = 50; z <= 600; z += 50) {
+  for (let z = 50; z <= RANGE; z += 50) {
     const big = z % 100 === 0, col = big ? '#ffd23f' : '#2de2e6';
     const tex = canvasTex(256, 112, (g, w, h) => {
       g.fillStyle = '#0a021e'; g.fillRect(0, 0, w, h);
@@ -213,33 +215,76 @@ mat.position.set(-.45, .015, .1); mat.receiveShadow = true; scene.add(mat);
   const greenMat = new THREE.MeshStandardMaterial({ color: 0x7ef07a, roughness: .8 });
   const ringMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: .55 });
   const flagCols = [0xff2e88, 0xffd23f, 0x2de2e6, 0xb6ff3b, 0xff9f1c];
-  [[100, -9], [175, 12], [250, -6], [350, 9], [450, 0]].forEach(([z, x], i) => {
-    const gr = new THREE.Mesh(new THREE.CircleGeometry(9 + i, 40), greenMat); gr.rotation.x = -Math.PI / 2; gr.position.set(x, .025, -z); gr.receiveShadow = true; scene.add(gr);
-    const ring = new THREE.Mesh(new THREE.RingGeometry(9 + i - .25, 9 + i, 48), ringMat); ring.rotation.x = -Math.PI / 2; ring.position.set(x, .03, -z); scene.add(ring);
+  [[100, -9], [175, 12], [250, -6], [350, 9], [450, 0], [560, -10], [660, 11], [770, -5], [880, 8], [1000, 0], [1150, -9], [1300, 10], [1450, -4], [1600, 7], [1800, -8], [2000, 0]].forEach(([z, x], i) => {
+    const R = 9 + Math.min(i, 7);
+    const gr = new THREE.Mesh(new THREE.CircleGeometry(R, 40), greenMat); gr.rotation.x = -Math.PI / 2; gr.position.set(x, .025, -z); gr.receiveShadow = true; scene.add(gr);
+    const ring = new THREE.Mesh(new THREE.RingGeometry(R - .25, R, 48), ringMat); ring.rotation.x = -Math.PI / 2; ring.position.set(x, .03, -z); scene.add(ring);
     const pole = new THREE.Mesh(new THREE.CylinderGeometry(.06, .06, 4, 6), new THREE.MeshStandardMaterial({ color: 0xeeeeee })); pole.position.set(x, 2, -z); scene.add(pole);
-    const flag = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 1), new THREE.MeshBasicMaterial({ color: glow(flagCols[i], 1.8), toneMapped: false, side: THREE.DoubleSide }));
+    const flag = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 1), new THREE.MeshBasicMaterial({ color: glow(flagCols[i % flagCols.length], 1.8), toneMapped: false, side: THREE.DoubleSide }));
     flag.position.set(x + .8, 3.45, -z); scene.add(flag);
   });
   // 나무
   let s = 5; const r = () => (s = (s * 16807) % 2147483647) / 2147483647;
   const treeGeo = new THREE.ConeGeometry(1, 1, 7); treeGeo.translate(0, .5, 0);
-  const trees = new THREE.InstancedMesh(treeGeo, new THREE.MeshStandardMaterial({ color: 0x2f7a3e, roughness: .9, flatShading: true }), 260);
+  const trees = new THREE.InstancedMesh(treeGeo, new THREE.MeshStandardMaterial({ color: 0x2f7a3e, roughness: .9, flatShading: true }), 640);
   const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(); let n = 0;
-  for (let z = 10; z < 1000 && n < 260; z += 9 + r() * 12) for (const side of [-1, 1]) {
-    if (n >= 260 || r() < .15) continue;
+  for (let z = 10; z < RANGE + 150 && n < 640; z += 9 + r() * 12) for (const side of [-1, 1]) {
+    if (n >= 640 || r() < .15) continue;
     const h = 8 + r() * 10, w = h * (.28 + r() * .1);
     m4.compose(V(side * (OB_X + 7 + r() * 60), 0, -z - r() * 8), q, V(w, h, w)); trees.setMatrixAt(n++, m4);
   }
   trees.count = n; scene.add(trees);
   // 조명탑
   const headMat = new THREE.MeshStandardMaterial({ color: 0xe8eef5, roughness: .4 });   // 낮이라 조명은 꺼져 있어요
-  for (let z = 60; z < 900; z += 120) for (const side of [-1, 1]) {
+  for (let z = 60; z < RANGE + 100; z += 120) for (const side of [-1, 1]) {
     const x = side * (OB_X + 5);
     const pole = new THREE.Mesh(new THREE.CylinderGeometry(.3, .45, 24, 6), postMat); pole.position.set(x, 12, -z); scene.add(pole);
     const head = new THREE.Mesh(new THREE.BoxGeometry(4, 1.6, .6), headMat); head.position.set(x, 24, -z); head.rotation.y = side * .3; scene.add(head);
   }
 }
 
+/* ── 멀리 있는 볼거리: 500m 마다 네온 아치 · 연못 · 열기구 ─────────────── */
+{
+  const gateCols = { 500: 0x2de2e6, 1000: 0xffd23f, 1500: 0xff2e88, 2000: 0xb6ff3b };
+  for (const [z, col] of Object.entries(gateCols)) {
+    const g = new THREE.Group(); g.position.set(0, 0, -z); scene.add(g);
+    const mat = new THREE.MeshStandardMaterial({ color: col, emissive: col, emissiveIntensity: .9, roughness: .4 });
+    const arch = new THREE.Mesh(new THREE.TorusGeometry(36, .9, 10, 48, Math.PI), mat); g.add(arch);
+    for (const sx of [-1, 1]) { const base = new THREE.Mesh(new THREE.CylinderGeometry(1.6, 2, 3, 8), new THREE.MeshStandardMaterial({ color: 0x3b3f4a })); base.position.set(sx * 36, 1.5, 0); g.add(base); }
+    const tex = canvasTex(512, 160, (c, w, h) => {
+      c.fillStyle = '#0a021e'; c.fillRect(0, 0, w, h);
+      const hex = '#' + new THREE.Color(col).getHexString();
+      c.strokeStyle = hex; c.lineWidth = 10; c.strokeRect(8, 8, w - 16, h - 16);
+      c.fillStyle = hex; c.textAlign = 'center'; c.textBaseline = 'middle';
+      c.font = '700 92px Rajdhani, Arial, sans-serif'; c.fillText(z + 'm', w / 2, h / 2 - 8);
+      c.font = '700 30px Rajdhani, Arial, sans-serif'; c.fillStyle = '#ffffff'; c.fillText(z >= 2000 ? 'LEGEND ZONE' : 'NICE SHOT!', w / 2, h - 30);
+    });
+    const sign = new THREE.Mesh(new THREE.PlaneGeometry(20, 6.25), new THREE.MeshBasicMaterial({ map: tex, toneMapped: false, side: THREE.DoubleSide, color: new THREE.Color(1.3, 1.3, 1.3) }));
+    sign.position.set(0, 36, 0); g.add(sign);
+  }
+  // 연못 (모래 테두리)
+  const water = new THREE.MeshStandardMaterial({ color: 0x3b8fd9, roughness: .08, metalness: .35 });
+  const sand = new THREE.MeshStandardMaterial({ color: 0xe6d3a3, roughness: 1 });
+  [[640, -52, 20], [980, 50, 24], [1380, -48, 22], [1750, 52, 26]].forEach(([z, x, r]) => {
+    const s1 = new THREE.Mesh(new THREE.CircleGeometry(r + 3, 36), sand); s1.rotation.x = -Math.PI / 2; s1.position.set(x, .02, -z); s1.scale.set(1.5, 1, 1); scene.add(s1);
+    const w1 = new THREE.Mesh(new THREE.CircleGeometry(r, 36), water); w1.rotation.x = -Math.PI / 2; w1.position.set(x, .04, -z); w1.scale.set(1.5, 1, 1); scene.add(w1);
+  });
+  // 모래 벙커 (페어웨이 옆)
+  [[300, 26], [520, -27], [720, 25], [1080, -26], [1250, 27], [1700, -25]].forEach(([z, x]) => {
+    const b = new THREE.Mesh(new THREE.CircleGeometry(7, 28), sand); b.rotation.x = -Math.PI / 2; b.position.set(x, .03, -z); b.scale.set(1, 1.8, 1); scene.add(b);
+  });
+  // 열기구
+  const stripes = (a, b) => canvasTex(256, 128, (c, w, h) => { for (let k = 0; k < 8; k++) { c.fillStyle = k % 2 ? a : b; c.fillRect(k * w / 8, 0, w / 8 + 1, h); } });
+  const looks = [['#ff2e88', '#ffd23f'], ['#2de2e6', '#ffffff'], ['#b6ff3b', '#9b5cff'], ['#ff9f1c', '#ffffff']];
+  [[380, -60, 70], [720, 45, 95], [1100, -30, 120], [1500, 70, 85], [1900, -15, 130]].forEach(([z, x, y], i) => {
+    const [a, b] = looks[i % looks.length];
+    const g = new THREE.Group(); g.position.set(x, y, -z); scene.add(g);
+    const env = new THREE.Mesh(new THREE.SphereGeometry(9, 24, 18), new THREE.MeshStandardMaterial({ map: stripes(a, b), roughness: .6 })); env.scale.set(1, 1.2, 1); g.add(env);
+    const basket = new THREE.Mesh(new THREE.BoxGeometry(3, 2.2, 3), new THREE.MeshStandardMaterial({ color: 0x8b5a2b, roughness: .9 })); basket.position.y = -15; g.add(basket);
+    g.userData.bob = i;
+    balloons.push(g);
+  });
+}
 /* ═══════════════════════════════════════════════════════════════
  *  학생 골퍼 (과잠 입은 대학생)
  *  캐릭터 자체 좌표: 앞 = +z, 캐릭터의 왼쪽 = +x (= 목표 방향), 발바닥 y = 0
@@ -707,6 +752,7 @@ function frame(now, dt) {
     const t = (now / 900) % 1; landRing.visible = true; landRing.position.set(b.x, .05, -b.z);
     landRing.scale.setScalar(.6 + t * 3.5); ringMat.opacity = 1 - t;
   } else landRing.visible = false;
+  balloons.forEach(g => { g.position.y += Math.sin(now / 1500 + g.userData.bob) * .01; g.rotation.y += dt * .05; });
   updateTrail();
   updateCamera(now, dt);
   composer.render(dt);
