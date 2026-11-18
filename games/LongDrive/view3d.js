@@ -20,17 +20,17 @@ renderer.setPixelRatio(Math.min(devicePixelRatio || 1, MOBILE ? 1.5 : 1.75));
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.05;
+renderer.toneMappingExposure = 1.0;
 
 const scene = new THREE.Scene();
-const HAZE = new THREE.Color(0x5a2272);
-scene.fog = new THREE.Fog(HAZE, 140, 1050);
+const HAZE = new THREE.Color(0xbdd9f5);
+scene.fog = new THREE.Fog(HAZE, 220, 1500);
 scene.background = HAZE;
 const camera = new THREE.PerspectiveCamera(52, innerWidth / innerHeight, 0.05, 4000);
 
 const composer = new EffectComposer(renderer);
 composer.addPass(new RenderPass(scene, camera));
-const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth / 2, innerHeight / 2), 0.75, 0.45, 0.82);
+const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth / 2, innerHeight / 2), 0.35, 0.4, 0.92);
 composer.addPass(bloom);
 composer.addPass(new OutputPass());
 
@@ -64,7 +64,7 @@ function noise(g, w, h, n, a, colorFn) {
   g.globalAlpha = 1;
 }
 
-/* ── 하늘 · 별 · 해 · 산 (카메라를 따라다녀서 아주 멀리 있는 것처럼) ── */
+/* ── 낮 하늘 · 해 · 구름 · 산 (카메라를 따라다녀서 아주 멀리 있는 것처럼) ── */
 const far = new THREE.Group(); scene.add(far);
 const sky = new THREE.Mesh(new THREE.SphereGeometry(3000, 32, 20), new THREE.ShaderMaterial({
   side: THREE.BackSide, depthWrite: false, fog: false,
@@ -72,62 +72,67 @@ const sky = new THREE.Mesh(new THREE.SphereGeometry(3000, 32, 20), new THREE.Sha
   fragmentShader: `varying vec3 vP;
     void main(){
       float h = vP.y;
-      vec3 haze = vec3(0.353, 0.133, 0.447);
-      vec3 hot  = vec3(1.0, 0.36, 0.55);
-      vec3 mid  = vec3(0.20, 0.05, 0.38);
-      vec3 top  = vec3(0.015, 0.0, 0.06);
-      vec3 c = mix(haze, hot, smoothstep(-0.01, 0.03, h));
-      c = mix(c, mid, smoothstep(0.03, 0.22, h));
-      c = mix(c, top, smoothstep(0.22, 0.75, h));
-      if (h < -0.01) c = haze;
+      vec3 haze = vec3(0.74, 0.85, 0.96);
+      vec3 low  = vec3(0.47, 0.70, 0.96);
+      vec3 top  = vec3(0.12, 0.38, 0.86);
+      vec3 c = mix(haze, low, smoothstep(0.0, 0.07, h));
+      c = mix(c, top, smoothstep(0.12, 0.8, h));
+      if (h < 0.0) c = haze;
       gl_FragColor = vec4(c, 1.0);
     }`,
 }));
 sky.renderOrder = -10; far.add(sky);
+const SUN_DIR = V(-.45, .55, -.7).normalize();
+const sunTex = canvasTex(256, 256, (g, w, h) => {
+  const gr = g.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w / 2);
+  gr.addColorStop(0, 'rgba(255,255,250,1)'); gr.addColorStop(.18, 'rgba(255,252,230,1)'); gr.addColorStop(.3, 'rgba(255,240,190,.45)'); gr.addColorStop(1, 'rgba(255,240,200,0)');
+  g.fillStyle = gr; g.fillRect(0, 0, w, h);
+});
+const sun = new THREE.Sprite(new THREE.SpriteMaterial({ map: sunTex, fog: false, depthWrite: false, toneMapped: false, color: new THREE.Color(1.4, 1.4, 1.3) }));
+sun.scale.set(700, 700, 1); sun.position.copy(SUN_DIR).multiplyScalar(2600); far.add(sun);
+// 뭉게구름
 {
-  const n = 500, pos = new Float32Array(n * 3);
-  for (let i = 0; i < n; i++) {
-    const a = Math.random() * Math.PI * 2, y = 0.12 + Math.random() * 0.88, r = Math.sqrt(1 - y * y);
-    pos.set([Math.cos(a) * r * 2800, y * 2800, Math.sin(a) * r * 2800], i * 3);
+  const cloudTex = canvasTex(256, 128, (g, w, h) => {
+    for (let i = 0; i < 14; i++) {
+      const x = w * (.18 + Math.random() * .64), y = h * (.45 + Math.random() * .25), r = h * (.18 + Math.random() * .22);
+      const gr = g.createRadialGradient(x, y, 0, x, y, r); gr.addColorStop(0, 'rgba(255,255,255,.95)'); gr.addColorStop(.6, 'rgba(255,255,255,.7)'); gr.addColorStop(1, 'rgba(255,255,255,0)');
+      g.fillStyle = gr; g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill();
+    }
+    g.globalCompositeOperation = 'source-atop'; const sh = g.createLinearGradient(0, 0, 0, h); sh.addColorStop(.4, 'rgba(255,255,255,0)'); sh.addColorStop(1, 'rgba(170,190,215,.6)'); g.fillStyle = sh; g.fillRect(0, 0, w, h);
+  });
+  let s = 21; const r = () => (s = (s * 16807) % 2147483647) / 2147483647;
+  for (let i = 0; i < 22; i++) {
+    const ang = -Math.PI / 2 + (r() - .5) * Math.PI * 1.6, d = 1500 + r() * 900, hgt = 160 + r() * 520;
+    const c = new THREE.Sprite(new THREE.SpriteMaterial({ map: cloudTex, fog: false, depthWrite: false, transparent: true, opacity: .75 + r() * .25 }));
+    const w = 380 + r() * 520; c.scale.set(w, w * .45, 1); c.position.set(Math.cos(ang) * d, hgt, Math.sin(ang) * d); far.add(c);
   }
-  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-  far.add(new THREE.Points(g, new THREE.PointsMaterial({ color: 0xffffff, size: 1.6, sizeAttenuation: false, fog: false, transparent: true, opacity: .85 })));
 }
-// 줄무늬 네온 해
-const sun = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({
-  map: canvasTex(512, 512, (g, w, h) => {
-    const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, '#ffe066'); gr.addColorStop(.55, '#ff4f8b'); gr.addColorStop(1, '#a01c8c');
-    g.fillStyle = gr; g.beginPath(); g.arc(w / 2, h / 2, w / 2 - 2, 0, Math.PI * 2); g.fill();
-    g.globalCompositeOperation = 'destination-out';
-    for (let i = 0; i < 8; i++) { const y = h * (.52 + i * .062); g.fillRect(0, y, w, 4 + i * 2.6); }
-  }),
-  transparent: true, fog: false, depthWrite: false, toneMapped: false, color: new THREE.Color(1.6, 1.6, 1.6),
-}));
-sun.scale.set(620, 620, 1); sun.position.set(0, 150, -2300); far.add(sun);
-// 산 (네온 테두리)
+// 먼 산 (파르스름하게, 눈 덮인 꼭대기)
 {
-  const mMat = new THREE.MeshBasicMaterial({ color: 0x220a3d, fog: false });
-  const eMat = new THREE.LineBasicMaterial({ color: glow(0xff2e88, 1.6), fog: false, toneMapped: false, transparent: true, opacity: .8 });
+  const mMat = new THREE.MeshLambertMaterial({ color: 0x8aa6c4, fog: false, flatShading: true });
+  const mMat2 = new THREE.MeshLambertMaterial({ color: 0x6f9a86, fog: false, flatShading: true });
+  const snow = new THREE.MeshLambertMaterial({ color: 0xffffff, fog: false, flatShading: true });
   let s = 11; const r = () => (s = (s * 16807) % 2147483647) / 2147483647;
   for (let i = 0; i < 26; i++) {
     const ang = -Math.PI / 2 + (i / 25 - .5) * Math.PI * 1.25 + (r() - .5) * .08;
-    const d = 1700 + r() * 300, hgt = 90 + r() * 200, rad = 160 + r() * 200;
-    const geo = new THREE.ConeGeometry(rad, hgt, 4 + Math.floor(r() * 3), 1);
-    const m = new THREE.Mesh(geo, mMat); m.position.set(Math.cos(ang) * d, hgt / 2 - 8, Math.sin(ang) * d); m.rotation.y = r() * 3;
-    const e = new THREE.LineSegments(new THREE.EdgesGeometry(geo), eMat); m.add(e);
+    const near = i % 3 === 0, d = near ? 1450 + r() * 150 : 1750 + r() * 300, hgt = near ? 70 + r() * 90 : 120 + r() * 220, rad = 170 + r() * 220;
+    const seg = 5 + Math.floor(r() * 3);
+    const m = new THREE.Mesh(new THREE.ConeGeometry(rad, hgt, seg, 1), near ? mMat2 : mMat);
+    m.position.set(Math.cos(ang) * d, hgt / 2 - 8, Math.sin(ang) * d); m.rotation.y = r() * 3;
+    if (!near && hgt > 200) { const cap = new THREE.Mesh(new THREE.ConeGeometry(rad * .26, hgt * .26, seg, 1), snow); cap.position.y = hgt * .37; m.add(cap); }
     far.add(m);
   }
 }
 
-/* ── 조명 ─────────────────────────────────────────────────────────── */
-scene.add(new THREE.HemisphereLight(0xb79cff, 0x1f4a26, 1.15));
-const key = new THREE.DirectionalLight(0xfff1e0, 2.3);   // 타석 뒤 조명탑
+/* ── 조명 (한낮 햇빛) ─────────────────────────────────────────────── */
+scene.add(new THREE.HemisphereLight(0xd6ebff, 0x4f7f35, 1.35));
+const key = new THREE.DirectionalLight(0xfff6e6, 2.8);   // 햇빛
 key.position.set(-8, 18, 14); key.castShadow = true;
 key.shadow.mapSize.set(MOBILE ? 1024 : 2048, MOBILE ? 1024 : 2048);
 Object.assign(key.shadow.camera, { left: -4, right: 4, top: 4, bottom: -4, near: 1, far: 60 });
 key.shadow.bias = -0.0015; key.shadow.normalBias = 0.05;
 scene.add(key); scene.add(key.target);
-const rim = new THREE.DirectionalLight(0xff4fa0, 1.4);   // 앞쪽 해 방향 분홍 빛
+const rim = new THREE.DirectionalLight(0xffffff, .7);   // 앞쪽에서 오는 하늘빛
 rim.position.set(0, 12, -40); scene.add(rim);
 
 /* ── 땅: 러프 · 페어웨이 · 타석 ───────────────────────────────────── */
@@ -164,7 +169,7 @@ fairway.rotation.x = -Math.PI / 2; fairway.position.set(0, 0.01, -700); fairway.
 }
 
 // 타석 (데크 · 매트 · 칸막이)
-const deck = new THREE.Mesh(new THREE.BoxGeometry(14, .3, 9), new THREE.MeshStandardMaterial({ color: 0x3d3560, roughness: .9 }));
+const deck = new THREE.Mesh(new THREE.BoxGeometry(14, .3, 9), new THREE.MeshStandardMaterial({ color: 0x9aa0ad, roughness: .9 }));
 deck.position.set(0, -.14, 3.6); scene.add(deck);
 const matTex = canvasTex(256, 256, (g, w, h) => {
   g.fillStyle = '#1f6b37'; g.fillRect(0, 0, w, h);
@@ -218,7 +223,7 @@ mat.position.set(-.45, .015, .1); mat.receiveShadow = true; scene.add(mat);
   // 나무
   let s = 5; const r = () => (s = (s * 16807) % 2147483647) / 2147483647;
   const treeGeo = new THREE.ConeGeometry(1, 1, 7); treeGeo.translate(0, .5, 0);
-  const trees = new THREE.InstancedMesh(treeGeo, new THREE.MeshStandardMaterial({ color: 0x1b5e4a, roughness: .9, flatShading: true, emissive: 0x0a2a2a }), 260);
+  const trees = new THREE.InstancedMesh(treeGeo, new THREE.MeshStandardMaterial({ color: 0x2f7a3e, roughness: .9, flatShading: true }), 260);
   const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(); let n = 0;
   for (let z = 10; z < 1000 && n < 260; z += 9 + r() * 12) for (const side of [-1, 1]) {
     if (n >= 260 || r() < .15) continue;
@@ -227,7 +232,7 @@ mat.position.set(-.45, .015, .1); mat.receiveShadow = true; scene.add(mat);
   }
   trees.count = n; scene.add(trees);
   // 조명탑
-  const headMat = new THREE.MeshBasicMaterial({ color: glow(0xfff4c8, 3), toneMapped: false });
+  const headMat = new THREE.MeshStandardMaterial({ color: 0xe8eef5, roughness: .4 });   // 낮이라 조명은 꺼져 있어요
   for (let z = 60; z < 900; z += 120) for (const side of [-1, 1]) {
     const x = side * (OB_X + 5);
     const pole = new THREE.Mesh(new THREE.CylinderGeometry(.3, .45, 24, 6), postMat); pole.position.set(x, 12, -z); scene.add(pole);
@@ -306,28 +311,105 @@ function shoe() {
   g.add(top, sole); golfer.add(g); return g;
 }
 parts.footL = shoe(); parts.footR = shoe();
-// 골프채
-const club = {
-  grip: limb(.016, .014, M(0x111111, { roughness: .9 })),
-  shaft: limb(.007, .006, M(0xc9ccd6, { metalness: .9, roughness: .25 })),
-  head: new THREE.Mesh(new RoundedBoxGeometry(.12, .05, .085, 3, .02), M(0x222222, { metalness: .6, roughness: .3 })),
-};
-club.head.castShadow = true; golfer.add(club.head);
-const CLUB_LOOK = [
-  { head: 0x7a4b25, rough: .7, metal: 0, shaft: 0x8b6b45 },
-  { head: 0xbfc3cc, rough: .3, metal: .9, shaft: 0xd8dbe2 },
-  { head: 0x6d7480, rough: .35, metal: .9, shaft: 0xb4b8c2 },
-  { head: 0x8fb0cc, rough: .25, metal: .95, shaft: 0xc9d6e2 },
-  { head: 0x141414, rough: .25, metal: .6, shaft: 0x2a2a2a, emissive: 0x2de2e6 },
-  { head: 0x141414, rough: .2, metal: .7, shaft: 0x1a1a1a, emissive: 0xb6ff3b },
-];
+/* ═══════════════════════════════════════════════════════════════
+ *  뼈 골프채 4개 (index.html CLUBS 와 같은 순서)
+ *    0 어깨뼈 드라이버   위팔뼈를 잡고 어깨뼈로 쳐요
+ *    1 손뼈 드라이버     위팔뼈 · 노뼈 · 자뼈 샤프트, 손이 헤드
+ *    2 다리뼈 드라이버   넙다리뼈 · 정강뼈 · 종아리뼈 샤프트, 발이 헤드
+ *    3 척추 드라이버     목뼈 쪽을 잡고 엉치뼈 · 꼬리뼈로 쳐요 (빛나요)
+ *  채 좌표: 원점 = 헤드, +Y = 손잡이→헤드 방향(샤프트는 -Y 쪽), +Z = 공을 치는 면, +X = 헤드 끝(토우)
+ *  헤드 좌표(head 그룹): 어드레스 때 x = 땅과 나란히 바깥쪽, y = 아래(땅 쪽), z = 치는 면
+ * ═══════════════════════════════════════════════════════════════ */
+const BONE = M(0xefe4c9, { roughness: .55 });
+const CART = M(0xa9cfe6, { roughness: .35 });                                   // 연골 (파르스름)
+const BONE_LEG = M(0xf2a65a, { roughness: .45, emissive: 0xff7a1a, emissiveIntensity: .45 });   // 척추 채: 주황빛
+const DISC = new THREE.MeshStandardMaterial({ color: 0x7fe9ff, emissive: 0x2de2e6, emissiveIntensity: 1.4, roughness: .3 });
+const clubGroups = [];
 let lookClub = -1;
+function bone(g, a, b, r1, r2 = r1, mat = BONE) {   // 두 점 사이 원기둥 뼈
+  const d = V().subVectors(b, a), L = d.length();
+  const geo = new THREE.CylinderGeometry(r2, r1, L, 10); geo.translate(0, L / 2, 0);
+  const m = new THREE.Mesh(geo, mat); m.position.copy(a); m.quaternion.setFromUnitVectors(UP, d.normalize()); m.castShadow = true; g.add(m); return m;
+}
+function knob(g, p, r, mat = BONE, s) { const m = new THREE.Mesh(new THREE.SphereGeometry(r, 14, 10), mat); m.position.copy(p); if (s) m.scale.set(...s); m.castShadow = true; g.add(m); return m; }
+function condyles(g, p, r, axis = V(0, 0, 1), mat = BONE) { knob(g, p.clone().addScaledVector(axis, r * .8), r, mat); knob(g, p.clone().addScaledVector(axis, -r * .8), r, mat); }
+function flat(g, pts, depth, mat = BONE) {   // (x, 위) 점들로 만든 납작한 뼈 판 (y 는 아래가 + 라서 뒤집어 넣어요)
+  const sh = new THREE.Shape(pts.map(([x, u]) => new THREE.Vector2(x, -u)));
+  const geo = new THREE.ExtrudeGeometry(sh, { depth, bevelEnabled: true, bevelThickness: depth * .4, bevelSize: depth * .5, bevelSegments: 2, curveSegments: 6 });
+  geo.translate(0, 0, -depth / 2);
+  const m = new THREE.Mesh(geo, mat); m.castShadow = true; g.add(m); return m;
+}
+const P = (x, up, z = 0) => V(x, -up, z);   // 헤드 좌표에서 "위"는 -y
+function buildClub(i) {
+  const g = new THREE.Group(), head = new THREE.Group();
+  head.rotation.z = Math.atan2(.47, .88);   // 샤프트가 기울어져도 헤드 바닥은 땅과 나란히
+  g.add(head);
+  const L = CLUB_LEN + .08, Y = (t) => V(0, -L * t, 0);   // t = 0 헤드, 1 손잡이 끝
+  if (i === 0) {
+    // 위팔뼈: 손잡이 = 아래쪽 끝(관절융기), 헤드 쪽 = 위팔뼈머리 → 어깨뼈 관절오목에 붙어요
+    bone(g, Y(.06), Y(.97), .014, .011); condyles(g, Y(.98), .018, V(1, 0, 0));
+    knob(g, Y(.035), .028, CART);
+    flat(head, [[0, .035], [.03, .075], [.2, .135], [.17, .02], [.13, -.035], [.03, -.005]], .012);   // 어깨뼈 몸통
+    bone(head, P(.17, .105, -.016), P(.025, .095, -.016), .007, .011);                              // 어깨뼈가시 (뒤쪽 능선)
+    knob(head, P(.012, .093, -.012), .02, BONE, [1.4, .7, 1]);                                       // 봉우리
+    bone(head, P(.03, .07, .012), P(.0, .08, .03), .006, .008);                                      // 부리돌기 (앞쪽)
+    knob(head, P(.004, .03, 0), .022, CART, [.6, 1.2, 1.1]);                                         // 관절오목
+  } else if (i === 1) {
+    // 위팔뼈 (손잡이 = 위팔뼈머리) → 팔꿈치 → 노뼈 · 자뼈 → 손목 → 손 (손바닥이 치는 면)
+    knob(g, Y(.99), .026); bone(g, Y(.55), Y(.97), .012, .011); condyles(g, Y(.53), .018, V(0, 0, 1));
+    knob(g, Y(.52).add(V(-.012, 0, -.008)), .014);                                                   // 팔꿈치머리
+    bone(g, Y(.05), Y(.51).add(V(0, 0, .012)), .009, .007);                                          // 노뼈
+    bone(g, Y(.05).add(V(0, 0, -.012)), Y(.51).add(V(0, 0, -.012)), .007, .009);                     // 자뼈
+    for (let k = 0; k < 8; k++) knob(head, P(-.005 + (k % 4) * .012, .045 - Math.floor(k / 4) * .016 + (k % 2) * .004, 0), .009, CART);   // 손목뼈
+    for (let f = 0; f < 4; f++) {   // 손허리뼈 + 손가락뼈
+      const u0 = .062 - f * .021, u1 = .068 - f * .026;
+      const pts = [P(.03, u0), P(.1, u1), P(.142, u1 - .002 * f), P(.168 - f * .006, u1 - .004 * f), P(.186 - f * .01, u1 - .005 * f)];
+      for (let k = 0; k < 4; k++) { bone(head, pts[k], pts[k + 1], .0065 - k * .0008); knob(head, pts[k + 1], .007 - k * .0009); }
+    }
+    const th = [P(.02, .072), P(.05, .1), P(.08, .125), P(.1, .14)];   // 엄지
+    for (let k = 0; k < 3; k++) { bone(head, th[k], th[k + 1], .007 - k * .001); knob(head, th[k + 1], .0075 - k * .001); }
+  } else if (i === 2) {
+    // 넙다리뼈 (손잡이 = 넙다리뼈머리) → 무릎 → 정강뼈 · 종아리뼈 → 발목 → 발 (발가락이 토우 쪽)
+    knob(g, Y(.99).add(V(.018, 0, 0)), .027); bone(g, Y(.99).add(V(.016, 0, 0)), Y(.95), .011);     // 머리 · 목
+    knob(g, Y(.95).add(V(-.012, 0, 0)), .016);                                                         // 큰돌기
+    bone(g, Y(.53), Y(.95), .015, .014); condyles(g, Y(.51), .02, V(0, 0, 1));
+    knob(g, Y(.51).add(V(.022, 0, 0)), .014, BONE, [.6, 1.2, 1]);                                       // 무릎뼈
+    bone(g, Y(.06), Y(.49), .011, .015);                                                                // 정강뼈
+    bone(g, Y(.07).add(V(-.012, 0, -.016)), Y(.47).add(V(-.012, 0, -.016)), .005);                     // 종아리뼈
+    head.position.z = -.012;
+    knob(head, P(.0, .045), .022);                                                                      // 목말뼈
+    knob(head, P(-.035, .02), .03, BONE, [1.4, 1, .9]);                                                 // 발꿈치뼈
+    knob(head, P(.03, .035), .02, CART, [1.2, .8, 1.4]);                                                // 발목뼈들
+    for (let f = 0; f < 5; f++) {
+      const z = (f - 2) * .013, u = .035 - Math.abs(f - 2) * .002;
+      const pts = [P(.045, u, z * .8), P(.115, .014, z), P(.14, .011, z * 1.1), P(.158 - f * .004, .009, z * 1.15)];
+      for (let k = 0; k < 3; k++) { bone(head, pts[k], pts[k + 1], (f === 0 ? .009 : .0065) - k * .001); knob(head, pts[k + 1], (f === 0 ? .009 : .007) - k * .001); }
+    }
+  } else {
+    // 척추: 손잡이 = 목뼈(위), 아래로 등뼈 · 허리뼈, 헤드 = 엉치뼈 + 꼬리뼈. 원반(사이원반)이 빛나요
+    const n = 24;
+    for (let k = 0; k < n; k++) {
+      const t = 1 - (k + .5) / n * .92, y = -L * t;
+      const curve = .018 * Math.sin((1 - t) * Math.PI * 2.2);    // 목·허리는 앞으로, 등은 뒤로 굽은 S자
+      const r = .011 + .013 * (k / n), hh = L * .92 / n;
+      const body = new THREE.Mesh(new THREE.CylinderGeometry(r, r, hh * .68, 12), BONE_LEG); body.position.set(curve, y, 0); body.castShadow = true; g.add(body);
+      const disc = new THREE.Mesh(new THREE.CylinderGeometry(r * .92, r * .92, hh * .26, 12), DISC); disc.position.set(curve, y + hh * .5, 0); g.add(disc);
+      const sp = new THREE.Mesh(new THREE.BoxGeometry(.006, .006, .02 + r), BONE_LEG); sp.position.set(curve - r * .4, y + hh * .15, -r - .008); sp.rotation.x = -.5; g.add(sp);   // 가시돌기
+      if (k > 6) for (const sx of [-1, 1]) { const tp = new THREE.Mesh(new THREE.BoxGeometry(.006, .005, .014), BONE_LEG); tp.position.set(curve + sx * (r + .006), y, -r * .3); tp.rotation.y = sx * .9; g.add(tp); }   // 가로돌기
+    }
+    flat(head, [[-.015, .075], [.15, .075], [.12, .045], [.075, -.005], [.045, .0], [.0, .03]], .02, BONE_LEG);   // 엉치뼈
+    for (let k = 0; k < 4; k++) for (const z of [-.006, .006]) knob(head, P(.035 + k * .025, .052 - k * .008, .016 * Math.sign(z) + z), .005, DISC);   // 엉치뼈구멍(빛)
+    const cx = [P(.082, -.008), P(.102, -.016), P(.12, -.02), P(.135, -.018)];
+    cx.forEach((p, k) => knob(head, p, .011 - k * .0018, BONE_LEG));                                   // 꼬리뼈
+  }
+  head.scale.setScalar([1.15, 1.25, 1.45, 1.3][i]);   // 헤드는 잘 보이게 조금 크게
+  g.traverse(o => { if (o.isMesh) o.castShadow = true; });
+  golfer.add(g); return g;
+}
 function applyClubLook(i) {
-  const L = CLUB_LOOK[i] || CLUB_LOOK[0];
-  club.head.material.color.setHex(L.head); club.head.material.roughness = L.rough; club.head.material.metalness = L.metal;
-  club.head.material.emissive.setHex(L.emissive || 0); club.head.material.emissiveIntensity = L.emissive ? 1.6 : 0;
-  club.shaft.material.color.setHex(L.shaft);
-  club.shaft.material.emissive.setHex(L.emissive || 0); club.shaft.material.emissiveIntensity = L.emissive ? .8 : 0;
+  i = Math.max(0, Math.min(3, i | 0));
+  if (!clubGroups[i]) clubGroups[i] = buildClub(i);
+  clubGroups.forEach((g, k) => { if (g) g.visible = k === i; });
   lookClub = i;
 }
 
@@ -348,7 +430,7 @@ const D = V(0, -.88, .47).normalize(), T = V(-1, 0, 0), N = V().crossVectors(D, 
 const R_HANDS = .64;
 const CLUB_LEN = (C0.y - .035) / -D.y - R_HANDS;   // 어드레스에서 헤드 바닥이 땅에 닿는 길이
 const toeAt = (dir) => V().addScaledVector(dir, .47).addScaledVector(N, -.88).normalize();
-const BALL_LOCAL = C0.clone().addScaledVector(D, R_HANDS + CLUB_LEN).addScaledVector(toeAt(D), .045).add(V(.05, 0, 0));
+const BALL_LOCAL = C0.clone().addScaledVector(D, R_HANDS + CLUB_LEN).addScaledVector(toeAt(D), .1).add(V(.05, 0, 0));   // 공은 헤드 가운데쯤
 // 공(월드 0, y, 0)이 클럽 페이스 앞에 오도록 캐릭터를 세워요. 캐릭터는 +x(화면 오른쪽 = 공 쪽)를 봐요.
 golfer.rotation.y = Math.PI / 2;
 golfer.position.set(-BALL_LOCAL.z, .03, BALL_LOCAL.x);
@@ -402,11 +484,13 @@ function poseGolfer(now) {
   parts.footR.position.set(ankR.x, ankR.y - .085, ankR.z - .04); parts.footR.rotation.set(follow * .7, -.15 + follow * .5, 0);
 
   // 골프채
-  const gripTop = hands.clone().addScaledVector(cdir, -.07), gripEnd = hands.clone().addScaledVector(cdir, .2), end = hands.clone().addScaledVector(cdir, CLUB_LEN);
-  place(club.grip, gripTop, gripEnd); place(club.shaft, gripEnd, end);
-  const toe = toeAt(cdir), face = V().crossVectors(cdir, N).normalize(), up = V().crossVectors(face, toe).normalize();
-  club.head.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(toe, up, face));
-  club.head.position.copy(end).addScaledVector(toe, .045).addScaledVector(up, .012);
+  const g = clubGroups[lookClub];
+  if (g) {
+    const end = hands.clone().addScaledVector(cdir, CLUB_LEN);
+    const face = V().crossVectors(cdir, N).normalize(), xAxis = N.clone().negate();
+    g.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(xAxis, cdir, face));
+    g.position.copy(end);
+  }
 }
 
 /* ── 공 · 꼬리 · 그림자 · 떨어진 자리 ─────────────────────────────── */
@@ -463,7 +547,7 @@ function pickTeeCam() { const t = innerWidth / innerHeight < .8 ? TEE_TALL : TEE
 pickTeeCam(); addEventListener('resize', pickTeeCam);
 const camPos = TEE_CAM.pos.clone(), camLook = TEE_CAM.look.clone();
 camera.position.copy(camPos); camera.lookAt(camLook);
-let prevPhase = '';
+let prevPhase = '', DBG = null;   // DBG: 확인용 카메라 (GolfView.debugCam)
 function updateCamera(now, dt) {
   const ph = phase, b = ball;
   let pos = TEE_CAM.pos, look = TEE_CAM.look;
@@ -477,6 +561,7 @@ function updateCamera(now, dt) {
   } else {
     camPos.copy(pos); camLook.copy(look);
   }
+  if (DBG) { camPos.copy(DBG.pos); camLook.copy(DBG.look); }
   camera.position.copy(camPos); camera.lookAt(camLook);
   // 그림자 카메라는 타석에 고정
   key.target.position.set(-.6, 0, 0); key.position.set(-8.6, 18, 14);
@@ -513,4 +598,4 @@ function frame(now, dt) {
   updateCamera(now, dt);
   composer.render(dt);
 }
-window.GolfView = { frame, ready: true };
+window.GolfView = { frame, ready: true, debugCam: (pos, look) => { DBG = pos ? { pos: V(...pos), look: V(...look) } : null; } };
