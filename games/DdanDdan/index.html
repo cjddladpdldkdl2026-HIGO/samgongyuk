@@ -897,7 +897,7 @@ function judge(phrase, k, rating) {
   if (onScreen && el) {   // a little word pops out of the card that was hit
     const r = el.getBoundingClientRect();
     const miss = rating === 'miss';
-    sticker(pick(HIT_WORDS[rating]), { small: !miss, oops: miss, x: (r.left + r.width / 2) / innerWidth * 100, y: (r.top - (miss ? 60 : 30)) / innerHeight * 100,
+    if (!miss) sticker(pick(HIT_WORDS[rating]), { small: !miss, oops: miss, x: (r.left + r.width / 2) / innerWidth * 100, y: (r.top - (miss ? 60 : 30)) / innerHeight * 100,
       color: rating === 'perfect' ? '#8fd36a' : rating === 'good' ? '#7fd6d3' : '#ff4d4d' });
     if (miss) {   // shake the card and flash the screen edge red
       el.classList.remove('shake'); void el.offsetWidth; el.classList.add('shake');
