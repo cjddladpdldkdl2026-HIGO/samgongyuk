@@ -856,7 +856,7 @@ function enterBar(i) {
   if (bar.type === 'break') { phase.className = 'phase wait'; phase.textContent = `LEVEL ${bar.level}!`; $('level').textContent = bar.level; bubble('레벨 업! 더 많이~'); drawSlots(null); party(0.8, { x: .5, y: .4 }); }
   if (bar.type === 'outro') { phase.className = 'phase wait'; phase.textContent = 'FINISH!'; bubble('최고였어! 💖'); drawSlots(null); }
   if (bar.type === 'call') { phase.className = 'phase call'; phase.textContent = '👂 잘 들어 봐!'; drawSlots(bar.phrase, 'call'); bubble(bar.phrase.pieces.map(p => p.read + '!').join(' ')); $('level').textContent = bar.phrase.level; }
-  if (bar.type === 'resp') { phase.className = 'phase resp'; phase.textContent = '🎤 따라 해!'; drawSlots(bar.phrase, 'resp'); bubble('공이 닿을 때 외쳐!'); openResponse(bar, i); }
+  if (bar.type === 'resp') { phase.className = 'phase resp'; phase.textContent = '🎤 따라 해!'; drawSlots(bar.phrase, 'resp'); bubble('빨개진 박스를 외쳐!'); openResponse(bar, i); }
 }
 function drawSlots(phrase, kind) {
   const box = $('slots');
