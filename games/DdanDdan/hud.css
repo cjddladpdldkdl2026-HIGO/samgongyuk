@@ -298,3 +298,6 @@ body.video .prog { align-self: flex-end; margin-right: 14px; }
   background: var(--brackets), linear-gradient(180deg, rgba(255, 79, 134, .55), rgba(255, 79, 134, .22)), var(--hud-bg);
   box-shadow: 0 0 0 2px #ff7aa3, 0 0 26px rgba(255, 79, 134, .75) !important; }
 .slot.now .en { color: #ffd0de; }
+
+/* 2026-11-18 (4): 3D part label at the bottom centre of the picture */
+.anatLabel { left: 50%; top: auto; bottom: 14px; transform: translateX(-50%); align-items: center; text-align: center; white-space: nowrap; }
