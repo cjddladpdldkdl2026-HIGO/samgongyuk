@@ -1009,7 +1009,7 @@ document.addEventListener("keydown", (e) => { if (e.key === "Escape") $("modalBg
 $("search").oninput = (e) => renderRows(e.target.value);
 
 /* ── 🏆 랭킹: 각 게임이 이 브라우저에 저장한 최고 점수를 모아서 높은 순으로 ── */
-const DIFF_KO = { easy: "쉬움", normal: "보통", medium: "보통", hard: "어려움" };
+const DIFF_KO = { easy: "쉬움", normal: "보통", medium: "중간", hard: "어려움" };
 function readJSON(key) { try { return JSON.parse(localStorage.getItem(key)) || {}; } catch { return {}; } }
 function collectScores() {
   const rows = [];

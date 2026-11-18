@@ -899,9 +899,9 @@ const PLAYERS = [
 ];
 
 const DIFFICULTIES = [
-  { id: 'easy',   label: 'Easy' },
-  { id: 'medium', label: 'Medium' },
-  { id: 'hard',   label: 'Hard' },
+  { id: 'easy',   label: '쉬움' },
+  { id: 'medium', label: '중간' },
+  { id: 'hard',   label: '어려움' },
 ];
 
 // Per-difficulty tuning. `radius` is world-units, `life` is ms a target lives
@@ -3510,7 +3510,7 @@ const Ranking = (() => {
   const NICK = 'landmark-nickname';
   // 삼공육 로그인(auth.js)이 있으면 계정 랭킹, 불러오지 못했을 때만 예전 Supabase(닉네임 입력) 랭킹
   const AUTH = !!(window.SamAuth && SamAuth.client);
-  const LABEL = { easy: '쉬움', medium: '보통', hard: '어려움' };
+  const LABEL = { easy: '쉬움', medium: '중간', hard: '어려움' };
   const fmt = (n) => Number(n).toLocaleString('en-US');
   const H = { apikey: KEY_, 'Content-Type': 'application/json' };
   const esc = (t) => String(t).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));

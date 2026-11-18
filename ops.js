@@ -16,7 +16,7 @@
     { id: 'neoege', ko: '너에게 닿기를', ic: '💘' },
     { id: 'wizard', ko: '뭐라구요!?', ic: '🧙' },
   ];
-  const DIFF = { easy: '쉬움', normal: '보통', medium: '보통', hard: '어려움' };
+  const DIFF = { easy: '쉬움', normal: '보통', medium: '중간', hard: '어려움' };
   const REGION = { arm: '어깨·위팔', forearm: '아래팔', hip: '엉덩이·넙다리', leg: '종아리·발' };
   const modeKo = (game, m) => {
     if (!m) return '기본';
