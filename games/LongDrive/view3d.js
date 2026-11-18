@@ -248,21 +248,29 @@ mat.position.set(-.45, .015, .1); mat.receiveShadow = true; scene.add(mat);
     for (const lx of [-W * .25, W * .25]) { const leg = new THREE.Mesh(new THREE.BoxGeometry(.6, BOTTOM, .6), legMat); leg.position.set(lx, BOTTOM / 2, -.1); leg.castShadow = true; g.add(leg); }
   }
   // 티 옆 바닥 간판 (뒤로 비스듬히 누운 세모 간판)
-  const tex = canvasTex(512, 200, (c, w, h) => {
-    const gr = c.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, '#16285e'); gr.addColorStop(1, '#0b1638');
+  // 글꼴(Pretendard)을 다 받은 뒤에 다시 그려요 — 안 그러면 일부 글자만 다른 글꼴로 나와요
+  const signCv = document.createElement('canvas'); signCv.width = 1024; signCv.height = 400;
+  const F1 = '800 188px "Pretendard Variable", Pretendard, sans-serif', F2 = '600 38px "Pretendard Variable", Pretendard, sans-serif';
+  const drawSign = () => {
+    const c = signCv.getContext('2d'), w = signCv.width, h = signCv.height;
+    const gr = c.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, '#1b2f6b'); gr.addColorStop(1, '#0f1d47');
     c.fillStyle = gr; c.fillRect(0, 0, w, h);
-    c.fillStyle = '#2de2e6'; c.fillRect(0, 0, w, 10); c.fillRect(0, h - 10, w, 10);
+    c.strokeStyle = 'rgba(255,255,255,.55)'; c.lineWidth = 4; c.strokeRect(18, 18, w - 36, h - 36);
     c.textAlign = 'center'; c.textBaseline = 'middle';
-    c.fillStyle = '#ffffff'; c.font = '400 96px "Black Han Sans", sans-serif'; c.fillText('물리치료과', w / 2, h / 2 + 6);
-    c.fillStyle = 'rgba(45,226,230,.9)'; c.font = '700 22px Rajdhani, Arial, sans-serif'; c.fillText('CHEONGAM UNIV. PHYSICAL THERAPY', w / 2, h - 28);
-  });
-  const sg = new THREE.Group(); sg.position.set(-1.8, 0, -11); sg.rotation.y = .12; scene.add(sg);   // 타석 바로 앞 잔디 (공은 위로 넘어가요)
+    c.fillStyle = '#ffffff'; c.font = F1; c.fillText('물리치료과', w / 2, h / 2 - 18);
+    c.fillStyle = '#c9d3ea'; c.font = F2; c.fillText('CHEONGAM UNIV.  PHYSICAL THERAPY', w / 2, h - 66);
+  };
+  drawSign();
+  const tex = new THREE.CanvasTexture(signCv); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+  Promise.all([document.fonts.load(F1, '물리치료과'), document.fonts.load(F2, 'CHEONGAM UNIV. PHYSICAL THERAPY')])
+    .then(() => { drawSign(); tex.needsUpdate = true; }).catch(() => {});
+  const sg = new THREE.Group(); sg.position.set(-3.6, 0, -14); sg.rotation.y = .22; scene.add(sg);   // 타석 앞 왼쪽 잔디
   const SW = 3.2, SH = 1.25, tilt = .55;   // 폭 · 경사면 길이 · 뒤로 누운 각도
   const d = Math.sin(tilt) * SH, h = Math.cos(tilt) * SH;   // 옆에서 본 세모: 앞 아래 (0,0) · 뒤 아래 (-d,0) · 뒤 위 (-d,h)
   const wedge = new THREE.Shape([new THREE.Vector2(0, 0), new THREE.Vector2(-d, 0), new THREE.Vector2(-d, h)]);
   const body = new THREE.Mesh(new THREE.ExtrudeGeometry(wedge, { depth: SW, bevelEnabled: false }), new THREE.MeshStandardMaterial({ color: 0x0b1638, roughness: .6 }));
   body.rotation.y = -Math.PI / 2; body.position.x = SW / 2; body.castShadow = true; sg.add(body);
-  const face = new THREE.Mesh(new THREE.PlaneGeometry(SW, SH), new THREE.MeshBasicMaterial({ map: tex, toneMapped: false }));
+  const face = new THREE.Mesh(new THREE.PlaneGeometry(SW, SH), new THREE.MeshBasicMaterial({ map: tex, color: new THREE.Color(.88, .88, .88) /* 형광 빛 번짐 없이 */ }));
   face.rotation.x = -tilt; face.position.set(0, h / 2 + Math.sin(tilt) * .012, -d / 2 + Math.cos(tilt) * .012); sg.add(face);
 }
 /* ── 멀리 있는 볼거리: 500m 마다 네온 아치 · 연못 · 열기구 ─────────────── */
