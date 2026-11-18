@@ -1,4 +1,4 @@
-/* 롱드라이브 — 3D 화면 (three.js)
+/* 사랑하는 그대에게 기대세요 — 3D 화면 (three.js)
  *
  *  index.html 의 게임 규칙(공 물리·스윙 게이지·상점·랭킹)은 그대로 두고, 그리는 것만 여기서 해요.
  *  index.html 의 전역 변수(let/const — window.xxx 가 아니라 이름 그대로)(phase, meterPos, setPower, downAt, hitAt, ball, trail, lastShot, S, CLUBS, BALLS)을 읽어요.

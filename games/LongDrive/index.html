@@ -3,14 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<title>롱드라이브 — 삼공육</title>
+<title>사랑하는 그대에게 기대세요 — 삼공육</title>
 <meta name="theme-color" content="#0b0221">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Rajdhani:wght@600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <style>
-/* 롱드라이브 — 문제 풀고 캐쉬 벌어서, 골프채·공·파워 사서 더 멀리!
+/* 사랑하는 그대에게 기대세요 (골프 비거리 게임, 폴더 이름은 예전 이름 LongDrive 그대로) — 문제 풀고 캐쉬 벌어서, 골프채·공·파워 사서 더 멀리!
  * 화면: 캔버스(밤의 네온 골프 연습장) 위에 HUD · 메뉴 · 문제 · 상점 · 랭킹 창이 올라가요. */
 :root {
   --bg: #0b0221; --panel: rgba(20, 6, 48, .92); --line: rgba(255, 255, 255, .14);
@@ -87,7 +87,7 @@ button { font: inherit; color: inherit; cursor: pointer; border: 0; background: 
 .card { position: relative; }
 
 /* 메뉴 */
-.logo { text-align: center; margin: 4px 0 2px; font: 400 clamp(44px, 11vw, 64px)/1 var(--title); background: linear-gradient(180deg, #fff 10%, var(--lime) 55%, #2fbf71); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 0 16px rgba(182, 255, 59, .55)) drop-shadow(0 4px 0 #13361c); }
+.logo { text-align: center; margin: 4px 0 6px; font: 400 clamp(30px, 8vw, 44px)/1.12 var(--title); background: linear-gradient(180deg, #fff 10%, var(--lime) 55%, #2fbf71); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 0 16px rgba(182, 255, 59, .55)) drop-shadow(0 4px 0 #13361c); }
 .tagline { text-align: center; color: var(--sub); font-weight: 700; margin-bottom: 16px; }
 .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 14px; }
 .stat { background: rgba(255, 255, 255, .06); border: 1px solid var(--line); border-radius: 14px; padding: 10px; text-align: center; }
@@ -106,7 +106,9 @@ button { font: inherit; color: inherit; cursor: pointer; border: 0; background: 
 .qtop .cash { color: var(--gold); font-family: var(--num); font-size: 20px; }
 .qbar { height: 6px; border-radius: 9px; background: rgba(255, 255, 255, .1); overflow: hidden; margin-bottom: 16px; }
 .qbar i { display: block; height: 100%; background: linear-gradient(90deg, var(--cyan), var(--lime)); transition: width .3s; }
-.qtext { font-size: 20px; font-weight: 800; line-height: 1.45; margin-bottom: 16px; word-break: keep-all; }
+.qtext { font-size: 20px; font-weight: 800; line-height: 1.45; margin-bottom: 16px; word-break: keep-all; white-space: pre-line; }
+.qsrc { font-size: 12px; font-weight: 700; color: var(--sub); margin: -6px 0 8px; }
+.logo span { font-size: 1.35em; }
 .choices { display: grid; gap: 8px; }
 .choices.ox { grid-template-columns: 1fr 1fr; }
 .choice { text-align: left; padding: 14px 16px; border-radius: 14px; background: rgba(255, 255, 255, .07); border: 2px solid var(--line); font-weight: 700; font-size: 16px; display: flex; gap: 10px; align-items: center; }
@@ -202,7 +204,7 @@ button { font: inherit; color: inherit; cursor: pointer; border: 0; background: 
 <!-- 첫 화면 -->
 <div class="screen" id="sHome">
   <div class="card">
-    <div class="logo">롱드라이브</div>
+    <div class="logo">사랑하는 그대에게<br><span>기대세요</span></div>
     <div class="tagline">문제 풀고 💰 캐쉬 벌어서, 장비 사서 더 멀리! ⛳</div>
     <div class="stats">
       <div class="stat"><b id="hBest">0</b><span>내 최고 (m)</span></div>
@@ -341,7 +343,7 @@ function save() {
 async function pushRemote() {
   try {
     const { error } = await A().client.from("game_saves").upsert({ user_id: A().user.id, game: GAME_ID, data: S, updated_at: new Date().toISOString() }, { onConflict: "user_id,game" });
-    if (error) { remoteOK = false; console.warn("[롱드라이브] 계정 저장 안 됨 (supabase/golf.sql 을 실행했나요?)", error.message); }
+    if (error) { remoteOK = false; console.warn("[사랑하는 그대에게 기대세요] 계정 저장 안 됨 (supabase/golf.sql 을 실행했나요?)", error.message); }
   } catch { /* 오프라인 */ }
 }
 async function load() {
@@ -645,7 +647,7 @@ function startQuiz() {
   if (!POOL.length) { toast("문제가 아직 없어요 (questions.js)"); return; }
   const list = shuffle(POOL.slice()).slice(0, Math.min(SET_SIZE, POOL.length)).map(q => {
     const opts = q.choices.map((c, i) => ({ t: c, ok: i === q.answer - 1 }));
-    return { q: q.q, explain: q.explain || "", ox: isOX(q), opts: isOX(q) ? opts : shuffle(opts) };
+    return { q: q.q, explain: q.explain || "", src: q.src || "", ox: isOX(q), opts: isOX(q) ? opts : shuffle(opts) };
   });
   Q = { list, i: 0, right: 0, combo: 0, earned: 0, picked: false };
   show("sQuiz"); renderQ();
@@ -656,7 +658,7 @@ function renderQ() {
     <button class="x" id="qx">✕</button>
     <div class="qtop"><span>📝 ${Q.i + 1} / ${Q.list.length}${Q.combo >= 2 ? ` · 🔥 ${Q.combo}연속` : ""}</span><span class="cash">💰 ${fmt(S.cash)}</span></div>
     <div class="qbar"><i style="width:${Q.i / Q.list.length * 100}%"></i></div>
-    <div class="qtext">${esc(q.q)}</div>
+    ${q.src ? `<div class="qsrc">📘 ${esc(q.src)} 기출</div>` : ""}<div class="qtext">${esc(q.q)}</div>
     <div class="choices${q.ox ? " ox" : ""}" id="choices">${q.opts.map((o, i) => `<button class="choice" data-i="${i}">${q.ox ? "" : `<span class="n">${i + 1}</span>`}${esc(o.t)}</button>`).join("")}</div>
     <div id="fb"></div>`;
   $("qx").onclick = () => { Q = null; show("sHome"); };
