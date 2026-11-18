@@ -733,6 +733,21 @@ const APPS = [
     featured: true
   },
   {
+    title: "롱드라이브",
+    emoji: "⛳",
+    category: "game",
+    tag: "NEW",
+    year: "2026",
+    who: "PTX+AI · 삼공육",
+    desc: "누가 더 멀리 치나! 해부학 문제를 맞혀 캐쉬를 벌고, 골프채 · 골프공 · 파워를 사서 비거리를 늘려요. 내 최고 기록은 회원 랭킹에 자동으로 올라가요.",
+    url: "games/LongDrive/index.html",
+    glow: "#b6ff3b",
+    thumb: "thumbs/longdrive.svg",
+    hero: "thumbs/longdrive.svg",
+    facts: [["⛳", "비거리 대결"], ["3", "아이템 종류"], ["🏆", "회원 랭킹"]],
+    featured: true
+  },
+  {
     title: "HIGO 공식 사이트",
     emoji: "🌐",
     category: "tool",
@@ -1027,6 +1042,13 @@ function collectScores() {
     const score = typeof v === "number" ? v : v && v.score;
     if (typeof score === "number") rows.push({ game: "LandMark", detail: `${DIFF_KO[diff] || diff}${v && v.accuracy != null ? ` · 정확도 ${Math.round(v.accuracy)}%` : ""}`, score });
   }
+  // 롱드라이브: samgongyuk-golf/v1/{회원id|guest}.best = 최고 비거리(m)
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    if (!k || !k.startsWith("samgongyuk-golf/v1/")) continue;
+    const g = readJSON(k);
+    if (typeof g.best === "number" && g.best > 0) rows.push({ game: "롱드라이브", detail: "최고 비거리 (m)", score: Math.round(g.best) });
+  }
   return rows.sort((a, b) => b.score - a.score);
 }
 /* 회원 랭킹 (part3 · supabase/ops.sql): 🏆 버튼을 누르면 열려요.
@@ -1037,6 +1059,7 @@ function collectScores() {
 const RANK_GAMES = [
   { id: "overall", ko: "👑 종합" }, { id: "landmark", ko: "🎯 LandMark" }, { id: "ddan", ko: "🎤 딴딴/딴" },
   { id: "neoege", ko: "💘 너에게 닿기를" }, { id: "wizard", ko: "🧙 뭐라구요!?" },
+  { id: "golf", ko: "⛳ 롱드라이브" },
 ];
 const RANK_REGION = { arm: "어깨·위팔", forearm: "아래팔", hip: "엉덩이·넙다리", leg: "종아리·발" };
 const rankModeKo = (game, m) => {

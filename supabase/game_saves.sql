@@ -7,7 +7,7 @@
 
 create table if not exists public.game_saves (
   user_id uuid not null default auth.uid() references auth.users(id) on delete cascade,
-  game text not null check (game in ('landmark', 'ddan', 'wizard', 'neoege')),
+  game text not null check (game in ('landmark', 'ddan', 'wizard', 'neoege', 'golf')),
   data jsonb not null check (octet_length(data::text) < 200000),
   updated_at timestamptz not null default now(),
   primary key (user_id, game)

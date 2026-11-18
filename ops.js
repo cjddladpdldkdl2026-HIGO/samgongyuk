@@ -15,6 +15,7 @@
     { id: 'ddan', ko: '딴딴/딴', ic: '🎤' },
     { id: 'neoege', ko: '너에게 닿기를', ic: '💘' },
     { id: 'wizard', ko: '뭐라구요!?', ic: '🧙' },
+    { id: 'golf', ko: '롱드라이브', ic: '⛳' },
   ];
   const DIFF = { easy: '쉬움', normal: '보통', medium: '보통', hard: '어려움' };
   const REGION = { arm: '어깨·위팔', forearm: '아래팔', hip: '엉덩이·넙다리', leg: '종아리·발' };

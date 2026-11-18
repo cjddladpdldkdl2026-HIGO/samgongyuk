@@ -18,7 +18,7 @@
 (function () {
   const URL_ = 'https://ptlhjxtvwcoyrhemimjw.supabase.co';
   const KEY_ = 'sb_publishable_cuv4DoFYqHSJFiL2FF28aQ_B03qGNkl';
-  const GAMES = ['landmark', 'ddan', 'wizard', 'neoege'];
+  const GAMES = ['landmark', 'ddan', 'wizard', 'neoege', 'golf'];
 
   const listeners = [];
   const mask = (p) => p.length <= 1 ? p : p.length === 2 ? p[0] + '*' : p[0] + '*'.repeat(p.length - 2) + p[p.length - 1];
@@ -103,7 +103,7 @@
       if (!sid) { sid = crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2) + Date.now().toString(36); sessionStorage.setItem('samgongyuk-sid', sid); }
     } catch { sid = 'tmp-' + Math.random().toString(36).slice(2) + Date.now().toString(36); }
     const PAGE_KO = { highgo: 'hub', index: 'hub', '': 'hub', DdanDdan: '딴딴/딴', Vertebral_Wizard: '뭐라구요!?',
-      'HIGO_뼈게임_사이트판': 'LandMark', '너에게닿기를': '너에게 닿기를' };
+      'HIGO_뼈게임_사이트판': 'LandMark', '너에게닿기를': '너에게 닿기를', LongDrive: '롱드라이브' };
     let path = location.pathname;
     try { path = decodeURIComponent(path); } catch { /* keep */ }
     const raw = (/\/games\/([^/]+)/.exec(path) || /([^/]*?)(?:\.html)?$/.exec(path) || [])[1] || '';
