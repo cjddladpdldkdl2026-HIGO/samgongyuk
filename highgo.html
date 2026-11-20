@@ -313,6 +313,19 @@
     padding: 16px 4vw 22px; scrollbar-width: none;
   }
   .row-track::-webkit-scrollbar { display: none; }
+  /* 게임이 많아져 줄이 넘치면 양옆 동그란 버튼으로 넘겨요 (마우스 휠로도 옆으로 가요) — 2026-11-20 */
+  .row-wrap { position: relative; }
+  .row-nav {
+    position: absolute; top: calc(50% + 3px); z-index: 5; width: 46px; height: 46px; border-radius: 50%;
+    transform: translateY(-50%); display: grid; place-items: center; font-size: 22px; line-height: 1;
+    color: var(--ink); border: 1px solid var(--line); background: rgba(17,4,42,.88); backdrop-filter: blur(8px);
+    box-shadow: 0 4px 18px rgba(0,0,0,.45); cursor: pointer; transition: opacity .2s, border-color .15s, box-shadow .15s, transform .15s;
+  }
+  .row-nav:hover { border-color: var(--cyan); box-shadow: 0 0 22px rgba(45,226,230,.45); transform: translateY(-50%) scale(1.08); }
+  .row-nav.prev { left: max(8px, calc(4vw - 23px)); }
+  .row-nav.next { right: max(8px, calc(4vw - 23px)); }
+  .row-nav[hidden] { display: grid; opacity: 0; pointer-events: none; }
+  @media (hover: none) { .row-nav { width: 38px; height: 38px; font-size: 18px; } }
 
   .card {
     flex: 0 0 auto; width: 300px; position: relative; overflow: hidden; cursor: pointer; text-align: left;
@@ -498,14 +511,14 @@
     background: linear-gradient(90deg, var(--cyan), var(--violet), var(--pink)); box-shadow: var(--glow-cyan); }
   #loaderTxt { font: 600 13px var(--font-ui); color: var(--ink-dim); }
 
-  /* ── 배경음악: 오른쪽 옆에 붙은 세로 탭 + 펼쳐지는 패널 ── */
+  /* ── 배경음악: 왼쪽 옆에 붙은 세로 탭 + 펼쳐지는 패널 (2026-11-20 오른쪽 → 왼쪽) ── */
   .bgm {
-    position: fixed; right: 0; top: 50%; z-index: 120; display: flex; align-items: center;
-    transform: translate(calc(100% - 46px), -50%); transition: transform .28s ease;
+    position: fixed; left: 0; top: 50%; z-index: 120; display: flex; flex-direction: row-reverse; align-items: center;
+    transform: translate(calc(-100% + 46px), -50%); transition: transform .28s ease;
   }
   .bgm.open { transform: translate(0, -50%); }
   .bgm-tab {
-    width: 46px; padding: 14px 0; border: 1px solid var(--line); border-right: 0; border-radius: 14px 0 0 14px;
+    width: 46px; padding: 14px 0; border: 1px solid var(--line); border-left: 0; border-radius: 0 14px 14px 0;
     background: rgba(17,4,42,.9); color: var(--ink-dim); display: flex; flex-direction: column; align-items: center; gap: 8px;
     font: 700 11px var(--font-display); letter-spacing: .12em; backdrop-filter: blur(8px);
   }
@@ -525,7 +538,7 @@
   .bgm-panel {
     width: 250px; padding: 16px; display: flex; flex-direction: column; gap: 6px;
     background: linear-gradient(160deg, rgba(29,7,66,.95), rgba(11,4,30,.97));
-    border: 1px solid var(--line); border-right: 0; border-radius: 14px 0 0 14px; backdrop-filter: blur(10px);
+    border: 1px solid var(--line); border-left: 0; border-radius: 0 14px 14px 0; backdrop-filter: blur(10px);
   }
   .bgm-kicker { font: 700 10px var(--font-display); letter-spacing: .2em; color: var(--pink); }
   .bgm-title { font-size: 15px; line-height: 1.3; }
@@ -958,6 +971,35 @@ function enableSwipe() {
   });
 }
 
+// 줄 양옆 동그란 버튼 ‹ › + 마우스 휠로 옆으로 넘기기
+function addRowNav(wrap, track) {
+  const mk = (cls, label, ch, dir) => {
+    const b = document.createElement("button");
+    b.className = "row-nav " + cls; b.type = "button"; b.setAttribute("aria-label", label); b.textContent = ch;
+    b.onclick = () => track.scrollBy({ left: dir * Math.max(300, track.clientWidth * .8), behavior: "smooth" });
+    wrap.appendChild(b); return b;
+  };
+  const prev = mk("prev", "앞 게임 보기", "‹", -1), next = mk("next", "뒤 게임 더 보기", "›", 1);
+  const update = () => {
+    const max = track.scrollWidth - track.clientWidth;
+    prev.hidden = track.scrollLeft <= 4;
+    next.hidden = track.scrollLeft >= max - 4;
+  };
+  track.addEventListener("scroll", update, { passive: true });
+  addEventListener("resize", update);
+  // 세로 휠을 굴리면 옆으로 이동 (끝에 닿으면 원래대로 페이지가 내려가요)
+  track.addEventListener("wheel", e => {
+    if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;          // 터치패드 가로 밀기는 그대로
+    const max = track.scrollWidth - track.clientWidth;
+    if (max <= 0) return;
+    if ((e.deltaY > 0 && track.scrollLeft >= max - 1) || (e.deltaY < 0 && track.scrollLeft <= 0)) return;
+    e.preventDefault();
+    track.scrollBy({ left: e.deltaY * 1.4, behavior: "auto" });
+  }, { passive: false });
+  requestAnimationFrame(update);
+  addEventListener("load", update);
+}
+
 function renderRows(filter = "") {
   const q = filter.trim().toLowerCase();
   $("rows").innerHTML = "";
@@ -986,7 +1028,11 @@ function renderRows(filter = "") {
       c.onclick = () => openModal(a, `${r.eyebrow} · ${num}`);
       track.appendChild(c);
     });
-    sec.appendChild(track);
+    const wrap = document.createElement("div");
+    wrap.className = "row-wrap";
+    wrap.appendChild(track);
+    if (items.length) addRowNav(wrap, track);
+    sec.appendChild(wrap);
     $("rows").appendChild(sec);
   });
 }
