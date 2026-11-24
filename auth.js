@@ -9,6 +9,8 @@
  *  SamAuth.displayName          → 랭킹에 보이는 이름 (학생: 김*수 (26), 관리자: 닉네임)
  *  SamAuth.record({ game, mode, score, accuracy, detail })  → 로그인한 사람만 저장, 실패해도 게임은 그대로
  *  SamAuth.ranking(game, mode)  → { top: [{ nickname, score, accuracy }], myBest, myRank, total }
+ *  SamAuth.answer({ game, item, cat, ok, mode })  → 문제 하나 풀 때마다 (내 약점 분석용, supabase/answers.sql)
+ *      item = 문제 이름 (관절오목 (Glenoid cavity)), cat = 묶음 (어깨뼈), ok = 맞았나. 회원만, 모아서 보내요. 실패해도 게임은 그대로
  *  SamAuth.onChange(fn)
  *  (part3) 화면을 보는 동안 1분마다 ops_ping — 지금 접속자 수 (supabase/ops.sql)
  *
@@ -39,6 +41,7 @@
     console.warn('[SamAuth] supabase-js 가 없어요');
     A.ready = Promise.resolve(A);
     A.record = async () => null;
+    A.answer = () => {};
     A.ranking = async () => { throw new Error('auth unavailable'); };
     return;
   }
@@ -92,6 +95,51 @@
     if (error) throw error;
     return data;
   };
+
+  /* 문항 기록 (내 약점 분석 · 관리자 문항 분석, supabase/answers.sql)
+   * 게임이 문제 하나를 판정할 때마다 부르면 모아 두었다가 20개가 차거나 8초마다, 창을 닫거나 숨길 때 한 번에 보내요.
+   * 로그인한 회원만. answers.sql 을 아직 안 돌렸으면 한 번 실패하고 조용히 멈춰요. */
+  (function answers() {
+    const buf = [];
+    let token = null, stop = false, timer = 0;
+    const keep = (s) => { token = s ? s.access_token : null; };
+    sb.auth.getSession().then(({ data }) => keep(data.session)).catch(() => {});
+    sb.auth.onAuthStateChange((_e, s) => keep(s));
+    const take = () => buf.splice(0, 300);
+    async function flush() {
+      clearTimeout(timer); timer = 0;
+      if (stop || !buf.length) return;
+      await A.ready;
+      if (!A.profile) { buf.length = 0; return; }
+      const rows = take();
+      try {
+        const { error } = await sb.rpc('log_answers', { p_rows: rows });
+        if (error && (error.code === 'PGRST202' || error.code === '42883')) stop = true;
+      } catch { /* 오프라인: 이번 것은 버려요 */ }
+    }
+    // 창을 닫을 때: fetch keepalive 로 바로 보내기 (페이지가 사라져도 전송돼요)
+    function flushNow() {
+      if (stop || !buf.length || !A.profile || !token) return;
+      try {
+        fetch(`${URL_}/rest/v1/rpc/log_answers`, {
+          method: 'POST', keepalive: true,
+          headers: { apikey: KEY_, Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ p_rows: take() }),
+        }).catch(() => {});
+      } catch { /* ignore */ }
+    }
+    A.answer = (r) => {
+      try {
+        if (stop || !r || GAMES.indexOf(r.game) < 0 || typeof r.ok !== 'boolean') return;
+        const item = String(r.item || '').trim().slice(0, 120);
+        if (!item) return;
+        buf.push({ game: r.game, item, cat: String(r.cat || '').slice(0, 60), mode: String(r.mode || '').slice(0, 30), ok: r.ok });
+        if (buf.length >= 20) flush(); else if (!timer) timer = setTimeout(flush, 8000);
+      } catch { /* 기록 실패해도 게임은 그대로 */ }
+    };
+    addEventListener('pagehide', flushNow);
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') flushNow(); });
+  })();
 
   /* 지금 접속 중 알리기 (part3 · supabase/ops.sql) — 화면을 보고 있을 때 1분마다 한 번.
    * 관리자 '데이터 관리'의 동시 접속 숫자와 자동 백업 기준(동시 접속 4만 명)에 쓰여요.

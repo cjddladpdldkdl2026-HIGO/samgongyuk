@@ -966,6 +966,7 @@
     text = pretty(text);
     if (!heard){
       stats.silent++;
+      window.SamAuth && SamAuth.answer && SamAuth.answer({ game:'wizard', item: cur.mean ? cur.mean + ' (' + cur.word + ')' : cur.word, cat: cur.skill.name, ok:false, mode: MON.title });   // 내 약점 분석 (auth.js)
       useCooldown(cur.skill);
       hideBubble(bubWiz); card.className = '';
       bubble(bubMon, esc(pick(NO_VOICE_LINES)), '', 2200);
@@ -978,6 +979,7 @@
     }
     if (pass){
       stats.hits++;
+      window.SamAuth && SamAuth.answer && SamAuth.answer({ game:'wizard', item: cur.mean ? cur.mean + ' (' + cur.word + ')' : cur.word, cat: cur.skill.name, ok:true, mode: MON.title });   // 내 약점 분석 (auth.js)
       wizMP -= cur.skill.mp; useCooldown(cur.skill); setHP();
       bubble(bubWiz, esc(cur.word) + '!', 'ok', 1600);
       log('"' + text + '" 주문 성공!', 'ok');
@@ -986,6 +988,7 @@
       doSkill(cur.skill, afterPlayer);
     } else {
       stats.wrong++;
+      window.SamAuth && SamAuth.answer && SamAuth.answer({ game:'wizard', item: cur.mean ? cur.mean + ' (' + cur.word + ')' : cur.word, cat: cur.skill.name, ok:false, mode: MON.title });   // 내 약점 분석 (auth.js)
       useCooldown(cur.skill);
       bubble(bubWiz, esc(text) + '?', 'bad', 1800);
       setTimeout(function(){ bubble(bubMon, esc(pick(WRONG_LINES)), '', 2000); }, 450);

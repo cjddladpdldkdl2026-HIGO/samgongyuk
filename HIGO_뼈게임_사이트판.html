@@ -2683,6 +2683,7 @@ class Bone3D {
   _next() {
     if (this.asked >= this.queue.length) { this._endStage(); return; }
     this.current = this.queue[this.asked++];
+    this._ans = false;   // 내 약점 분석: 문제마다 첫 판정만 기록
     this.revealUntil = 0;
     this.born = performance.now() + TURN_MS;   // clock starts once turned
     const options = this._options();
@@ -2741,6 +2742,10 @@ class Bone3D {
     if (!picked) { s.streak = 0; this._updateScores(); v.flash('shoot a target', ''); return; }
 
     s.shots++;
+    if (!this._ans) {   // 내 약점 분석 (auth.js): 첫 발이 맞았는지
+      this._ans = true;
+      window.SamAuth && SamAuth.answer && SamAuth.answer({ game: 'landmark', item: `${this.current.ko} (${this.current.name})`, cat: `${this.bone.ko} (${this.bone.name})`, ok: picked === this.current, mode: this.difficulty });
+    }
     if (picked === this.current) {
       Sfx.hit();
       v.burst(picked, true);
@@ -2797,6 +2802,7 @@ class Bone3D {
       if (this.revealUntil && now >= this.revealUntil) this._next();
       else if (!this.revealUntil && now - this.born >= BONE3D_DIFF[this.difficulty].life) {
         this.stats.forEach(s => { s.streak = 0; s.shots++; });   // unanswered counts as a miss
+        if (!this._ans) { this._ans = true; window.SamAuth && SamAuth.answer && SamAuth.answer({ game: 'landmark', item: `${this.current.ko} (${this.current.name})`, cat: `${this.bone.ko} (${this.bone.name})`, ok: false, mode: this.difficulty }); }
         Sfx.timeout();
         this._reveal(`Time's up — ${this.current.name}`);
         this._updateScores();
@@ -3343,6 +3349,7 @@ anatomy.onPrompt = (landmark, lifeMs) => ui.setPrompt(landmark, lifeMs);
 anatomy.onExpire = (landmark) => {
   // An unanswered question counts against accuracy like a wrong answer.
   state.shots++;
+  window.SamAuth && SamAuth.answer && SamAuth.answer({ game: 'landmark', item: `${landmark.ko} (${landmark.name})`, cat: `어깨뼈 (${anatomy.bone.label})`, ok: false, mode: state.difficulty });   // 내 약점 분석: 시간 초과 = 틀림
   state.streak = 0;
   ui.promptNote(`Time's up — ${landmark.name} is in green`, 'bad');
   ui.updateHUD(state);
@@ -3814,6 +3821,7 @@ function shootAnatomy() {
   }
 
   state.shots++;
+  window.SamAuth && SamAuth.answer && SamAuth.answer({ game: 'landmark', item: `${target.ko} (${target.name})`, cat: `어깨뼈 (${anatomy.bone.label})`, ok: result === 'hit', mode: state.difficulty });   // 내 약점 분석 (auth.js)
   if (result === 'hit') {
     state.reactTimes.push(rt);
     state.hits++;

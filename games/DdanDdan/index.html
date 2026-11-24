@@ -892,6 +892,11 @@ function bubble(text) { const b = $('bubble'); b.textContent = text; b.style.tra
 function judge(phrase, k, rating) {
   if (phrase.results[k]) return;
   phrase.results[k] = rating;
+  { // 내 약점 분석 (auth.js): 단어 하나의 조각을 다 판정하면 기록 (하나라도 놓치면 틀림)
+    const w = phrase.pieces[k].word, ks = phrase.pieces.map((p, i) => p.word === w ? i : -1).filter(i => i >= 0);
+    if (ks.every(i => phrase.results[i])) window.SamAuth && SamAuth.answer && SamAuth.answer({ game: 'ddan', item: `${w.ko} (${w.en})`,
+      cat: ((MAPS.find(m => m.id === w.map) || {}).name || w.map).replace(/^\S+\s/, ''), ok: ks.every(i => phrase.results[i] !== 'miss'), mode: opt.map });
+  }
   run.counts[rating]++;
   const el = slotEls()[k], onScreen = run.bars[run.curBar] && run.bars[run.curBar].phrase === phrase;
   if (onScreen && el) {   // a little word pops out of the card that was hit

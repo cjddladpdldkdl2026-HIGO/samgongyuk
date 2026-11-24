@@ -1818,6 +1818,9 @@ class Quiz {
    */
   _settle(hit) {
     this.found.add(this.q.key);
+    // 내 약점 분석 (auth.js): 한 번에 맞혀야 정답, 틀린 뒤 맞히거나 시간 초과면 틀림
+    window.SamAuth && SamAuth.answer && SamAuth.answer({ game: 'neoege', item: `${this.muscle.ko} ${this.q.role === 'origin' ? '이는곳' : '닿는곳'} · ${this.answer.ko}`,
+      cat: this.region.ko, ok: !!hit && !this.missed, mode: `${this.region.id}:${this.difficulty}` });
     this.viewer.reveal(this.answer);
     this.viewer.addPin(this.answer, this.q.role === 'origin' ? COLORS.origin : COLORS.insertion, this.radius * 0.5);
     this._timer(false);

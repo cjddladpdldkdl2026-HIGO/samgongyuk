@@ -727,6 +727,8 @@ function pick(i, e) {
   box.children[i].classList.add(ok ? "right" : "wrong");
   q.opts.forEach((o, k) => { if (o.ok) box.children[k].classList.add("right"); });
   S.solved++;
+  window.SamAuth && SamAuth.answer && SamAuth.answer({ game: "golf", item: `${q.src ? q.src + " · " : ""}${String(q.q).replace(/\s+/g, " ").slice(0, 70)}`,
+    cat: (String(q.src || "").match(/^\d{4}년/) || ["기출"])[0], ok, mode: "" });   // 내 약점 분석 (auth.js)
   let gain = 0;
   if (ok) { Q.right++; Q.combo++; S.correct++; gain = CASH_PER_RIGHT + (Q.combo >= 3 ? COMBO_BONUS * Math.min(Q.combo - 2, 4) : 0); S.cash += gain; Q.earned += gain; snd("right"); setTimeout(() => snd("coin"), 150); coinPop(e, "+" + gain); }
   else { Q.combo = 0; snd("wrong"); }
