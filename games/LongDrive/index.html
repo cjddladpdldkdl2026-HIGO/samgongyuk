@@ -97,6 +97,13 @@ button { font: inherit; color: inherit; cursor: pointer; border: 0; background: 
 .menu .btn { width: 100%; text-align: left; display: flex; align-items: center; gap: 12px; }
 .menu .btn em { font-style: normal; font-size: 24px; }
 .menu .btn small { display: block; font-weight: 600; font-size: 12px; opacity: .8; }
+.chars { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 14px; }
+.charBtn { position: relative; padding: 10px 4px 8px; border-radius: 14px; background: rgba(255, 255, 255, .06); border: 2px solid var(--line); text-align: center; font-weight: 800; font-size: 13px; }
+.charBtn em { display: block; font-style: normal; font-size: 30px; line-height: 1.1; margin-bottom: 2px; }
+.charBtn.on { border-color: var(--lime); background: rgba(182, 255, 59, .14); box-shadow: 0 0 14px rgba(182, 255, 59, .35); }
+.charBtn.lock { opacity: .45; filter: grayscale(1); }
+.charBtn .lk { position: absolute; top: 4px; right: 6px; font-size: 14px; filter: none; }
+.charTitle { font-size: 12px; color: var(--sub); margin: 0 0 6px 2px; }
 .who { margin-top: 12px; text-align: center; font-size: 13px; color: var(--sub); }
 .who b { color: var(--cyan); }
 .back { display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 12px; padding: 12px; border-radius: 14px; font-weight: 800; font-size: 15px; color: var(--ink); text-decoration: none; background: rgba(255, 255, 255, .08); border: 2px solid var(--line); }
@@ -217,6 +224,8 @@ button { font: inherit; color: inherit; cursor: pointer; border: 0; background: 
       <div class="stat"><b id="hCash">0</b><span>캐쉬</span></div>
       <div class="stat"><b id="hRank">-</b><span>내 순위</span></div>
     </div>
+    <div class="charTitle">🏌️ 캐릭터 고르기</div>
+    <div class="chars" id="charList"></div>
     <div class="menu">
       <button class="btn main" id="mPlay"><em>⛳</em><span>치러 가기<small>지금 장비로 최대한 멀리 날려 봐요</small></span></button>
       <button class="btn lime" id="mQuiz"><em>📝</em><span>문제 풀고 캐쉬 벌기<small>한 문제 맞힐 때마다 💰 20 · 연속 정답 보너스</small></span></button>
@@ -293,6 +302,13 @@ const CLUBS = [
 ];
 const OLD_CLUB_PRICES = [0, 60, 150, 300, 550, 900];   // 예전 금속 채 6개 (2026-11-18 까지) — 산 사람에게 캐쉬를 돌려줘요
 // 골프공 (4개, 약한 순서): drag = 공기 저항(작을수록 멀리), roll = 떨어진 뒤 굴러가는 비율, wind = 바람 영향. 3D 모양은 view3d.js buildBall()
+// 캐릭터 (Mixamo, models/chars/<file>.glb) · lock: true 면 잠겨 있어서 못 골라요
+const CHARS = [
+  { name: "남자", ic: "🧑", file: "man" },
+  { name: "여자", ic: "👩", file: "woman" },
+  { name: "쥐",   ic: "🐭", file: "mouse", lock: true },
+  { name: "라이더", ic: "🏍️", file: "rider", lock: true },
+];
 const BALLS = [
   { name: "기본 골프공", ic: "⚪", price: 0,   drag: 1.00, roll: .18, wind: 1.00, desc: "평범한 하얀 골프공 · 기본" },
   { name: "무릎뼈 공",   ic: "🦴", price: 60,  drag: .88,  roll: .22, wind: .85,  desc: "무릎뼈만 떼어 만든 세모난 공" },
@@ -313,7 +329,7 @@ const DRAG_K = 0.0045, LIFT_K = 0.0014, LAUNCH_DEG = 15;
 const $ = (id) => document.getElementById(id);
 const fmt = (n) => Math.round(n).toLocaleString("ko-KR");
 const esc = (s) => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-const blank = () => ({ v: 1, cv: 3, bv: 3, cash: 0, club: 0, ball: 0, power: 0, owned: { club: [0], ball: [0] }, best: 0, sent: 0, shots: 0, solved: 0, correct: 0, updated: 0 });
+const blank = () => ({ v: 1, cv: 3, bv: 3, cash: 0, club: 0, ball: 0, char: 0, power: 0, owned: { club: [0], ball: [0] }, best: 0, sent: 0, shots: 0, solved: 0, correct: 0, updated: 0 });
 let S = blank();
 const A = () => window.SamAuth;
 const member = () => !!(A() && A().joined && A().user);
@@ -325,6 +341,7 @@ function fix(d) {
   s.owned = Object.assign({ club: [0], ball: [0] }, s.owned || {});
   s.club = Math.min(Math.max(0, s.club | 0), CLUBS.length - 1); s.ball = Math.min(Math.max(0, s.ball | 0), BALLS.length - 1);
   s.power = Math.min(Math.max(0, s.power | 0), POWER_MAX);
+  s.char = Math.min(Math.max(0, s.char | 0), CHARS.length - 1); if (CHARS[s.char].lock) s.char = 0;
   if (d && (d.cv || 1) < 2) {   // 골프채가 뼈 채 4개로 바뀜: 예전 채 값을 돌려주고 기본 채부터
     s.cash += [...new Set(s.owned.club || [])].reduce((sum, i) => sum + (OLD_CLUB_PRICES[i] || 0), 0);
     s.owned.club = [0]; s.club = 0; s.cv = 2;
@@ -638,7 +655,17 @@ function refreshHome() {
 function refreshAll() {
   $("cashChip").textContent = fmt(S.cash);
   $("gearChip").innerHTML = `${CLUBS[S.club].ic} ${esc(CLUBS[S.club].name)}<br>${BALLS[S.ball].ic} ${esc(BALLS[S.ball].name)} · 💪 Lv.${S.power}`;
-  drawTrackMarks(); refreshHome();
+  drawTrackMarks(); refreshHome(); renderChars();
+}
+function renderChars() {
+  const box = $("charList"); if (!box) return;
+  box.innerHTML = CHARS.map((c, i) => `<button class="charBtn${i === S.char ? " on" : ""}${c.lock ? " lock" : ""}" data-char="${i}"><em>${c.ic}</em>${esc(c.name)}${c.lock ? '<span class="lk">🔒</span>' : ""}</button>`).join("");
+  box.querySelectorAll("[data-char]").forEach(b => b.onclick = () => {
+    const i = +b.dataset.char, c = CHARS[i];
+    if (c.lock) { toast(`🔒 ${esc(c.name)} 캐릭터는 아직 잠겨 있어요`); return; }
+    if (i === S.char) return;
+    S.char = i; snd("buy"); toast(`${c.ic} ${esc(c.name)} 캐릭터로 바꿨어요!`); save(); refreshAll();
+  });
 }
 let toastT = null;
 function toast(t) { const el = $("toast"); el.innerHTML = t; el.classList.add("on"); clearTimeout(toastT); toastT = setTimeout(() => el.classList.remove("on"), 1800); }
