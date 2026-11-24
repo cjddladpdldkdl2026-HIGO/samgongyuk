@@ -67,6 +67,11 @@ button { font: inherit; color: inherit; cursor: pointer; border: 0; background: 
 #result .msg.best { color: var(--gold); }
 #result .msg.ob { color: var(--pink); }
 #result .sub { margin-top: 4px; font-size: 14px; color: var(--sub); text-shadow: 0 2px 8px #000; }
+#steer { position: absolute; left: 50%; bottom: max(30px, env(safe-area-inset-bottom)); transform: translateX(-50%); display: none; align-items: center; gap: 14px; pointer-events: auto; }
+#steer.on { display: flex; }
+#steer span { white-space: nowrap; font: 800 13px var(--font); color: var(--sub); text-shadow: 0 1px 4px #000; }
+#steer button { width: 74px; height: 64px; border-radius: 18px; font-size: 26px; color: #10230a; background: linear-gradient(135deg, #6bff8b, var(--lime)); border: 0; box-shadow: 0 6px 18px rgba(0, 0, 0, .35), 0 0 16px rgba(182, 255, 59, .45); touch-action: none; user-select: none; -webkit-user-select: none; }
+#steer button.hold { transform: scale(.94); filter: brightness(1.15); }
 #flyDist { position: absolute; right: 18px; bottom: 110px; font: 700 42px/1 var(--num); text-shadow: 0 0 14px var(--cyan); opacity: 0; transition: opacity .2s; }
 #flyDist.on { opacity: 1; }
 
@@ -209,6 +214,7 @@ button { font: inherit; color: inherit; cursor: pointer; border: 0; background: 
   </div>
   <div id="result"><div class="big" id="resBig"></div><div class="msg" id="resMsg"></div><div class="sub" id="resSub"></div></div>
   <div id="flyDist">0m</div>
+  <div id="steer"><button id="stL" aria-label="왼쪽으로">◀</button><span>공 조종</span><button id="stR" aria-label="오른쪽으로">▶</button></div>
   <div id="swing">
     <div id="swingHint">화면을 탭하거나 스페이스바를 눌러 스윙 시작!</div>
     <div id="meter"><div id="meterPow"></div><div id="meterZone"></div><div id="meterSweet"></div><div id="meterSet"></div><div id="meterCursor"></div></div>
@@ -281,7 +287,7 @@ button { font: inherit; color: inherit; cursor: pointer; border: 0; background: 
 { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/" } }
 </script>
-<script type="module" src="view3d.js?v=50"></script>   <!-- 3D 코드를 고치면 v 숫자도 올려요 (휴대폰 옛 사본 방지) -->
+<script type="module" src="view3d.js?v=51"></script>   <!-- 3D 코드를 고치면 v 숫자도 올려요 (휴대폰 옛 사본 방지) -->
 <script>
 "use strict";
 /* ═══════════════════════════════════════════════════════════════
@@ -305,11 +311,12 @@ const CLUBS = [
 const OLD_CLUB_PRICES = [0, 60, 150, 300, 550, 900];   // 예전 금속 채 6개 (2026-11-18 까지) — 산 사람에게 캐쉬를 돌려줘요
 // 골프공 (4개, 약한 순서): drag = 공기 저항(작을수록 멀리), roll = 떨어진 뒤 굴러가는 비율, wind = 바람 영향. 3D 모양은 view3d.js buildBall()
 // 캐릭터 (Mixamo, models/chars/<file>.glb · 사진은 <file>.webp) · need: 내 최고 기록이 이 거리(m) 이상이면 열려요
+// steer: 날아가는 공을 ◀ ▶ (←/→ 키)로 좌우로 조금씩 움직일 수 있어요
 const CHARS = [
   { name: "남자", ic: "🧑", file: "man" },
   { name: "여자", ic: "👩", file: "woman" },
-  { name: "제리", ic: "🐭", file: "mouse", need: 500 },
-  { name: "라이더", ic: "🏍️", file: "rider", need: 1000 },
+  { name: "제리", ic: "🐭", file: "mouse", need: 500, steer: true },
+  { name: "라이더", ic: "🏍️", file: "rider", need: 1000, steer: true },
 ];
 const charLocked = (c, best = S.best) => !!c.need && best < c.need;
 const BALLS = [
@@ -487,7 +494,11 @@ function boost(b) {
   (lastShot.boosts = lastShot.boosts || []).push(b.type);
   phase = "fly";
 }
-const ZONE = { at: .08, nice: .07, sweet: .022 };   // 임팩트 칸 위치·너비 (게이지 비율)
+const ZONE = { at: .08, nice: .07, sweet: .022 };
+// 공 조종 (steer 캐릭터): 누르는 동안 옆으로 이만큼씩 밀어요 · 한 샷에 최대 max(m/s) 까지
+const STEER = { acc: 4.5, max: 10 };
+let steerDir = 0; const steerKeys = { L: false, R: false };
+const canSteer = () => !!(CHARS[S.char] && CHARS[S.char].steer);   // 임팩트 칸 위치·너비 (게이지 비율)
 
 function newWind() {
   const sp = Math.random() * 6, a = Math.random() * Math.PI * 2;
@@ -525,7 +536,7 @@ function hit(pos) {
   const yaw = acc * 6 * Math.PI / 180, pitch = LAUNCH_DEG * Math.PI / 180;
   ball.vx = v0 * Math.cos(pitch) * Math.sin(yaw); ball.vz = v0 * Math.cos(pitch) * Math.cos(yaw); ball.vy = v0 * Math.sin(pitch);
   ball.spin = acc * 2.2;          // 휘어 나가는 정도 (훅/슬라이스)
-  ball.drag = DRAG_K * b.drag; ball.wind = b.wind; ball.roll = b.roll;
+  ball.drag = DRAG_K * b.drag; ball.wind = b.wind; ball.roll = b.roll; ball.steer = 0;
   lastShot = { acc, power: setPower, v0, perfect: acc === 0 };
   phase = "down"; downAt = performance.now();   // 캐릭터가 내려 치는 동안 잠깐 기다렸다가 공이 날아가요
   $("swing").classList.add("hidden");
@@ -551,6 +562,7 @@ function step(dt) {
       const rx = ball.vx - wind.x * ball.wind, rz = ball.vz - wind.z * ball.wind, ry = ball.vy;
       const v = Math.hypot(rx, ry, rz), d = ball.drag * v, vh = Math.hypot(ball.vx, ball.vz);
       ball.vx += (-d * rx + ball.spin * Math.min(1, vh / 40)) * h;
+      if (steerDir && canSteer()) { const dv = Math.max(-STEER.max, Math.min(STEER.max, ball.steer + steerDir * STEER.acc * h)) - ball.steer; ball.steer += dv; ball.vx += dv; }
       ball.vz += (-d * rz) * h;
       ball.vy += (-9.8 - d * ry + LIFT_K * vh * vh) * h;
       ball.x += ball.vx * h; ball.y += ball.vy * h; ball.z += ball.vz * h;
@@ -577,6 +589,11 @@ function step(dt) {
     } else if (k >= 1) { ball.y = 0; finishShot(); }
   }
   // HUD
+  const st = $("steer"), showSteer = phase === "fly" && canSteer();
+  if (st.classList.contains("on") !== showSteer) {
+    st.classList.toggle("on", showSteer);
+    if (showSteer && !step.steerHint) { step.steerHint = true; toast("◀ ▶ 버튼(또는 ← → 키)을 누르고 있으면<br>공이 조금씩 옆으로 움직여요!"); }
+  }
   if (ball) {
     const d = Math.hypot(ball.x, ball.z);
     $("flyDist").textContent = d.toFixed(1) + "m";
@@ -669,7 +686,7 @@ function renderChars() {
     const i = +b.dataset.char, c = CHARS[i];
     if (charLocked(c)) { toast(`🔒 최고 기록 ${fmt(c.need)}m 를 넘기면 ${esc(c.name)} 캐릭터가 열려요<br><small>지금 내 최고 ${fmt(S.best)}m</small>`); return; }
     if (i === S.char) return;
-    S.char = i; snd("buy"); toast(`${c.ic} ${esc(c.name)} 캐릭터로 바꿨어요!`); save(); refreshAll();
+    S.char = i; snd("buy"); toast(`${c.ic} ${esc(c.name)} 캐릭터로 바꿨어요!${c.steer ? "<br><small>날아가는 공을 ◀ ▶ 로 조종할 수 있어요</small>" : ""}`); save(); refreshAll();
   });
 }
 let toastT = null;
@@ -814,7 +831,23 @@ $("scene").addEventListener("pointerdown", (e) => { e.preventDefault(); tap(); }
 addEventListener("keydown", (e) => {
   if (e.code === "Space" || e.code === "Enter") { if (document.activeElement && document.activeElement.tagName === "BUTTON" && e.code === "Enter") return; e.preventDefault(); tap(); }
   if (e.code === "Escape") show($("sHome").classList.contains("hidden") ? "sHome" : null);
+  if (e.code === "ArrowLeft" || e.code === "KeyA") { steerKeys.L = true; e.preventDefault(); }
+  if (e.code === "ArrowRight" || e.code === "KeyD") { steerKeys.R = true; e.preventDefault(); }
+  steerDir = (steerKeys.R ? 1 : 0) - (steerKeys.L ? 1 : 0);
 });
+addEventListener("keyup", (e) => {
+  if (e.code === "ArrowLeft" || e.code === "KeyA") steerKeys.L = false;
+  if (e.code === "ArrowRight" || e.code === "KeyD") steerKeys.R = false;
+  steerDir = (steerKeys.R ? 1 : 0) - (steerKeys.L ? 1 : 0);
+});
+// 공 조종 버튼 (누르고 있는 동안)
+for (const [id, dir] of [["stL", -1], ["stR", 1]]) {
+  const b = $(id);
+  const on = (e) => { e.preventDefault(); e.stopPropagation(); b.classList.add("hold"); steerDir = dir; try { b.setPointerCapture(e.pointerId); } catch { /* 없음 */ } };
+  const off = () => { b.classList.remove("hold"); if (steerDir === dir) steerDir = 0; };
+  b.addEventListener("pointerdown", on); b.addEventListener("pointerup", off); b.addEventListener("pointercancel", off); b.addEventListener("lostpointercapture", off);
+  b.addEventListener("contextmenu", (e) => e.preventDefault());
+}
 // 스윙 버튼 영역도 탭 가능하게
 $("swing").style.pointerEvents = "auto"; $("swing").addEventListener("pointerdown", (e) => { e.preventDefault(); tap(); });
 

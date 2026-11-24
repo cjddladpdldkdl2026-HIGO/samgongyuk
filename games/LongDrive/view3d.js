@@ -52,6 +52,7 @@ const UP = V(0, 1, 0);
 const glow = (hex, k = 2.2) => new THREE.Color(hex).multiplyScalar(k);   // 블룸으로 빛나게 (1보다 밝은 색)
 const OB_X = 70;   // index.html 의 OB_X 와 같은 값
 const RANGE = 2000;  // 연습장 길이(m): 표지판 · 그린 · 나무 · 선이 여기까지 있어요
+const SEA_AT = 500, SKY_AT = 1000;   // 바깥 풍경: 0~500m 숲 · 500~1000m 바다 · 1000m~ 하늘(구름 위)
 
 /* ── 캔버스로 만드는 무늬 ─────────────────────────────────────────── */
 function canvasTex(w, h, draw, repeat) {
@@ -70,6 +71,7 @@ function noise(g, w, h, n, a, colorFn) {
 
 /* ── 낮 하늘 · 해 · 구름 · 산 (카메라를 따라다녀서 아주 멀리 있는 것처럼) ── */
 const far = new THREE.Group(); scene.add(far);
+const farHills = [];   // 먼 산줄기 (바다 · 하늘 구역에서는 숨겨요)
 const balloons = [];   // 열기구 (천천히 오르내려요)
 const sky = new THREE.Mesh(new THREE.SphereGeometry(3000, 32, 20), new THREE.ShaderMaterial({
   side: THREE.BackSide, depthWrite: false, fog: false,
@@ -148,7 +150,7 @@ sun.scale.set(700, 700, 1); sun.position.copy(SUN_DIR).multiplyScalar(2600); far
       const ang = Math.atan2(fp.getX(i), fp.getZ(i)), side = -Math.cos(ang) * fn.getX(i) + Math.sin(ang) * fn.getZ(i);   // 보는 쪽 기준 가로 기울기
       const k = .9 - side * .14; fc.setXYZ(i, fc.getX(i) * k, fc.getY(i) * k, fc.getZ(i) * k);
     }
-    far.add(new THREE.Mesh(flat, new THREE.MeshBasicMaterial({ vertexColors: true, fog: false, side: THREE.DoubleSide })));
+    const hill = new THREE.Mesh(flat, new THREE.MeshBasicMaterial({ vertexColors: true, fog: false, side: THREE.DoubleSide })); far.add(hill); farHills.push(hill);
   }
 }
 
@@ -205,8 +207,8 @@ function grassify(m, bladeScale, bladeAmt, patchScale, patchAmt) {
   return m;
 }
 const roughTex = canvasTex(64, 64, (g, w, h) => { g.fillStyle = '#2b6a31'; g.fillRect(0, 0, w, h); }, [1, 1]);
-const ground = new THREE.Mesh(new THREE.PlaneGeometry(1400, 4800), grassify(new THREE.MeshStandardMaterial({ map: roughTex, roughness: 1 }), 1 / 3, 1.2, 1 / 90, 1.3));
-ground.rotation.x = -Math.PI / 2; ground.position.z = -2200; ground.receiveShadow = true; scene.add(ground);
+const ground = new THREE.Mesh(new THREE.PlaneGeometry(1400, 200 + SEA_AT), grassify(new THREE.MeshStandardMaterial({ map: roughTex, roughness: 1 }), 1 / 3, 1.2, 1 / 90, 1.3));
+ground.rotation.x = -Math.PI / 2; ground.position.z = 100 - (200 + SEA_AT) / 2; ground.receiveShadow = true; scene.add(ground);
 
 const fairTex = canvasTex(64, 512, (g, w, h) => {   // 잔디 깎은 줄무늬 (밝은 줄 · 어두운 줄)
   g.fillStyle = '#4ea94f'; g.fillRect(0, 0, w, h / 2);
@@ -313,7 +315,7 @@ mat.position.set(-.45, .015, .1); mat.receiveShadow = true; scene.add(mat);
   const MAXT = 700, pines = new THREE.InstancedMesh(pineGeo, leafMat, MAXT), blobs = new THREE.InstancedMesh(blobGeo, leafMat, MAXT);
   const trunks = new THREE.InstancedMesh(trunkGeo, new THREE.MeshStandardMaterial({ color: 0x5a4030, roughness: 1 }), MAXT * 2);
   const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), col = new THREE.Color(); let np = 0, nb = 0, nt = 0;
-  for (let z = 10; z < RANGE + 150; z += 8 + r() * 11) for (const side of [-1, 1]) {
+  for (let z = 10; z < SEA_AT - 10; z += 8 + r() * 11) for (const side of [-1, 1]) {
     if (r() < .12) continue;
     const pine = r() < .62, h = pine ? 9 + r() * 11 : 7 + r() * 6, w = h * (pine ? .75 + r() * .2 : .95 + r() * .25);
     if (pine ? np >= MAXT : nb >= MAXT) continue;
@@ -325,7 +327,7 @@ mat.position.set(-.45, .015, .1); mat.receiveShadow = true; scene.add(mat);
   pines.count = np; blobs.count = nb; trunks.count = nt; scene.add(pines, blobs, trunks);
   // 조명탑
   const headMat = new THREE.MeshStandardMaterial({ color: 0xe8eef5, roughness: .4 });   // 낮이라 조명은 꺼져 있어요
-  for (let z = 60; z < RANGE + 100; z += 120) for (const side of [-1, 1]) {
+  for (let z = 60; z < SEA_AT; z += 120) for (const side of [-1, 1]) {
     const x = side * (OB_X + 5);
     const pole = new THREE.Mesh(new THREE.CylinderGeometry(.3, .45, 24, 6), postMat); pole.position.set(x, 12, -z); scene.add(pole);
     const head = new THREE.Mesh(new THREE.BoxGeometry(4, 1.6, .6), headMat); head.position.set(x, 24, -z); head.rotation.y = side * .3; scene.add(head);
@@ -374,6 +376,76 @@ mat.position.set(-.45, .015, .1); mat.receiveShadow = true; scene.add(mat);
   const face = new THREE.Mesh(new THREE.PlaneGeometry(SW, SH), new THREE.MeshBasicMaterial({ map: tex, color: new THREE.Color(.88, .88, .88) /* 형광 빛 번짐 없이 */ }));
   face.rotation.x = -tilt; face.position.set(0, h / 2 + Math.sin(tilt) * .012, -d / 2 + Math.cos(tilt) * .012); sg.add(face);
 }
+/* ── 바깥 풍경 2: 500m~ 바다 (모래사장 · 야자수 · 파도) ───────────────────── */
+let water = null;
+{
+  const L = SKY_AT - SEA_AT, zc = -(SEA_AT + L / 2);
+  // 모래사장 (페어웨이 옆 32m ~ OB 70m)
+  const sandTex = canvasTex(64, 64, (g, w, h) => { g.fillStyle = '#e9d6a6'; g.fillRect(0, 0, w, h); }, [1, 1]);
+  const sandMat = grassify(new THREE.MeshStandardMaterial({ map: sandTex, roughness: 1 }), 1 / 4, .35, 1 / 40, .5);
+  for (const side of [-1, 1]) {
+    const sd = new THREE.Mesh(new THREE.PlaneGeometry(OB_X - 32 + 6, L), sandMat); sd.rotation.x = -Math.PI / 2; sd.position.set(side * (32 + (OB_X - 32 + 6) / 2), .005, zc); sd.receiveShadow = true; scene.add(sd);
+  }
+  // 바다 (OB 바깥) · 반짝이는 물결
+  const waveTex = canvasTex(256, 256, (g, w, h) => {
+    g.fillStyle = '#1f7fc4'; g.fillRect(0, 0, w, h);
+    for (let i = 0; i < 260; i++) {
+      const x = Math.random() * w, y = Math.random() * h, l = 6 + Math.random() * 22, a = .25 + Math.random() * .5;
+      g.strokeStyle = Math.random() < .3 ? `rgba(255,255,255,${a})` : `rgba(120,200,255,${a})`; g.lineWidth = 1 + Math.random() * 1.5;
+      g.beginPath(); g.moveTo(x, y); g.quadraticCurveTo(x + l / 2, y - 2, x + l, y); g.stroke();
+    }
+  }, [60, 30]);
+  water = new THREE.Mesh(new THREE.PlaneGeometry(2400, L + 40), new THREE.MeshStandardMaterial({ map: waveTex, roughness: .2, metalness: .1, envMap: ENV_TEX, envMapIntensity: 1.4 }));
+  water.rotation.x = -Math.PI / 2; water.position.set(0, -.35, zc); scene.add(water);
+  // 하얀 파도 (모래사장 끝)
+  const foam = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: .75 });
+  for (const side of [-1, 1]) { const f = new THREE.Mesh(new THREE.PlaneGeometry(1.6, L), foam); f.rotation.x = -Math.PI / 2; f.position.set(side * (OB_X + 6.6), -.3, zc); scene.add(f); }
+  // 야자수 (모래사장 바깥쪽)
+  let s = 31; const r = () => (s = (s * 16807) % 2147483647) / 2147483647;
+  const trunkG = new THREE.CylinderGeometry(.05, .09, 1, 6); trunkG.translate(0, .5, 0); trunkG.rotateZ(.18);
+  const leaves = []; for (let k = 0; k < 7; k++) { const g = new THREE.ConeGeometry(.09, .62, 4); g.rotateZ(Math.PI / 2 + .5); g.translate(.3, -.1, 0); g.rotateY(k / 7 * Math.PI * 2); g.translate(-.18, 1.02, 0); leaves.push(g); }
+  const leafG = mergeGeometries(leaves); leafG.scale(1, .55, 1).translate(0, .45, 0);
+  const N = 60, tr = new THREE.InstancedMesh(trunkG, new THREE.MeshStandardMaterial({ color: 0x8a6a45, roughness: 1, flatShading: true }), N), lf = new THREE.InstancedMesh(leafG, new THREE.MeshStandardMaterial({ color: 0x3f9a3a, roughness: .9, flatShading: true }), N);
+  const m4 = new THREE.Matrix4(), q = new THREE.Quaternion();
+  for (let i = 0; i < N; i++) {
+    const side = i % 2 ? 1 : -1, z = -(SEA_AT + 10 + r() * (L - 20)), h = 7 + r() * 5;
+    q.setFromAxisAngle(UP, r() * 6.28); m4.compose(V(side * (56 + r() * 14), 0, z), q, V(h, h, h)); tr.setMatrixAt(i, m4); lf.setMatrixAt(i, m4);
+  }
+  scene.add(tr, lf);
+}
+/* ── 바깥 풍경 3: 1000m~ 하늘 (페어웨이가 구름 위에 떠 있어요) ───────────────── */
+const skyZone = new THREE.Group(); scene.add(skyZone);
+{
+  const L = RANGE + 300 - SKY_AT, zc = -(SKY_AT + L / 2);
+  const puffTex = (n, sz, base, big = 1) => canvasTex(sz, sz, (g, w, h) => {
+    g.fillStyle = base; g.fillRect(0, 0, w, h);
+    for (let i = 0; i < n; i++) {
+      const x = Math.random() * w, y = Math.random() * h, rr = w * (.04 + Math.random() * .09) * big;
+      for (const dx of [-w, 0, w]) for (const dy of [-h, 0, h]) {
+        const gr = g.createRadialGradient(x + dx, y + dy, 0, x + dx, y + dy, rr); gr.addColorStop(0, 'rgba(255,255,255,.95)'); gr.addColorStop(.6, 'rgba(240,246,255,.6)'); gr.addColorStop(1, 'rgba(255,255,255,0)');
+        g.fillStyle = gr; g.fillRect(x + dx - rr, y + dy - rr, rr * 2, rr * 2);
+      }
+    }
+  });
+  // 페어웨이 옆 잔디 (32m ~ OB): 구름 위에 떠 있는 잔디 섬
+  for (const side of [-1, 1]) {
+    const c = new THREE.Mesh(new THREE.PlaneGeometry(OB_X - 32 + 6, L), ground.material); c.rotation.x = -Math.PI / 2; c.position.set(side * (32 + (OB_X - 32 + 6) / 2), .005, zc); c.receiveShadow = true; skyZone.add(c);
+  }
+  // 페어웨이 아래 두께 (떠 있는 섬처럼)
+  const slab = new THREE.Mesh(new THREE.BoxGeometry(OB_X * 2 + 12, 6, L), new THREE.MeshStandardMaterial({ color: 0x6b5340, roughness: 1 })); slab.position.set(0, -3.02, zc); skyZone.add(slab);
+  const rim = new THREE.Mesh(new THREE.BoxGeometry(OB_X * 2 + 12.4, .6, L), new THREE.MeshStandardMaterial({ color: 0x2f7a35, roughness: 1 })); rim.position.set(0, -.31, zc); skyZone.add(rim);
+  // 아래로 펼쳐진 구름 바다
+  const seaTex = puffTex(30, 512, '#4f8ad3', 1.5); seaTex.repeat.set(6, 7);
+  const cloudSea = new THREE.Mesh(new THREE.PlaneGeometry(5000, L + 2400), new THREE.MeshBasicMaterial({ map: seaTex, color: new THREE.Color(.9, .92, .96) }));
+  cloudSea.rotation.x = -Math.PI / 2; cloudSea.position.set(0, -90, zc - 600); skyZone.add(cloudSea);
+  // 길 옆 둥실 구름
+  const ct = canvasTex(256, 128, (g, w, h) => { for (let i = 0; i < 16; i++) { const x = w * (.15 + Math.random() * .7), y = h * (.5 + Math.random() * .2), rr = h * (.15 + Math.random() * .2); const gr = g.createRadialGradient(x, y, 0, x, y, rr); gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.beginPath(); g.arc(x, y, rr, 0, 7); g.fill(); } });
+  let s = 47; const r = () => (s = (s * 16807) % 2147483647) / 2147483647;
+  for (let i = 0; i < 30; i++) {
+    const side = i % 2 ? 1 : -1, sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: ct, depthWrite: false, transparent: true, opacity: .8 }));
+    const w = 40 + r() * 70; sp.scale.set(w, w * .45, 1); const below = i % 3 !== 2; sp.position.set(side * (below ? 85 + r() * 120 : 200 + r() * 260), below ? -38 + r() * 22 : -70 + r() * 40, -(SKY_AT + r() * L)); skyZone.add(sp);
+  }
+}
 /* ── 멀리 있는 볼거리: 500m 마다 네온 아치 · 연못 · 열기구 ─────────────── */
 {
   const gateCols = { 500: 0x2de2e6, 1000: 0xffd23f, 1500: 0xff2e88, 2000: 0xb6ff3b };
@@ -396,7 +468,7 @@ mat.position.set(-.45, .015, .1); mat.receiveShadow = true; scene.add(mat);
   // 연못 (모래 테두리)
   const water = new THREE.MeshStandardMaterial({ color: 0x3b8fd9, roughness: .08, metalness: .35 });
   const sand = new THREE.MeshStandardMaterial({ color: 0xe6d3a3, roughness: 1 });
-  [[640, -52, 20], [980, 50, 24], [1380, -48, 22], [1750, 52, 26]].forEach(([z, x, r]) => {
+  [].forEach(([z, x, r]) => {   // 연못 자리는 바다 · 하늘 구역이 됐어요
     const s1 = new THREE.Mesh(new THREE.CircleGeometry(r + 3, 36), sand); s1.rotation.x = -Math.PI / 2; s1.position.set(x, .02, -z); s1.scale.set(1.5, 1, 1); scene.add(s1);
     const w1 = new THREE.Mesh(new THREE.CircleGeometry(r, 36), water); w1.rotation.x = -Math.PI / 2; w1.position.set(x, .04, -z); w1.scale.set(1.5, 1, 1); scene.add(w1);
   });
@@ -1037,6 +1109,10 @@ function updateCamera(now, dt) {
   // 그림자 카메라는 타석에 고정
   key.target.position.set(-.6, 0, 0); key.position.set(-8.6, 18, 14);
   far.position.set(camera.position.x, 0, camera.position.z);
+  const hillsOn = camera.position.z > -(SEA_AT - 30); if (farHills[0].visible !== hillsOn) farHills.forEach(h => h.visible = hillsOn);
+  // 하늘 구역: 안개를 파란 하늘빛으로, 더 멀리까지 (아래 구름 바다가 보이게)
+  const inSky = camera.position.z < -(SKY_AT - 40);
+  if (inSky !== updateCamera.inSky) { updateCamera.inSky = inSky; scene.fog.color.set(inSky ? 0x8fbdea : HAZE); scene.fog.near = inSky ? 400 : 220; scene.fog.far = inSky ? 2800 : 1500; }
 }
 
 /* ── 매 프레임 ─────────────────────────────────────────────────────── */
@@ -1083,6 +1159,7 @@ function frame(now, dt) {
   } else landRing.visible = false;
   updateBoosters(now);
   WIND.value = now / 1000;
+  if (water) { water.material.map.offset.x = (now / 90000) % 1; water.material.map.offset.y = (now / 60000) % 1; }
   balloons.forEach(g => { g.position.y += Math.sin(now / 1500 + g.userData.bob) * .01; g.rotation.y += dt * .05; });
   updateTrail();
   updateCamera(now, dt);
