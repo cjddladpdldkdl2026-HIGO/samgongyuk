@@ -650,6 +650,7 @@ function swingPose(now) {
  *  캐릭터 목록 · 잠금은 index.html 의 CHARS 에 있어요 (파일 이름이 같아야 해요).
  * ═══════════════════════════════════════════════════════════════ */
 const CHAR_FILES = ['man', 'woman', 'mouse', 'rider'];
+golfer.visible = false;   // 캐릭터 파일을 받는 동안 옛 학생이 잠깐 보이지 않게
 const CLUB_LEN0 = CLUB_LEN;   // 학생 기준 채 길이 (공 자리 계산용)
 const FBX = { model: null, mixer: null, act: null, lead: null, trail: null, armL: null, armR: null, hips: null, t: { addr: 0, top: 0, imp: 0, fin: 0 } };
 let charWant = -1, charToken = 0;
@@ -672,6 +673,7 @@ function loadChar(i) {
     o.traverse(b => { if (/LeftHand$/.test(b.name)) F.lead = b; if (/RightHand$/.test(b.name)) F.trail = b; if (/LeftArm$/.test(b.name)) F.armL = b; if (/RightArm$/.test(b.name)) F.armR = b; if (/Hips$/.test(b.name)) F.hips = b; });
     if (!F.lead || !F.trail || !F.armL || !F.armR || !F.hips) return;
     if (FBX.model) golfer.remove(FBX.model);
+    golfer.visible = true;
     Object.assign(FBX, F, { model: null });
     golfer.add(o);
     FBX.mixer = new THREE.AnimationMixer(o); FBX.act = FBX.mixer.clipAction(clip); FBX.act.play();
@@ -682,7 +684,8 @@ function loadChar(i) {
     // 백스윙 꼭대기 = 손이 처음으로 높이 올라갔다가 다시 내려가기 시작하는 순간 (피니시가 더 높아서 '가장 높은 곳'은 안 돼요)
     const n = ys.length, y0 = Math.min(...ys.slice(0, Math.round(.6 / step)));
     let iTop = 1;
-    for (let i = 1; i < n - 1; i++) { if (ys[i] > y0 + .35 && ys[i] >= ys[i - 1] && ys[i] >= ys[i + 1]) { iTop = i; break; } }
+    const yMax = Math.max(...ys), thr = y0 + (yMax - y0) * .45;   // 키가 작은 캐릭터도 맞게 (손이 오르는 높이의 45%)
+    for (let i = 1; i < n - 1; i++) { if (ys[i] > thr && ys[i] >= ys[i - 1] && ys[i] >= ys[i + 1]) { iTop = i; break; } }
     const iImp = argmin(iTop, Math.min(n, iTop + Math.round(.7 / step)));
     const iFin = argmax(iImp, Math.min(n, iImp + Math.round(1 / step)));
     const iAddr = argmin(0, iTop);
@@ -705,7 +708,7 @@ function loadChar(i) {
     clubGroups.forEach(g => g && golfer.remove(g)); clubGroups.length = 0; lookClub = -1;
     FBX.model = o;
     window.GolfView && (window.GolfView.fbx = FBX);
-  }, undefined, () => { /* 못 불러오면 지금 모습 그대로 */ });
+  }, undefined, () => { golfer.visible = true; /* 못 불러오면 직접 만든 학생으로 */ });
 }
 function fbxTime(now) {
   const T = FBX.t, ph = phase, back = (k) => T.addr + (T.top - T.addr) * k;

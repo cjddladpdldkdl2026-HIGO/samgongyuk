@@ -104,6 +104,7 @@ button { font: inherit; color: inherit; cursor: pointer; border: 0; background: 
 .charBtn.on { border-color: var(--lime); background: rgba(182, 255, 59, .14); box-shadow: 0 0 14px rgba(182, 255, 59, .35); }
 .charBtn.lock { opacity: .45; filter: grayscale(1); }
 .charBtn .lk { position: absolute; top: 5px; right: 6px; font-size: 14px; }
+.charBtn .need { display: block; font-size: 11px; font-weight: 700; color: var(--gold); margin-top: 1px; }
 .charTitle { font-size: 12px; color: var(--sub); margin: 0 0 6px 2px; }
 .who { margin-top: 12px; text-align: center; font-size: 13px; color: var(--sub); }
 .who b { color: var(--cyan); }
@@ -280,7 +281,7 @@ button { font: inherit; color: inherit; cursor: pointer; border: 0; background: 
 { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/" } }
 </script>
-<script type="module" src="view3d.js?v=49"></script>   <!-- 3D 코드를 고치면 v 숫자도 올려요 (휴대폰 옛 사본 방지) -->
+<script type="module" src="view3d.js?v=50"></script>   <!-- 3D 코드를 고치면 v 숫자도 올려요 (휴대폰 옛 사본 방지) -->
 <script>
 "use strict";
 /* ═══════════════════════════════════════════════════════════════
@@ -303,13 +304,14 @@ const CLUBS = [
 ];
 const OLD_CLUB_PRICES = [0, 60, 150, 300, 550, 900];   // 예전 금속 채 6개 (2026-11-18 까지) — 산 사람에게 캐쉬를 돌려줘요
 // 골프공 (4개, 약한 순서): drag = 공기 저항(작을수록 멀리), roll = 떨어진 뒤 굴러가는 비율, wind = 바람 영향. 3D 모양은 view3d.js buildBall()
-// 캐릭터 (Mixamo, models/chars/<file>.glb) · lock: true 면 잠겨 있어서 못 골라요
+// 캐릭터 (Mixamo, models/chars/<file>.glb · 사진은 <file>.webp) · need: 내 최고 기록이 이 거리(m) 이상이면 열려요
 const CHARS = [
   { name: "남자", ic: "🧑", file: "man" },
   { name: "여자", ic: "👩", file: "woman" },
-  { name: "제리", ic: "🐭", file: "mouse", lock: true },
-  { name: "라이더", ic: "🏍️", file: "rider", lock: true },
+  { name: "제리", ic: "🐭", file: "mouse", need: 500 },
+  { name: "라이더", ic: "🏍️", file: "rider", need: 1000 },
 ];
+const charLocked = (c, best = S.best) => !!c.need && best < c.need;
 const BALLS = [
   { name: "기본 골프공", ic: "⚪", price: 0,   drag: 1.00, roll: .18, wind: 1.00, desc: "평범한 하얀 골프공 · 기본" },
   { name: "무릎뼈 공",   ic: "🦴", price: 60,  drag: .88,  roll: .22, wind: .85,  desc: "무릎뼈만 떼어 만든 세모난 공" },
@@ -342,7 +344,7 @@ function fix(d) {
   s.owned = Object.assign({ club: [0], ball: [0] }, s.owned || {});
   s.club = Math.min(Math.max(0, s.club | 0), CLUBS.length - 1); s.ball = Math.min(Math.max(0, s.ball | 0), BALLS.length - 1);
   s.power = Math.min(Math.max(0, s.power | 0), POWER_MAX);
-  s.char = Math.min(Math.max(0, s.char | 0), CHARS.length - 1); if (CHARS[s.char].lock) s.char = 0;
+  s.char = Math.min(Math.max(0, s.char | 0), CHARS.length - 1); if (CHARS[s.char].need && s.best < CHARS[s.char].need) s.char = 0;
   if (d && (d.cv || 1) < 2) {   // 골프채가 뼈 채 4개로 바뀜: 예전 채 값을 돌려주고 기본 채부터
     s.cash += [...new Set(s.owned.club || [])].reduce((sum, i) => sum + (OLD_CLUB_PRICES[i] || 0), 0);
     s.owned.club = [0]; s.club = 0; s.cv = 2;
@@ -597,6 +599,8 @@ function finishShot() {
   if (ob) { msg.classList.add("ob"); msg.textContent = "옆으로 너무 벗어났어요! 기록 없음 😵"; sub.textContent = "노란 칸에 맞춰 칠수록 똑바로 날아가요"; snd("wrong"); }
   else if (dist > S.best + .05) {
     const before = S.best; S.best = Math.round(dist * 10) / 10;
+    const opened = CHARS.filter(c => charLocked(c, before) && !charLocked(c));
+    if (opened.length) setTimeout(() => { toast(`🔓 새 캐릭터 해금! ${opened.map(c => c.ic + ' ' + esc(c.name)).join(' · ')}<br><small>메뉴에서 고를 수 있어요</small>`); snd("buy"); }, 1200);
     msg.classList.add("best"); msg.textContent = before > 0 ? `🎉 최고 기록 갱신! (+${(dist - before).toFixed(1)}m)` : "🎉 첫 기록!";
     sub.textContent = member() ? "랭킹에 올리는 중…" : "로그인하면 이 기록이 랭킹에 올라가요";
     snd("best"); recordBest(dist).then(() => { if (member()) sub.textContent = topBoard && topBoard.myRank ? `지금 ${topBoard.myRank}위!` : "랭킹 저장 완료"; });
@@ -660,10 +664,10 @@ function refreshAll() {
 }
 function renderChars() {
   const box = $("charList"); if (!box) return;
-  box.innerHTML = CHARS.map((c, i) => `<button class="charBtn${i === S.char ? " on" : ""}${c.lock ? " lock" : ""}" data-char="${i}"><img src="models/chars/${c.file}.webp" alt="" draggable="false">${esc(c.name)}${c.lock ? '<span class="lk">🔒</span>' : ""}</button>`).join("");
+  box.innerHTML = CHARS.map((c, i) => { const lk = charLocked(c); return `<button class="charBtn${i === S.char ? " on" : ""}${lk ? " lock" : ""}" data-char="${i}"><img src="models/chars/${c.file}.webp" alt="" draggable="false">${esc(c.name)}${lk ? `<span class="need">🔒 ${fmt(c.need)}m</span>` : ""}</button>`; }).join("");
   box.querySelectorAll("[data-char]").forEach(b => b.onclick = () => {
     const i = +b.dataset.char, c = CHARS[i];
-    if (c.lock) { toast(`🔒 ${esc(c.name)} 캐릭터는 아직 잠겨 있어요`); return; }
+    if (charLocked(c)) { toast(`🔒 최고 기록 ${fmt(c.need)}m 를 넘기면 ${esc(c.name)} 캐릭터가 열려요<br><small>지금 내 최고 ${fmt(S.best)}m</small>`); return; }
     if (i === S.char) return;
     S.char = i; snd("buy"); toast(`${c.ic} ${esc(c.name)} 캐릭터로 바꿨어요!`); save(); refreshAll();
   });
