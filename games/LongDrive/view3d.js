@@ -12,6 +12,7 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
 
 const canvas = document.getElementById('scene');
 const MOBILE = Math.min(innerWidth, innerHeight) < 600;
@@ -518,7 +519,7 @@ golfer.updateMatrixWorld(true);
 const C0 = toLocal(chestN, 0, .5, 0);
 const D = V(0, -.88, .47).normalize(), T = V(-1, 0, 0), N = V().crossVectors(D, T).normalize();
 const R_HANDS = .64;
-const CLUB_LEN = (C0.y - .035) / -D.y - R_HANDS;   // 어드레스에서 헤드 바닥이 땅에 닿는 길이
+let CLUB_LEN = (C0.y - .035) / -D.y - R_HANDS;   // 어드레스에서 헤드 바닥이 땅에 닿는 길이
 const toeAt = (dir) => V().addScaledVector(dir, .47).addScaledVector(N, -.88).normalize();
 const BALL_LOCAL = C0.clone().addScaledVector(D, R_HANDS + CLUB_LEN).addScaledVector(toeAt(D), .1).add(V(.05, 0, 0));   // 공은 헤드 가운데쯤
 // 공(월드 0, y, 0)이 클럽 페이스 앞에 오도록 캐릭터를 세워요. 캐릭터는 +x(화면 오른쪽 = 공 쪽)를 봐요.
@@ -541,6 +542,69 @@ function swingPose(now) {
     phi = -2.75 * e; h = -1.65 * e * e; follow = e;   // 피니시: 채가 목 뒤로 감겨요
   } else { phi = .035 * Math.sin(now / 520); }
   return { phi, h, follow };
+}
+/* ═══════════════════════════════════════════════════════════════
+ *  3D 캐릭터 (Mixamo "Golf Drive", models/golfer-drive.fbx)
+ *  불러오면 직접 만든 학생 대신 이 캐릭터가 스윙해요 (못 불러오면 학생 그대로).
+ *  손 높이로 어드레스 · 백스윙 꼭대기 · 임팩트 · 피니시 순간을 찾아서,
+ *  파워 게이지 → 백스윙, 임팩트 → 다운스윙, 공이 날아갈 때 → 피니시로 재생해요.
+ *  채는 왼손(위) → 오른손(아래) 방향으로 손에 붙어요.
+ * ═══════════════════════════════════════════════════════════════ */
+const FBX = { model: null, mixer: null, act: null, lead: null, trail: null, armL: null, armR: null, t: { addr: 0, top: 0, imp: 0, fin: 0 } };
+function fbxAt(t) { FBX.act.time = t; FBX.mixer.update(0); golfer.updateMatrixWorld(true); }
+function fbxHands() { return [golfer.worldToLocal(FBX.lead.getWorldPosition(V())), golfer.worldToLocal(FBX.trail.getWorldPosition(V()))]; }
+/* 채 방향 = 스윙 평면 위에서 '어깨 → 왼손' 팔 각도 + 손목 꺾임(h, 학생 스윙과 같은 값) */
+function fbxClubDir(L, h) {
+  const sh = golfer.worldToLocal(FBX.armL.getWorldPosition(V())).add(golfer.worldToLocal(FBX.armR.getWorldPosition(V()))).multiplyScalar(.5);
+  const a = V().subVectors(L, sh), phiArm = Math.atan2(a.dot(T), a.dot(D)), ang = phiArm + h;
+  return V().addScaledVector(D, Math.cos(ang)).addScaledVector(T, Math.sin(ang)).normalize();
+}
+new FBXLoader().load('models/golfer-drive.fbx', (o) => {
+  const clip = o.animations.find(a => a.duration > .1); if (!clip) return;
+  o.scale.setScalar(.01);   // cm → m (키 약 1.8m)
+  o.traverse(m => { if (m.isMesh) { m.castShadow = true; m.frustumCulled = false; } });
+  o.traverse(b => { if (/LeftHand$/.test(b.name)) FBX.lead = b; if (/RightHand$/.test(b.name)) FBX.trail = b; if (/LeftArm$/.test(b.name)) FBX.armL = b; if (/RightArm$/.test(b.name)) FBX.armR = b; if (/Hips$/.test(b.name)) FBX.hips = b; });
+  if (!FBX.lead || !FBX.trail || !FBX.armL || !FBX.armR || !FBX.hips) return;
+  golfer.add(o);
+  FBX.mixer = new THREE.AnimationMixer(o); FBX.act = FBX.mixer.clipAction(clip); FBX.act.play();
+  // 손 높이 곡선으로 중요한 순간 찾기
+  const step = .02, ys = [];
+  for (let t = 0; t <= clip.duration; t += step) { fbxAt(t); ys.push(fbxHands()[0].y); }
+  const at = i => i * step, argmax = (a, b) => { let k = a; for (let i = a; i < b; i++) if (ys[i] > ys[k]) k = i; return k; }, argmin = (a, b) => { let k = a; for (let i = a; i < b; i++) if (ys[i] < ys[k]) k = i; return k; };
+  const n = ys.length, iTop = argmax(1, Math.floor(n * .6)), iImp = argmin(iTop, Math.min(n, iTop + Math.round(1 / step))), iFin = argmax(iImp, Math.min(n, iImp + Math.round(1.5 / step)));
+  const base = Math.min(...ys.slice(0, iTop)); let iAddr = 0; for (let i = 0; i < iTop; i++) if (ys[i] <= base + .04) iAddr = i;
+  FBX.t = { addr: at(iAddr), top: at(iTop), imp: at(iImp), fin: at(iFin) };
+  // 캐릭터가 공(앞 = 캐릭터 기준 +z) 쪽을 보게 돌리기: 어드레스 때 골반 → 손 방향이 정면
+  fbxAt(FBX.t.addr);
+  { const hip = golfer.worldToLocal(FBX.hips.getWorldPosition(V())), Lh = fbxHands()[0]; o.rotation.y -= Math.atan2(Lh.x - hip.x, Lh.z - hip.z); }
+  // 임팩트 순간 채 끝이 공 자리(예전 학생 기준)에 오도록 캐릭터 위치 · 채 길이 맞추기
+  fbxAt(FBX.t.imp);
+  const [L] = fbxHands(), c = fbxClubDir(L, 0), E0 = C0.clone().addScaledVector(D, R_HANDS + CLUB_LEN);
+  CLUB_LEN = Math.max(.75, Math.min(1.25, (L.y - E0.y) / Math.max(.2, -c.y)));
+  const end = L.clone().addScaledVector(c, CLUB_LEN);
+  o.position.x += E0.x - end.x; o.position.z += E0.z - end.z;
+  // 직접 만든 학생은 숨기고, 채는 새 길이로 다시 만들기
+  golfer.children.forEach(ch => { if (ch !== o) ch.visible = false; });
+  clubGroups.forEach(g => g && golfer.remove(g)); clubGroups.length = 0; lookClub = -1;
+  FBX.model = o;
+  window.GolfView && (window.GolfView.fbx = FBX);
+}, undefined, () => { /* 못 불러오면 직접 만든 학생 그대로 */ });
+function fbxTime(now) {
+  const T = FBX.t, ph = phase, back = (k) => T.addr + (T.top - T.addr) * k;
+  if (ph === 'power') return back(meterPos);
+  if (ph === 'accuracy') return back(setPower);
+  if (ph === 'down') { const k = Math.min(1, (now - downAt) / DOWN_MS), from = back(setPower); return from + (T.imp - from) * k * k; }
+  if (ph === 'fly' || ph === 'roll' || ph === 'done') { const k = Math.min(1, (now - hitAt) / 700); return T.imp + (T.fin - T.imp) * (1 - (1 - k) * (1 - k)); }
+  return T.addr;
+}
+function poseFBX(now) {
+  fbxAt(fbxTime(now));
+  const g = clubGroups[lookClub];
+  if (!g) return;
+  const [L] = fbxHands(), c = fbxClubDir(L, swingPose(now).h);
+  const Np = N.clone().addScaledVector(c, -N.dot(c)).normalize();
+  g.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(Np.clone().negate(), c, V().crossVectors(c, Np)));
+  g.position.copy(L).addScaledVector(c, CLUB_LEN);
 }
 function poseGolfer(now) {
   const { phi, h, follow } = swingPose(now);
@@ -854,7 +918,7 @@ function updateCamera(now, dt) {
 function frame(now, dt) {
   if (S.club !== lookClub) applyClubLook(S.club);
   if (S.ball !== lookBall) applyBallLook(S.ball);
-  poseGolfer(now);
+  if (FBX.model) poseFBX(now); else poseGolfer(now);
   const ph = phase, b = ball;
   if (b) {
     const onTee = !(ph === 'fly' || ph === 'roll' || ph === 'done');
