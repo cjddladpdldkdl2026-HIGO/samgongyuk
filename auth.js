@@ -9,8 +9,10 @@
  *  SamAuth.displayName          → 랭킹에 보이는 이름 (학생: 김*수 (26), 관리자: 닉네임)
  *  SamAuth.record({ game, mode, score, accuracy, detail })  → 로그인한 사람만 저장, 실패해도 게임은 그대로
  *  SamAuth.ranking(game, mode)  → { top: [{ nickname, score, accuracy }], myBest, myRank, total }
- *  SamAuth.answer({ game, item, cat, ok, mode })  → 문제 하나 풀 때마다 (내 약점 분석용, supabase/answers.sql)
- *      item = 문제 이름 (관절오목 (Glenoid cavity)), cat = 묶음 (어깨뼈), ok = 맞았나. 회원만, 모아서 보내요. 실패해도 게임은 그대로
+ *  SamAuth.answer({ game, item, cat, ok, mode, picked, ms, reason })  → 문제 하나 풀 때마다 (내 약점 분석용, supabase/answers.sql)
+ *      item = 문제 이름 (관절오목 (Glenoid cavity)), cat = 묶음 · 단원 (어깨뼈), ok = 첫 시도에 맞았나
+ *      picked = 틀렸을 때 고른 것 (헷갈린 짝), ms = 걸린 시간, reason = 'timeout' | 'no_voice' (마이크가 못 들음)
+ *      회원만, 모아서 보내요. 실패해도 게임은 그대로. 한 판의 문제들은 같은 play 번호 → record() 때 detail.play 로 끝 표시
  *  SamAuth.onChange(fn)
  *  (part3) 화면을 보는 동안 1분마다 ops_ping — 지금 접속자 수 (supabase/ops.sql)
  *
@@ -77,13 +79,14 @@
 
   A.record = async (row) => {
     try {
+      const play = A._endPlay ? A._endPlay(row && row.game) : null;   // 끝까지 한 판 → 그 판의 문제들과 연결 (어디서 그만두나 분석)
       await A.ready;
       if (!A.profile || GAMES.indexOf(row.game) < 0) return null;
       const acc = Number(row.accuracy);
       const { error } = await sb.from('runs').insert({
         game: row.game, mode: String(row.mode || '').slice(0, 30), score: Math.round(Number(row.score) || 0),
         accuracy: row.accuracy === '' || row.accuracy == null || !isFinite(acc) ? null : Math.max(0, Math.min(100, acc)),
-        detail: row.detail || {},
+        detail: Object.assign({}, row.detail || {}, play ? { play } : {}),
       });
       return error ? null : true;
     } catch { return null; }
@@ -106,6 +109,10 @@
     sb.auth.getSession().then(({ data }) => keep(data.session)).catch(() => {});
     sb.auth.onAuthStateChange((_e, s) => keep(s));
     const take = () => buf.splice(0, 300);
+    const uuid = () => (crypto.randomUUID ? crypto.randomUUID()
+      : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => { const r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 3 | 8)).toString(16); }));
+    let play = null;   // 지금 하는 판 { game, id } — 게임이 바뀌거나 record() 로 끝나면 새 번호
+    A._endPlay = (game) => { const id = play && (!game || play.game === game) ? play.id : null; play = null; return id; };
     async function flush() {
       clearTimeout(timer); timer = 0;
       if (stop || !buf.length) return;
@@ -133,7 +140,11 @@
         if (stop || !r || GAMES.indexOf(r.game) < 0 || typeof r.ok !== 'boolean') return;
         const item = String(r.item || '').trim().slice(0, 120);
         if (!item) return;
-        buf.push({ game: r.game, item, cat: String(r.cat || '').slice(0, 60), mode: String(r.mode || '').slice(0, 30), ok: r.ok });
+        if (!play || play.game !== r.game) play = { game: r.game, id: uuid() };
+        const ms = Math.round(Number(r.ms));
+        buf.push({ game: r.game, item, cat: String(r.cat || '').slice(0, 60), mode: String(r.mode || '').slice(0, 30), ok: r.ok,
+          picked: String(r.picked || '').trim().slice(0, 120), ms: ms >= 0 && ms <= 600000 ? ms : null,
+          reason: r.reason === 'timeout' || r.reason === 'no_voice' ? r.reason : '', play: play.id });
         if (buf.length >= 20) flush(); else if (!timer) timer = setTimeout(flush, 8000);
       } catch { /* 기록 실패해도 게임은 그대로 */ }
     };

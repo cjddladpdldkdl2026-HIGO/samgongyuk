@@ -30,7 +30,7 @@
 | `highgo.html` | 허브 (게임 목록 `APPS`, 배너) |
 | `auth.js` · `account.js` | 로그인 (`SamAuth`), ☰ 사이드바 · 게시판 · 이용자 현황 · 회원 관리 |
 | `ops.js` · `ops.css` | part3: ☰ 사이드바의 🏆 랭킹(누구나) · 🗂 데이터 관리 · 🛠 서버 점검·백업(관리자). `Account.addPage` 로 붙음 |
-| `study.js` | ☰ 📚 내 약점 분석(회원) · 🧑‍🎓 회원 활동·문항 분석(관리자). 게임은 문제마다 `SamAuth.answer({ game, item, cat, ok, mode })` 로 기록 (`supabase/answers.sql`) |
+| `study.js` | ☰ 📚 내 약점 분석(회원) · 🧑‍🎓 회원 활동·문항 분석(관리자). 게임은 문제마다 `SamAuth.answer({ game, item, cat, ok, mode })` 로 기록 (`supabase/answers.sql`). 기출 단원은 `games/LongDrive/units.js` (자동 분류, 검수 필요) |
 | `game-menu.js` | 게임 ⏸ 메뉴 · 일시정지 · 저장하고 나가기 · 이어하기 (`GameMenu.mount`) |
 | `sheets.js` · `sheets/` | 구글 시트 연결 |
 | `supabase/*.sql` | DB 구조 (동아리 Supabase 프로젝트 `ptlhjxtvwcoyrhemimjw`). 실행 순서: `schema.sql` → `game_saves.sql` → `ops.sql` → `answers.sql` |

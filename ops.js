@@ -289,7 +289,7 @@
               <td class="num">${mb(b.bytes)}</td>
               <td><div class="acts"><button class="abtn sm" type="button" data-bdl="${b.id}">⬇ 내려받기</button><button class="abtn sm warn" type="button" data-bdel="${b.id}">삭제</button></div></td></tr>`).join('')
               || '<tr><td colspan="6" class="empty2">아직 백업이 없어요.</td></tr>'}</tbody></table></div>
-          <p class="note">백업은 같은 Supabase 안에 저장돼요. 프로젝트가 통째로 사라지는 경우를 대비해 가끔 ⬇ 내려받아 동아리 드라이브에 보관해 주세요. 비밀번호는 들어가지 않아요.</p>
+          <p class="note">백업은 같은 Supabase 안에 저장돼요. 프로젝트가 통째로 사라지는 경우를 대비해 가끔 ⬇ 내려받아 동아리 드라이브에 보관해 주세요. 비밀번호는 들어가지 않아요. 가입 동의문에 따라 30일 지난 백업은 자동으로 지워져요 (answers.sql).</p>
 
           <h3>📋 매일 점검 보고서</h3>
           <div class="tbl-wrap ops-tall"><table class="tbl"><thead><tr><th>날짜</th><th>상태</th><th class="num">게임 실행</th><th class="num">방문</th><th class="num">로그인 회원</th><th class="num">최대 동시</th><th>주의 · 문제</th></tr></thead>

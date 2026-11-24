@@ -1734,6 +1734,7 @@ class Quiz {
     this.answer = this.region.points[q.key];
     this.revealUntil = 0;
     this.missed = false;
+    this._firstWrong = '';   // 내 약점 분석: 처음 잘못 쏜 곳 (헷갈린 짝)
     this.overtime = false;
     this.born = performance.now() + TURN_MS;
 
@@ -1803,6 +1804,7 @@ class Quiz {
       Sfx.wrong();
       this.viewer.burst(picked, false);
       const pen = Math.round(WRONG_PENALTY * this.d.mult);
+      if (!this.missed) this._firstWrong = picked.ko || '';
       this.score -= pen; this.combo = 0; this.missed = true;
       this.viewer.mark(picked, COLORS.wrong);
       this._pop(`아깝다… 거긴 ${picked.ko}  −${pen}`, 'bad');
@@ -1820,7 +1822,8 @@ class Quiz {
     this.found.add(this.q.key);
     // 내 약점 분석 (auth.js): 한 번에 맞혀야 정답, 틀린 뒤 맞히거나 시간 초과면 틀림
     window.SamAuth && SamAuth.answer && SamAuth.answer({ game: 'neoege', item: `${this.muscle.ko} ${this.q.role === 'origin' ? '이는곳' : '닿는곳'} · ${this.answer.ko}`,
-      cat: this.region.ko, ok: !!hit && !this.missed, mode: `${this.region.id}:${this.difficulty}` });
+      cat: this.region.ko, ok: !!hit && !this.missed, mode: `${this.region.id}:${this.difficulty}`,
+      picked: this._firstWrong || '', ms: hit && !this.missed ? performance.now() - this.born : null, reason: !hit && !this.missed ? 'timeout' : '' });
     this.viewer.reveal(this.answer);
     this.viewer.addPin(this.answer, this.q.role === 'origin' ? COLORS.origin : COLORS.insertion, this.radius * 0.5);
     this._timer(false);

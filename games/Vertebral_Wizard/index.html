@@ -966,7 +966,8 @@
     text = pretty(text);
     if (!heard){
       stats.silent++;
-      window.SamAuth && SamAuth.answer && SamAuth.answer({ game:'wizard', item: cur.mean ? cur.mean + ' (' + cur.word + ')' : cur.word, cat: cur.skill.name, ok:false, mode: MON.title });   // 내 약점 분석 (auth.js)
+      window.SamAuth && SamAuth.answer && SamAuth.answer({ game:'wizard', item: cur.mean ? cur.mean + ' (' + cur.word + ')' : cur.word, cat: cur.skill.name, ok:false, mode: MON.title,
+        reason: opt.input === 'button' ? 'timeout' : 'no_voice' });   // 마이크가 아무 소리도 못 들음 → 정답률에서 빼요   // 내 약점 분석 (auth.js)
       useCooldown(cur.skill);
       hideBubble(bubWiz); card.className = '';
       bubble(bubMon, esc(pick(NO_VOICE_LINES)), '', 2200);
@@ -988,7 +989,8 @@
       doSkill(cur.skill, afterPlayer);
     } else {
       stats.wrong++;
-      window.SamAuth && SamAuth.answer && SamAuth.answer({ game:'wizard', item: cur.mean ? cur.mean + ' (' + cur.word + ')' : cur.word, cat: cur.skill.name, ok:false, mode: MON.title });   // 내 약점 분석 (auth.js)
+      window.SamAuth && SamAuth.answer && SamAuth.answer({ game:'wizard', item: cur.mean ? cur.mean + ' (' + cur.word + ')' : cur.word, cat: cur.skill.name, ok:false, mode: MON.title,
+        picked: text });   // 무엇으로 들렸나 (음성 인식 실패 vs 진짜 틀림 구분용)   // 내 약점 분석 (auth.js)
       useCooldown(cur.skill);
       bubble(bubWiz, esc(text) + '?', 'bad', 1800);
       setTimeout(function(){ bubble(bubMon, esc(pick(WRONG_LINES)), '', 2000); }, 450);
