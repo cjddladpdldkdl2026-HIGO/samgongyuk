@@ -580,18 +580,27 @@ function loadChar(i) {
     const step = .02, ys = [];
     for (let t = 0; t <= clip.duration; t += step) { fbxAt(t); ys.push(fbxHands()[0].y); }
     const at = i => i * step, argmax = (a, b) => { let k = a; for (let i = a; i < b; i++) if (ys[i] > ys[k]) k = i; return k; }, argmin = (a, b) => { let k = a; for (let i = a; i < b; i++) if (ys[i] < ys[k]) k = i; return k; };
-    const n = ys.length, iTop = argmax(1, Math.floor(n * .6)), iImp = argmin(iTop, Math.min(n, iTop + Math.round(1 / step))), iFin = argmax(iImp, Math.min(n, iImp + Math.round(1.5 / step)));
-    const base = Math.min(...ys.slice(0, iTop)); let iAddr = 0; for (let i = 0; i < iTop; i++) if (ys[i] <= base + .04) iAddr = i;
+    // 백스윙 꼭대기 = 손이 처음으로 높이 올라갔다가 다시 내려가기 시작하는 순간 (피니시가 더 높아서 '가장 높은 곳'은 안 돼요)
+    const n = ys.length, y0 = Math.min(...ys.slice(0, Math.round(.6 / step)));
+    let iTop = 1;
+    for (let i = 1; i < n - 1; i++) { if (ys[i] > y0 + .35 && ys[i] >= ys[i - 1] && ys[i] >= ys[i + 1]) { iTop = i; break; } }
+    const iImp = argmin(iTop, Math.min(n, iTop + Math.round(.7 / step)));
+    const iFin = argmax(iImp, Math.min(n, iImp + Math.round(1 / step)));
+    const iAddr = argmin(0, iTop);
     FBX.t = { addr: at(iAddr), top: at(iTop), imp: at(iImp), fin: at(iFin) };
     // 캐릭터가 공(앞 = 캐릭터 기준 +z) 쪽을 보게 돌리기: 어드레스 때 골반 → 손 방향이 정면
     fbxAt(FBX.t.addr);
     { const hip = golfer.worldToLocal(FBX.hips.getWorldPosition(V())), Lh = fbxHands()[0]; o.rotation.y -= Math.atan2(Lh.x - hip.x, Lh.z - hip.z); }
-    // 임팩트 순간 채 끝이 공 자리(예전 학생 기준)에 오도록 캐릭터 위치 · 채 길이 맞추기 (키가 달라도 채 길이로 맞춰요)
-    fbxAt(FBX.t.imp);
+    // 어드레스(기다리는 자세) 때 채 끝이 공 자리에 오도록 캐릭터 위치 · 채 길이 맞추기 (키가 달라도 채 길이로 맞춰요)
+    fbxAt(FBX.t.addr);
     const [L] = fbxHands(), c = fbxClubDir(L, 0), E0 = C0.clone().addScaledVector(D, R_HANDS + CLUB_LEN0);
     CLUB_LEN = Math.max(.6, Math.min(1.3, (L.y - E0.y) / Math.max(.2, -c.y)));
     const end = L.clone().addScaledVector(c, CLUB_LEN);
     o.position.x += E0.x - end.x; o.position.z += E0.z - end.z;
+    // 임팩트 때 손 자리가 어드레스와 조금 달라요 → 내려칠 때만 살짝 밀어서 채가 공에 닿게
+    fbxAt(FBX.t.addr); golfer.updateMatrixWorld(true); const La = fbxHands()[0];
+    fbxAt(FBX.t.imp); const Li = fbxHands()[0];
+    FBX.pos0 = o.position.clone(); FBX.shift = V(La.x - Li.x, 0, La.z - Li.z);
     // 직접 만든 학생은 숨기고, 채는 새 길이로 다시 만들기
     golfer.children.forEach(ch => { if (ch !== o && !clubGroups.includes(ch)) ch.visible = false; });
     clubGroups.forEach(g => g && golfer.remove(g)); clubGroups.length = 0; lookClub = -1;
@@ -608,6 +617,10 @@ function fbxTime(now) {
   return T.addr;
 }
 function poseFBX(now) {
+  let w = 0;
+  if (phase === 'down') { const k = Math.min(1, (now - downAt) / DOWN_MS); w = k * k; }
+  else if (phase === 'fly' || phase === 'roll' || phase === 'done') w = 1 - Math.min(1, (now - hitAt) / 350);
+  if (FBX.pos0) FBX.model.position.copy(FBX.pos0).addScaledVector(FBX.shift, w);
   fbxAt(fbxTime(now));
   const g = clubGroups[lookClub];
   if (!g) return;
