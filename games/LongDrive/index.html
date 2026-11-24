@@ -287,7 +287,7 @@ button { font: inherit; color: inherit; cursor: pointer; border: 0; background: 
 { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/" } }
 </script>
-<script type="module" src="view3d.js?v=51"></script>   <!-- 3D 코드를 고치면 v 숫자도 올려요 (휴대폰 옛 사본 방지) -->
+<script type="module" src="view3d.js?v=52"></script>   <!-- 3D 코드를 고치면 v 숫자도 올려요 (휴대폰 옛 사본 방지) -->
 <script>
 "use strict";
 /* ═══════════════════════════════════════════════════════════════
@@ -464,7 +464,7 @@ let ball = null, trail = [], lastShot = null, wind = { x: 0, z: 0 }, rollTo = nu
  *  공이 떨어지거나 굴러서 동그라미 안에 들어가면 한 번씩 발동해요.
  *    폭탄: 펑! 위로 튀면서 앞으로 더 날아가요
  *    대포: 공을 빨아들여 똑바로 멀리 쏴 줘요 (드물지만 세요, 옆으로 휜 공도 가운데로) */
-const BOOST_FROM = 70, BOOST_TO = 1600;      // 이 거리 사이에 깔아요 (m)
+const BOOST_FROM = 70, BOOST_TO = 3000;      // 이 거리 사이에 깔아요 (m) — 2026-11-24 우주 구역까지 (예전 1600)
 const BOOST_GAP = [27, 50];                  // 부스터 사이 간격 (m) — 2026-11-18 1.3배 많게 (예전 35~65)
 const CANNON_RATE = .2;                      // 대포가 나올 확률
 const BOMB = { r: 7, up: [18, 25], fwd: [16, 24] };
