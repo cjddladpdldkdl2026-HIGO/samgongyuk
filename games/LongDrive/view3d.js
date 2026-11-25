@@ -832,7 +832,8 @@ function loadChar(i) {
     // 어드레스(기다리는 자세) 때 채 끝이 공 자리에 오도록 캐릭터 위치 · 채 길이 맞추기 (키가 달라도 채 길이로 맞춰요)
     fbxAt(FBX.t.addr);
     const [L] = fbxHands(), c = fbxClubDir(L, 0), E0 = C0.clone().addScaledVector(D, R_HANDS + CLUB_LEN0);
-    CLUB_LEN = Math.max(.6, Math.min(1.3, (L.y - E0.y) / Math.max(.2, -c.y)));
+    // 제리처럼 작은 캐릭터는 채가 짧아야 해요 (예전 최소 .6 이면 채가 땅속에 묻혀 안 보였어요)
+    CLUB_LEN = Math.max(.3, Math.min(1.3, (L.y - E0.y) / Math.max(.2, -c.y)));
     const end = L.clone().addScaledVector(c, CLUB_LEN);
     o.position.x += E0.x - end.x; o.position.z += E0.z - end.z;
     // 임팩트 때 손 자리가 어드레스와 조금 달라요 → 내려칠 때만 살짝 밀어서 채가 공에 닿게
