@@ -53,6 +53,8 @@ const glow = (hex, k = 2.2) => new THREE.Color(hex).multiplyScalar(k);   // 블�
 const OB_X = 70;   // index.html 의 OB_X 와 같은 값
 const RANGE = 3000;  // 연습장 길이(m): 표지판 · 선 · 아치가 여기까지 있어요 (부스터는 index.html BOOST_TO)
 const SEA_AT = 500, SKY_AT = 1000, SPACE_AT = 1500;   // 바깥 풍경: 0~500m 숲 · 500~1000m 바다 · 1000~1500m 하늘(구름 위) · 1500m~ 우주
+// 🎄 크리스마스 꾸미기 (눈 덮인 숲 · 눈 오는 바다 · 산타 썰매). 끝나면 false 로 바꾸면 원래 풍경으로 돌아가요
+const XMAS = true;
 
 /* ── 캔버스로 만드는 무늬 ─────────────────────────────────────────── */
 function canvasTex(w, h, draw, repeat) {
@@ -133,6 +135,7 @@ sun.scale.set(700, 700, 1); sun.position.copy(SUN_DIR).multiplyScalar(2600); far
     { d: 1680, h: 220, lo: 0x87a3c0, hi: 0xa2b9d6, snow: .74, k: 5.3 },
     { d: 2080, h: 360, lo: 0x93abc9, hi: 0xb3c6de, snow: .62, k: 8.9 },
   ];
+  if (XMAS) { LAYERS[0].snow = .4; LAYERS[0].lo = 0x5f8574; LAYERS[1].snow = .32; LAYERS[2].snow = .22; }   // 🎄 산에 눈이 많이
   for (const L of LAYERS) {
     const geo = new THREE.CylinderGeometry(1, 1, 1, 260, 5, true);
     const pos = geo.attributes.position, cols = [], lo = new THREE.Color(L.lo), hi = new THREE.Color(L.hi), white = new THREE.Color(0xf4f8ff), c = new THREE.Color();
@@ -207,8 +210,8 @@ function grassify(m, bladeScale, bladeAmt, patchScale, patchAmt) {
   };
   return m;
 }
-const roughTex = canvasTex(64, 64, (g, w, h) => { g.fillStyle = '#2b6a31'; g.fillRect(0, 0, w, h); }, [1, 1]);
-const ground = new THREE.Mesh(new THREE.PlaneGeometry(1400, 200 + SEA_AT), grassify(new THREE.MeshStandardMaterial({ map: roughTex, roughness: 1 }), 1 / 3, 1.2, 1 / 90, 1.3));
+const roughTex = canvasTex(64, 64, (g, w, h) => { g.fillStyle = XMAS ? '#c3ceda' : '#2b6a31'; g.fillRect(0, 0, w, h); }, [1, 1]);   // 🎄 눈밭
+const ground = new THREE.Mesh(new THREE.PlaneGeometry(1400, 200 + SEA_AT), XMAS ? grassify(new THREE.MeshStandardMaterial({ map: roughTex, roughness: 1 }), 1 / 6, .18, 1 / 60, .45) : grassify(new THREE.MeshStandardMaterial({ map: roughTex, roughness: 1 }), 1 / 3, 1.2, 1 / 90, 1.3));
 ground.rotation.x = -Math.PI / 2; ground.position.z = 100 - (200 + SEA_AT) / 2; ground.receiveShadow = true; scene.add(ground);
 
 const fairTex = canvasTex(64, 512, (g, w, h) => {   // 잔디 깎은 줄무늬 (밝은 줄 · 어두운 줄)
@@ -245,7 +248,7 @@ const WIND = { value: 0 };
     q.setFromAxisAngle(UP, r() * Math.PI); m4.compose(V(x, 0, z), q, V(w, hgt, w)); tufts.setMatrixAt(i, m4);
     tufts.setColorAt(i, col.setHSL(.27 + r() * .06, .45 + r() * .2, .42 + r() * .16));
   }
-  tufts.frustumCulled = false; scene.add(tufts);
+  tufts.frustumCulled = false; if (!XMAS) scene.add(tufts);   // 🎄 눈 덮여서 안 보여요
 }
 
 // 50m 마다 흰 선 · OB 선 (네온 분홍)
@@ -289,6 +292,189 @@ mat.position.set(-.45, .015, .1); mat.receiveShadow = true; scene.add(mat);
   tee.position.set(0, .05, 0); scene.add(tee);
 }
 
+/* ═══════════════════════════════════════════════════════════════
+ *  🎄 크리스마스 꾸미기 (맨 위 XMAS = false 로 끄면 원래 풍경)
+ *  숲: 눈 덮인 트리 + 전구 · 장식 공 · 별, 눈사람, 선물 상자, 큰 트리
+ *  바다: 눈 덮인 해변 · 야자수 전구 · 빙산 · 펭귄 · 하늘을 나는 산타 썰매
+ *  둘 다: 하늘에서 눈이 내려요
+ * ═══════════════════════════════════════════════════════════════ */
+const xmasAnim = [];   // 매 프레임 움직이는 것들 (눈 · 썰매 · 전구)
+let xs = 2024; const xr = () => (xs = (xs * 16807) % 2147483647) / 2147483647;
+const XM = (c, o = {}) => new THREE.MeshStandardMaterial(Object.assign({ color: c, roughness: .75 }, o));
+const BULB_COLS = [0xff2e4d, 0xffd23f, 0x2de2e6, 0x6bff8b, 0xff7ad9, 0xffffff];
+const ORN_COLS = [0xd8142e, 0xe8b522, 0x1f5fd6, 0xc9ccd6, 0x9b1fd6];
+function candyTex() {   // 사탕 지팡이 줄무늬
+  const t = canvasTex(128, 128, (g, w, h) => {
+    g.fillStyle = '#ffffff'; g.fillRect(0, 0, w, h); g.fillStyle = '#e0142f';
+    for (let k = -2; k < 4; k++) { g.beginPath(); g.moveTo(k * w / 2, h); g.lineTo(k * w / 2 + w / 4, h); g.lineTo(k * w / 2 + w / 4 + w, 0); g.lineTo(k * w / 2 + w, 0); g.fill(); }
+  });
+  t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(1, 8); return t;
+}
+function starGeo(R) {   // 다섯 꼭지 별 (두께 있음)
+  const pts = []; for (let k = 0; k < 10; k++) { const a = Math.PI / 2 + k * Math.PI / 5, rr = k % 2 ? R * .45 : R; pts.push(new THREE.Vector2(Math.cos(a) * rr, Math.sin(a) * rr)); }
+  const g = new THREE.ExtrudeGeometry(new THREE.Shape(pts), { depth: R * .25, bevelEnabled: false }); g.translate(0, 0, -R * .125); return g;
+}
+// 트리 목록에 전구 · 장식 공 · 별 달기 (InstancedMesh 로 한 번에 그려서 가벼워요)
+const TREE_LAYERS = [[.40, .44, .16], [.32, .40, .38], [.22, .36, .62]];   // (반지름, 높이, 바닥 높이) — 숲의 소나무와 같은 모양
+function decorate(trees) {
+  const per = MOBILE ? 9 : 14, orn = MOBILE ? 5 : 8;
+  const nb = trees.reduce((a, t) => a + (t.big ? 140 : per), 0), no = trees.reduce((a, t) => a + (t.big ? 46 : orn), 0);
+  const bulbs = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 8, 6), new THREE.MeshBasicMaterial({ toneMapped: false }), nb);
+  const balls = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 14, 10), new THREE.MeshStandardMaterial({ metalness: .65, roughness: .22, envMap: ENV_TEX }), no);
+  const stars = new THREE.InstancedMesh(starGeo(1), new THREE.MeshBasicMaterial({ color: glow(0xffd23f, 2.6), toneMapped: false }), trees.length);
+  const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), col = new THREE.Color(); let ib = 0, io = 0;
+  const onTree = (t, inset) => {   // 트리 겉면 위 아무 점
+    const [rad, h, y] = TREE_LAYERS[Math.floor(xr() * 3)], k = .12 + xr() * .7, a = xr() * 6.28, rr = rad * (1 - k) * t.w * inset;
+    return V(t.x + Math.cos(a) * rr, (y + k * h) * t.h, t.z + Math.sin(a) * rr);
+  };
+  trees.forEach((t, i) => {
+    const sz = t.h / 15;
+    for (let k = 0; k < (t.big ? 140 : per); k++) { m4.compose(onTree(t, 1.03), q.identity(), V(1, 1, 1).multiplyScalar(.17 * sz)); bulbs.setMatrixAt(ib, m4); bulbs.setColorAt(ib++, col.set(BULB_COLS[Math.floor(xr() * BULB_COLS.length)]).multiplyScalar(2.4)); }
+    for (let k = 0; k < (t.big ? 46 : orn); k++) { m4.compose(onTree(t, 1.0), q.identity(), V(1, 1, 1).multiplyScalar(.36 * sz)); balls.setMatrixAt(io, m4); balls.setColorAt(io++, col.set(ORN_COLS[Math.floor(xr() * ORN_COLS.length)])); }
+    m4.compose(V(t.x, t.h + .55 * sz, t.z), q.identity(), V(1, 1, 1).multiplyScalar(.75 * sz)); stars.setMatrixAt(i, m4);
+  });
+  bulbs.count = ib; balls.count = io; scene.add(bulbs, balls, stars);
+  // 전구가 반짝반짝 (몇 개씩 번갈아 어두워져요)
+  const base = Float32Array.from(bulbs.instanceColor.array); let last = -1;
+  xmasAnim.push((now) => {
+    const ph = Math.floor(now / 450); if (ph === last) return; last = ph;
+    const a = bulbs.instanceColor.array;
+    for (let i = 0; i < ib; i++) { const on = ((i * 7 + ph) % 5) !== 0 ? 1 : .25; a[i * 3] = base[i * 3] * on; a[i * 3 + 1] = base[i * 3 + 1] * on; a[i * 3 + 2] = base[i * 3 + 2] * on; }
+    bulbs.instanceColor.needsUpdate = true;
+  });
+}
+// 숲: 소나무마다 눈 모자 + 장식, 큰 트리 · 눈사람 · 선물
+function xmasTrees(pines, n) {
+  const capGeo = mergeGeometries(TREE_LAYERS.map(([rad, h, y]) => { const g = new THREE.ConeGeometry(rad * .62, h * .62, 9); g.translate(0, y + h * .42 + h * .31, 0); return g; }));
+  const capMat = new THREE.MeshStandardMaterial({ color: 0xdfe8f2, roughness: 1, flatShading: true, envMapIntensity: 0 });
+  const caps = new THREE.InstancedMesh(capGeo, capMat, n);
+  const m4 = new THREE.Matrix4(), p = V(), q = new THREE.Quaternion(), sc = V(), trees = [];
+  for (let i = 0; i < n; i++) {
+    pines.getMatrixAt(i, m4); caps.setMatrixAt(i, m4);
+    m4.decompose(p, q, sc); if (p.z > -330 || xr() < .5) trees.push({ x: p.x, z: p.z, w: sc.x, h: sc.y });   // 가까운 트리는 전부, 먼 트리는 절반만 꾸며요
+  }
+  scene.add(caps);
+  // 큰 크리스마스 트리 (타석 앞 왼쪽)
+  const BIG = { x: -52, z: -72, w: 15, h: 26, big: true };
+  const bigTree = new THREE.Mesh(mergeGeometries(TREE_LAYERS.map(([rad, h, y]) => { const g = new THREE.ConeGeometry(rad, h, 16); g.translate(0, y + h / 2, 0); return g; })), new THREE.MeshStandardMaterial({ color: 0x1f6b3a, roughness: .85, flatShading: true, envMapIntensity: 0 }));
+  bigTree.scale.set(BIG.w, BIG.h, BIG.w); bigTree.position.set(BIG.x, 0, BIG.z); bigTree.castShadow = true; scene.add(bigTree);
+  const bigCap = new THREE.Mesh(capGeo, capMat); bigCap.scale.copy(bigTree.scale); bigCap.position.copy(bigTree.position); scene.add(bigCap);
+  const trunk = new THREE.Mesh(new THREE.CylinderGeometry(.7, .9, 4.5, 8), XM(0x5a4030, { roughness: 1 })); trunk.position.set(BIG.x, 2.2, BIG.z); scene.add(trunk);
+  trees.push(BIG);
+  decorate(trees);
+  // 눈사람 (페어웨이 옆 눈밭)
+  const snow = new THREE.MeshStandardMaterial({ color: 0xf2f6fb, roughness: .9, envMapIntensity: .3 }), coal = XM(0x15151a, { roughness: .6 }), carrot = XM(0xff7a1a, { roughness: .6 }), scarfM = XM(0xe0142f, { roughness: .8 }), hatM = XM(0x18181f, { roughness: .5 }), stick = XM(0x5a4030);
+  [[-44, 38, 1.3], [47, 92, 1.5], [-50, 168, 1.6], [43, 262, 1.7], [-42, 352, 1.8], [52, 445, 2]].forEach(([x, z, k]) => {
+    const g = new THREE.Group(); g.position.set(x, 0, -z); g.scale.setScalar(k); g.rotation.y = -Math.sign(x) * .5; scene.add(g);
+    const ball = (r, y) => { const m = new THREE.Mesh(new THREE.SphereGeometry(r, 20, 14), snow); m.position.y = y; m.castShadow = true; g.add(m); return m; };
+    ball(.9, .8); ball(.65, 2.0); ball(.45, 2.95);
+    for (const ex of [-.16, .16]) { const e = new THREE.Mesh(new THREE.SphereGeometry(.06, 8, 6), coal); e.position.set(ex, 3.07, .39); g.add(e); }
+    for (const by of [1.75, 2.05, 2.35]) { const b = new THREE.Mesh(new THREE.SphereGeometry(.07, 8, 6), coal); b.position.set(0, by, .62 - Math.abs(by - 2.0) * .3); g.add(b); }
+    const nose = new THREE.Mesh(new THREE.ConeGeometry(.08, .45, 8), carrot); nose.rotation.x = Math.PI / 2; nose.position.set(0, 2.93, .62); g.add(nose);
+    const sc2 = new THREE.Mesh(new THREE.TorusGeometry(.48, .11, 8, 20), scarfM); sc2.rotation.x = Math.PI / 2; sc2.position.y = 2.55; g.add(sc2);
+    const brim = new THREE.Mesh(new THREE.CylinderGeometry(.5, .5, .06, 18), hatM); brim.position.y = 3.33; g.add(brim);
+    const top = new THREE.Mesh(new THREE.CylinderGeometry(.32, .32, .55, 18), hatM); top.position.y = 3.62; g.add(top);
+    const band = new THREE.Mesh(new THREE.CylinderGeometry(.335, .335, .1, 18), scarfM); band.position.y = 3.42; g.add(band);
+    for (const sx of [-1, 1]) { const arm = new THREE.Mesh(new THREE.CylinderGeometry(.03, .045, 1.1, 5), stick); arm.position.set(sx * .95, 2.2, 0); arm.rotation.z = sx * -1.0; g.add(arm); }
+  });
+  // 선물 상자 (타석 양옆)
+  const giftCols = [[0xe0142f, 0xffd23f], [0x1f9e4a, 0xffffff], [0x2a5fd6, 0xff7ad9], [0xffd23f, 0xe0142f], [0x9b1fd6, 0x6bff8b], [0xffffff, 0xe0142f]];
+  [[-8.6, -2.4, .9, .5], [-9.7, -3.6, .6, .3], [-8.1, -4.4, .5, .9], [8.7, -2.8, .8, .2], [9.8, -1.6, .55, .7], [9.2, -4.6, .65, .4]].forEach(([x, z, s, ry], i) => {
+    const [c1, c2] = giftCols[i % giftCols.length], g = new THREE.Group(); g.position.set(x, 0, z); g.rotation.y = ry; g.scale.setScalar(s); scene.add(g);
+    const box = new THREE.Mesh(new RoundedBoxGeometry(1, .9, 1, 2, .04), XM(c1, { roughness: .5 })); box.position.y = .45; box.castShadow = true; g.add(box);
+    const rb = XM(c2, { roughness: .35 });
+    const r1 = new THREE.Mesh(new THREE.BoxGeometry(1.02, .92, .16), rb); r1.position.y = .45; g.add(r1);
+    const r2 = new THREE.Mesh(new THREE.BoxGeometry(.16, .92, 1.02), rb); r2.position.y = .45; g.add(r2);
+    for (const a of [-.7, .7]) { const bow = new THREE.Mesh(new THREE.TorusGeometry(.17, .05, 8, 16), rb); bow.position.set(Math.sin(a) * .14, 1.0, 0); bow.rotation.set(0, Math.PI / 2, a); g.add(bow); }
+  });
+}
+// 바다: 야자수 전구 · 빙산 · 펭귄 · 산타 썰매
+function xmasSea(tr, N, L) {
+  const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), col = new THREE.Color(), per = MOBILE ? 10 : 16, lean = .18;
+  const bulbs = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 8, 6), new THREE.MeshBasicMaterial({ toneMapped: false }), N * per); let ib = 0;
+  for (let i = 0; i < N; i++) {
+    tr.getMatrixAt(i, m4);
+    for (let k = 0; k < per; k++) {   // 줄기를 빙빙 감은 전구
+      const t = .08 + k / per * .86, a = k * 1.9, rr = .1 - .04 * t;
+      const p = V(Math.cos(a) * rr - Math.sin(lean) * t, Math.cos(lean) * t, Math.sin(a) * rr).applyMatrix4(m4);
+      bulbs.setMatrixAt(ib, new THREE.Matrix4().compose(p, q, V(.17, .17, .17))); bulbs.setColorAt(ib++, col.set(BULB_COLS[k % BULB_COLS.length]).multiplyScalar(2.4));
+    }
+  }
+  bulbs.count = ib; scene.add(bulbs);
+  // 빙산 (OB 바깥 바다)
+  const ice = new THREE.MeshStandardMaterial({ color: 0xdff3ff, roughness: .35, flatShading: true, envMap: ENV_TEX, envMapIntensity: .8 });
+  for (let i = 0; i < 30; i++) {
+    const side = i % 2 ? 1 : -1, g = new THREE.IcosahedronGeometry(1, 1), p = g.attributes.position;
+    for (let k = 0; k < p.count; k++) { const j = .75 + xr() * .5; p.setXYZ(k, p.getX(k) * j, Math.max(-.2, p.getY(k)) * j, p.getZ(k) * j); }
+    g.computeVertexNormals();
+    const w = 6 + xr() * 16, m = new THREE.Mesh(g, ice); m.scale.set(w, w * (.45 + xr() * .5), w * (.7 + xr() * .5));
+    m.position.set(side * (90 + xr() * 300), -.5, -(SEA_AT + 20 + xr() * (L - 40))); m.rotation.y = xr() * 6.28; scene.add(m);
+  }
+  // 펭귄 (눈 덮인 해변에 3마리씩 · 산타 모자)
+  const black = XM(0x1a1c24, { roughness: .5 }), white = XM(0xf4f6fa, { roughness: .6 }), beak = XM(0xffa31a, { roughness: .5 }), hatRed = XM(0xe0142f);
+  [[-46, 560], [50, 640], [-52, 730], [45, 820], [-48, 905], [54, 965]].forEach(([cx, cz]) => {
+    for (let k = 0; k < 3; k++) {
+      const g = new THREE.Group(); g.position.set(cx + (xr() - .5) * 6, 0, -(cz + (xr() - .5) * 6)); g.rotation.y = (xr() - .5) * 1.5 - Math.sign(cx) * .4; g.scale.setScalar(.9 + xr() * .6); scene.add(g);
+      const body = new THREE.Mesh(new THREE.SphereGeometry(.45, 16, 12), black); body.scale.set(1, 1.5, .9); body.position.y = .68; body.castShadow = true; g.add(body);
+      const belly = new THREE.Mesh(new THREE.SphereGeometry(.36, 16, 12), white); belly.scale.set(1, 1.45, .8); belly.position.set(0, .62, .14); g.add(belly);
+      const head = new THREE.Mesh(new THREE.SphereGeometry(.3, 16, 12), black); head.position.y = 1.45; g.add(head);
+      for (const ex of [-.11, .11]) { const e = new THREE.Mesh(new THREE.SphereGeometry(.06, 8, 6), white); e.position.set(ex, 1.52, .25); g.add(e); }
+      const bk = new THREE.Mesh(new THREE.ConeGeometry(.07, .22, 8), beak); bk.rotation.x = Math.PI / 2; bk.position.set(0, 1.42, .33); g.add(bk);
+      for (const fx of [-.15, .15]) { const f = new THREE.Mesh(new THREE.BoxGeometry(.16, .05, .26), beak); f.position.set(fx, .03, .1); g.add(f); }
+      for (const sx of [-1, 1]) { const w = new THREE.Mesh(new THREE.SphereGeometry(.12, 8, 6), black); w.scale.set(.4, 2.2, 1); w.position.set(sx * .45, .78, 0); w.rotation.z = sx * .35; g.add(w); }
+      const santaHat = new THREE.Mesh(new THREE.ConeGeometry(.22, .4, 12), hatRed); santaHat.position.y = 1.85; santaHat.rotation.z = .3; g.add(santaHat);
+      const pom = new THREE.Mesh(new THREE.SphereGeometry(.07, 8, 6), white); pom.position.set(-.1, 2.03, 0); g.add(pom);
+    }
+  });
+  // 산타 썰매 (루돌프 4마리 · 바다 위 하늘을 빙글빙글)
+  const sleigh = new THREE.Group(); scene.add(sleigh);
+  const red = XM(0xd0142c, { roughness: .45 }), gold = XM(0xffc83a, { metalness: .8, roughness: .3 }), brown = XM(0x7a4a26, { roughness: .8 }), fur = XM(0xffffff, { roughness: .9 });
+  const S2 = new THREE.Group(); S2.scale.setScalar(3); sleigh.add(S2);
+  const seat = new THREE.Mesh(new RoundedBoxGeometry(1.6, .8, 2.4, 2, .15), red); seat.position.y = .9; S2.add(seat);
+  const back = new THREE.Mesh(new RoundedBoxGeometry(1.6, 1.2, .3, 2, .1), red); back.position.set(0, 1.4, -1.1); S2.add(back);
+  for (const sx of [-.7, .7]) { const run = new THREE.Mesh(new THREE.BoxGeometry(.1, .1, 3.2), gold); run.position.set(sx, .3, .1); S2.add(run); const tip = new THREE.Mesh(new THREE.TorusGeometry(.3, .05, 6, 12, Math.PI), gold); tip.rotation.y = Math.PI / 2; tip.position.set(sx, .6, 1.7); S2.add(tip); for (const lz of [-.8, .6]) { const leg = new THREE.Mesh(new THREE.BoxGeometry(.08, .5, .08), gold); leg.position.set(sx, .55, lz); S2.add(leg); } }
+  const santa = new THREE.Mesh(new THREE.SphereGeometry(.5, 16, 12), red); santa.position.set(0, 1.7, -.3); santa.scale.set(1, 1.1, 1); S2.add(santa);
+  const face = new THREE.Mesh(new THREE.SphereGeometry(.3, 14, 10), XM(0xffc9a8)); face.position.set(0, 2.35, -.25); S2.add(face);
+  const beard = new THREE.Mesh(new THREE.SphereGeometry(.3, 14, 10), fur); beard.scale.set(1, 1.1, .7); beard.position.set(0, 2.1, -.05); S2.add(beard);
+  const hat = new THREE.Mesh(new THREE.ConeGeometry(.3, .6, 12), red); hat.position.set(0, 2.75, -.3); hat.rotation.x = -.3; S2.add(hat);
+  const sack = new THREE.Mesh(new THREE.SphereGeometry(.55, 12, 10), XM(0x8a5a2b)); sack.position.set(0, 1.6, -1.6); S2.add(sack);
+  const noseMat = new THREE.MeshBasicMaterial({ color: glow(0xff2020, 3), toneMapped: false }), antM = XM(0xd9c09a);
+  for (let k = 0; k < 4; k++) {
+    const d = new THREE.Group(); d.position.set((k % 2 ? .6 : -.6), 1.2, 2.6 + Math.floor(k / 2) * 2); S2.add(d);
+    const body = new THREE.Mesh(new THREE.CapsuleGeometry(.3, .9, 4, 8), brown); body.rotation.x = Math.PI / 2; d.add(body);
+    const head = new THREE.Mesh(new THREE.SphereGeometry(.22, 10, 8), brown); head.position.set(0, .45, .65); d.add(head);
+    for (const lx of [-.15, .15]) for (const lz of [-.35, .35]) { const leg = new THREE.Mesh(new THREE.CylinderGeometry(.05, .05, .6, 5), brown); leg.position.set(lx, -.4, lz); leg.rotation.x = lz > 0 ? -.6 : .6; d.add(leg); }
+    for (const ax of [-.12, .12]) { const ant = new THREE.Mesh(new THREE.CylinderGeometry(.025, .03, .45, 4), antM); ant.position.set(ax, .75, .55); ant.rotation.z = ax * 4; d.add(ant); }
+    if (k >= 2) { const nose = new THREE.Mesh(new THREE.SphereGeometry(.08, 8, 6), noseMat); nose.position.set(0, .45, .88); d.add(nose); }   // 맨 앞 루돌프는 빨간 코
+  }
+  xmasAnim.push((now) => {
+    const a = now / 9000, cz = -(SEA_AT + L * .45), R = 170;
+    sleigh.position.set(Math.cos(a) * R, 55 + Math.sin(now / 1300) * 4, cz + Math.sin(a) * R * .6);
+    const dx = -Math.sin(a) * R, dz = Math.cos(a) * R * .6; sleigh.rotation.y = Math.atan2(dx, dz);   // 가는 쪽을 봐요
+  });
+}
+// 눈 내리기 (카메라 주변 상자 안에서 계속 돌아요 · 숲 · 바다에서만)
+if (XMAS) {
+  const NF = MOBILE ? 900 : 2200, B = V(50, 22, 70), pos = new Float32Array(NF * 3), raw = new Float32Array(NF * 3), spd = new Float32Array(NF);
+  for (let i = 0; i < NF; i++) { raw[i * 3] = (xr() * 2 - 1) * B.x; raw[i * 3 + 1] = (xr() * 2 - 1) * B.y; raw[i * 3 + 2] = (xr() * 2 - 1) * B.z; spd[i] = 1.2 + xr() * 1.6; }
+  const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  const flakeTex = canvasTex(32, 32, (g, w, h) => { const gr = g.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w / 2); gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(.5, 'rgba(255,255,255,.8)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.fillRect(0, 0, w, h); });
+  const flakes = new THREE.Points(geo, new THREE.PointsMaterial({ size: .22, map: flakeTex, transparent: true, depthWrite: false, color: 0xffffff }));
+  flakes.frustumCulled = false; scene.add(flakes);
+  const wrap = (v, b) => ((v + b) % (2 * b) + 2 * b) % (2 * b) - b;
+  xmasAnim.push((now, dt) => {
+    const cam = camera.position, on = cam.z > -(SKY_AT - 40); flakes.visible = on; if (!on) return;
+    const t = now / 1000;
+    for (let i = 0; i < NF; i++) {
+      raw[i * 3 + 1] -= spd[i] * dt; raw[i * 3] += Math.sin(t + i) * .35 * dt;
+      pos[i * 3] = cam.x + wrap(raw[i * 3] - cam.x, B.x);
+      pos[i * 3 + 1] = cam.y + 4 + wrap(raw[i * 3 + 1] - cam.y - 4, B.y);
+      pos[i * 3 + 2] = cam.z + wrap(raw[i * 3 + 2] - cam.z, B.z);
+    }
+    geo.attributes.position.needsUpdate = true;
+  });
+}
+
 /* ── 거리 표지판 · 나무 · 조명탑 ─────────────────────── */
 {
   const postMat = new THREE.MeshStandardMaterial({ color: 0x241c38, roughness: .7 });
@@ -318,7 +504,7 @@ mat.position.set(-.45, .015, .1); mat.receiveShadow = true; scene.add(mat);
   const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), col = new THREE.Color(); let np = 0, nb = 0, nt = 0;
   for (let z = 10; z < SEA_AT - 10; z += 8 + r() * 11) for (const side of [-1, 1]) {
     if (r() < .12) continue;
-    const pine = r() < .62, h = pine ? 9 + r() * 11 : 7 + r() * 6, w = h * (pine ? .75 + r() * .2 : .95 + r() * .25);
+    const pine = XMAS || r() < .62, h = pine ? 9 + r() * 11 : 7 + r() * 6, w = h * (pine ? .75 + r() * .2 : .95 + r() * .25);
     if (pine ? np >= MAXT : nb >= MAXT) continue;
     q.setFromAxisAngle(UP, r() * 6.28); m4.compose(V(side * (OB_X + 7 + r() * 60), 0, -z - r() * 8), q, V(w, h, w));
     if (pine) { pines.setMatrixAt(np, m4); pines.setColorAt(np++, col.setHSL(.33 + r() * .05, .42 + r() * .15, .22 + r() * .08)); }
@@ -326,11 +512,13 @@ mat.position.set(-.45, .015, .1); mat.receiveShadow = true; scene.add(mat);
     trunks.setMatrixAt(nt++, m4);
   }
   pines.count = np; blobs.count = nb; trunks.count = nt; scene.add(pines, blobs, trunks);
-  // 조명탑
+  if (XMAS) xmasTrees(pines, np);
+  // 조명탑 (🎄 빨강·하양 사탕 지팡이 줄무늬)
+  const candyMat = XMAS ? new THREE.MeshStandardMaterial({ map: candyTex(), roughness: .4 }) : null;
   const headMat = new THREE.MeshStandardMaterial({ color: 0xe8eef5, roughness: .4 });   // 낮이라 조명은 꺼져 있어요
   for (let z = 60; z < SEA_AT; z += 120) for (const side of [-1, 1]) {
     const x = side * (OB_X + 5);
-    const pole = new THREE.Mesh(new THREE.CylinderGeometry(.3, .45, 24, 6), postMat); pole.position.set(x, 12, -z); scene.add(pole);
+    const pole = new THREE.Mesh(new THREE.CylinderGeometry(.3, .45, 24, XMAS ? 12 : 6), XMAS ? candyMat : postMat); pole.position.set(x, 12, -z); scene.add(pole);
     const head = new THREE.Mesh(new THREE.BoxGeometry(4, 1.6, .6), headMat); head.position.set(x, 24, -z); head.rotation.y = side * .3; scene.add(head);
   }
 }
@@ -382,14 +570,14 @@ let water = null;
 {
   const L = SKY_AT - SEA_AT, zc = -(SEA_AT + L / 2);
   // 모래사장 (페어웨이 옆 32m ~ OB 70m)
-  const sandTex = canvasTex(64, 64, (g, w, h) => { g.fillStyle = '#e9d6a6'; g.fillRect(0, 0, w, h); }, [1, 1]);
+  const sandTex = canvasTex(64, 64, (g, w, h) => { g.fillStyle = XMAS ? '#c8d3df' : '#e9d6a6'; g.fillRect(0, 0, w, h); }, [1, 1]);   // 🎄 눈 덮인 모래
   const sandMat = grassify(new THREE.MeshStandardMaterial({ map: sandTex, roughness: 1 }), 1 / 4, .35, 1 / 40, .5);
   for (const side of [-1, 1]) {
     const sd = new THREE.Mesh(new THREE.PlaneGeometry(OB_X - 32 + 6, L), sandMat); sd.rotation.x = -Math.PI / 2; sd.position.set(side * (32 + (OB_X - 32 + 6) / 2), .005, zc); sd.receiveShadow = true; scene.add(sd);
   }
   // 바다 (OB 바깥) · 반짝이는 물결
   const waveTex = canvasTex(256, 256, (g, w, h) => {
-    g.fillStyle = '#1f7fc4'; g.fillRect(0, 0, w, h);
+    g.fillStyle = XMAS ? '#16619e' : '#1f7fc4'; g.fillRect(0, 0, w, h);   // 🎄 차가운 겨울 바다
     for (let i = 0; i < 260; i++) {
       const x = Math.random() * w, y = Math.random() * h, l = 6 + Math.random() * 22, a = .25 + Math.random() * .5;
       g.strokeStyle = Math.random() < .3 ? `rgba(255,255,255,${a})` : `rgba(120,200,255,${a})`; g.lineWidth = 1 + Math.random() * 1.5;
@@ -413,6 +601,7 @@ let water = null;
     q.setFromAxisAngle(UP, r() * 6.28); m4.compose(V(side * (56 + r() * 14), 0, z), q, V(h, h, h)); tr.setMatrixAt(i, m4); lf.setMatrixAt(i, m4);
   }
   scene.add(tr, lf);
+  if (XMAS) xmasSea(tr, N, L);
 }
 /* ── 바깥 풍경 3: 1000m~ 하늘 (페어웨이가 구름 위에 떠 있어요) ───────────────── */
 const skyZone = new THREE.Group(); scene.add(skyZone);
@@ -1232,6 +1421,7 @@ function frame(now, dt) {
   WIND.value = now / 1000;
   if (spaceZone.visible) spaceZone.userData.earth.rotation.y = now / 60000;
   if (water) { water.material.map.offset.x = (now / 90000) % 1; water.material.map.offset.y = (now / 60000) % 1; }
+  for (const f of xmasAnim) f(now, dt);   // 🎄 눈 · 썰매 · 전구
   balloons.forEach(g => { g.position.y += Math.sin(now / 1500 + g.userData.bob) * .01; g.rotation.y += dt * .05; });
   updateTrail();
   updateCamera(now, dt);
