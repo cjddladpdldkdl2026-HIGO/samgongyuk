@@ -95,3 +95,5 @@
 .st-data { margin-top: 22px; padding: 10px 14px; border-radius: 12px; border: 1px solid var(--line); background: rgba(255,255,255,.03); font-size: 13px; color: var(--ink-dim); }
 .st-data summary { cursor: pointer; color: var(--ink); }
 .st-data p { margin-top: 8px; line-height: 1.6; }
+.pg h2.st-h2 { margin-top: 30px; font-size: 20px; }
+.pg h2.st-h2:first-of-type { margin-top: 18px; }

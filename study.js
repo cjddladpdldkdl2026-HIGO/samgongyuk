@@ -49,18 +49,129 @@
     <p>내 기록은 나와 관리자만 볼 수 있고, 랭킹에는 가린 이름(김*수)만 보여요. 문제 기록은 1년이 지나면 이름 없는 통계로만 남기고 지워요.
       탈퇴하면 바로 모두 지워져요 (☰ → 내 정보 → 회원 탈퇴).</p></details>`;
 
+
+  /* 게임 기록 표 — runs 표의 내 기록 (끝까지 한 판). answers.sql 없이도 바로 보여요. */
+  const DIFF = { easy: '쉬움', normal: '보통', medium: '보통', hard: '어려움' };
+  const REGION = { arm: '어깨·위팔', forearm: '아래팔', hip: '엉덩이·넙다리', leg: '종아리·발' };
+  const DDAN_MAP = { brain: '뇌·뇌신경', tract: '신경로', nuclei: '바닥핵·신경핵', bone: '뼈·랜드마크', muscle: '근육', headbone: '머리·얼굴뼈', headmuscle: '머리·얼굴 근육', all: '전부 섞기' };
+  const modeKo = (game, m) => {
+    if (!m) return game === 'golf' ? '롱드라이브' : '기본';
+    if (game === 'neoege') { const [r, d] = m.split(':'); return `${REGION[r] || r}${d ? ' · ' + (DIFF[d] || d) : ''}`; }
+    if (game === 'ddan') return DDAN_MAP[m] || m;
+    return DIFF[m] || m;
+  };
+  const verdict = (acc, rank, total) => {
+    if (acc != null) return acc >= 80 ? '<span class="st-pill good">💪 강점</span>' : acc < 60 ? '<span class="st-pill low">⚠ 약점</span>' : '<span class="st-pill mid">보통</span>';
+    if (rank && total >= 3) return rank <= Math.ceil(total / 3) ? '<span class="st-pill good">💪 강점</span>' : rank > total - Math.ceil(total / 3) ? '<span class="st-pill low">⚠ 약점</span>' : '<span class="st-pill mid">보통</span>';
+    return '-';
+  };
+  const avg = (xs) => (xs.length ? Math.round(xs.reduce((a, b) => a + b, 0) / xs.length) : null);
+  const scoreText = (game, v) => (game === 'golf' ? `${n(v)}m` : game === 'wizard' ? (v ? '이김' : '-') : n(v));
+
+  async function gameRecordsHtml() {
+    const me = K.me();
+    let q = sb.from('runs').select('game,mode,score,accuracy,detail,created_at').eq('user_id', me.id).order('created_at', { ascending: true }).limit(2000);
+    if (M.game) q = q.eq('game', M.game);
+    if (M.days) q = q.gte('created_at', new Date(Date.now() - M.days * 864e5).toISOString());
+    const { data: runs, error } = await q;
+    if (error) return `<h2 class="st-h2">🎮 내 게임 성적표</h2><p class="empty2">${esc(K.KO_ERR(error))}</p>`;
+    if (!runs.length) return `<h2 class="st-h2">🎮 내 게임 성적표</h2><p class="empty2">${M.game || M.days ? '이 조건에는' : '아직'} 끝까지 한 게임이 없어요. 로그인한 채로 한 판 끝까지 해 보세요! 🎮</p>`;
+
+    // ① 게임 · 모드별
+    const groups = new Map();
+    runs.forEach(r => { const k = r.game + '|' + r.mode; if (!groups.has(k)) groups.set(k, []); groups.get(k).push(r); });
+    const ranks = await Promise.all([...groups.keys()].map(k => {
+      const [game, mode] = k.split('|');
+      return rpc('ranking_board', { p_game: game, p_mode: mode, p_days: null, p_limit: 1 }).catch(() => null);
+    }));
+    const rows = [...groups.entries()].map(([k, rs], i) => {
+      const [game, mode] = k.split('|');
+      const accs = rs.map(r => r.accuracy).filter(a => a != null).map(Number);
+      const first = accs[0], last = accs[accs.length - 1];
+      const rk = ranks[i] || {};
+      const best = game === 'wizard' ? rs.filter(r => r.score > 0).length : Math.max(...rs.map(r => r.score));
+      return { game, mode, plays: rs.length, best, acc: avg(accs), recent: avg(accs.slice(-3)), diff: accs.length >= 2 ? Math.round(last - first) : null,
+        rank: rk.myRank, total: rk.total, last: rs[rs.length - 1].created_at };
+    }).sort((a, b) => GAMES.findIndex(g => g.id === a.game) - GAMES.findIndex(g => g.id === b.game) || b.plays - a.plays);
+    const withAcc = rows.filter(r => r.acc != null);
+    const allAcc = avg(runs.map(r => r.accuracy).filter(a => a != null).map(Number));
+    const strong = withAcc.slice().sort((a, b) => b.acc - a.acc)[0], weakest = withAcc.slice().sort((a, b) => a.acc - b.acc)[0];
+    const label = (r) => `${esc(G[r.game] ? G[r.game].ko : r.game)} · ${esc(modeKo(r.game, r.mode))}`;
+
+    // ② 날짜 × 게임
+    const day = (t) => K.fmtDate(t);
+    const gamesIn = GAMES.filter(g => runs.some(r => r.game === g.id));
+    const byDay = new Map();
+    runs.forEach(r => { const d0 = day(r.created_at); if (!byDay.has(d0)) byDay.set(d0, []); byDay.get(d0).push(r); });
+    const days = [...byDay.keys()].sort().reverse();
+    M.csv = [['날짜', ...gamesIn.map(g => g.ko), '합계(판)', '평균 정확도(%)'],
+      ...days.map(d0 => { const rs = byDay.get(d0); return [d0, ...gamesIn.map(g => rs.filter(r => r.game === g.id).length), rs.length, avg(rs.map(r => r.accuracy).filter(a => a != null).map(Number)) ?? '']; })];
+
+    // ③ 게임 기록 안에서 찾은 약한 부분 (너에게 닿기를: 근육별 · 딴딴/딴: 놓친 용어 · 뭐라구요!?: 단계별)
+    const parts = [];
+    const mus = new Map();
+    runs.filter(r => r.game === 'neoege').forEach(r => ((r.detail || {}).muscles || []).forEach(t => {
+      const m = /^(.*)\s(\d+)\/(\d+)$/.exec(String(t)); if (!m) return;
+      const o = mus.get(m[1]) || { hit: 0, of: 0 }; o.hit += +m[2]; o.of += +m[3]; mus.set(m[1], o);
+    }));
+    mus.forEach((o, name) => o.of && parts.push({ game: 'neoege', part: name, kind: '근육 부착점', rec: `${o.hit} / ${o.of} 맞힘`, rate: pct(o.hit, o.of) }));
+    const miss = new Map(), ddanPlays = runs.filter(r => r.game === 'ddan').length;
+    runs.filter(r => r.game === 'ddan').forEach(r => ((r.detail || {}).missed || []).forEach(w => miss.set(w, (miss.get(w) || 0) + 1)));
+    miss.forEach((c, w) => parts.push({ game: 'ddan', part: w, kind: '놓친 용어', rec: `${c}번 놓침 (${ddanPlays}판 중)`, rate: Math.max(0, 100 - pct(c, ddanPlays)) }));
+    const wz = new Map();
+    runs.filter(r => r.game === 'wizard').forEach(r => { const d0 = r.detail || {}; const o = wz.get(r.mode) || { tries: 0, hits: 0, wrong: 0, silent: 0, win: 0, n: 0 };
+      o.tries += d0.tries || 0; o.hits += d0.hits || 0; o.wrong += d0.wrong || 0; o.silent += d0.silent || 0; o.win += r.score > 0 ? 1 : 0; o.n++; wz.set(r.mode, o); });
+    wz.forEach((o, stage) => o.tries && parts.push({ game: 'wizard', part: `스테이지 ${stage}`, kind: '주문',
+      rec: `성공 ${o.hits} · 틀림 ${o.wrong} · 못 들음 ${o.silent} (이김 ${o.win}/${o.n})`, rate: pct(o.hits, Math.max(1, o.tries - o.silent)) }));
+    parts.sort((a, b) => a.rate - b.rate);
+
+    return `<h2 class="st-h2">🎮 내 게임 성적표 <small class="st-hint">끝까지 한 판 기준</small></h2>
+      <div class="kpis">
+        <div class="kpi c1"><small>끝까지 한 판</small><b>${n(runs.length)}</b><span>${gamesIn.length}개 게임 · 마지막 ${K.fmtDate(runs[runs.length - 1].created_at)}</span></div>
+        <div class="kpi c3"><small>평균 정확도</small><b>${allAcc == null ? '-' : `${allAcc}%`}</b><span>정확도를 남기는 게임만</span></div>
+        <div class="kpi c4"><small>💪 가장 잘하는 것</small><b style="font-size:18px">${strong ? label(strong) : '-'}</b><span>${strong ? `정확도 ${strong.acc}%` : ''}</span></div>
+        <div class="kpi c2"><small>⚠ 가장 약한 것</small><b style="font-size:18px">${weakest && weakest !== strong ? label(weakest) : '-'}</b><span>${weakest && weakest !== strong ? `정확도 ${weakest.acc}%` : ''}</span></div>
+      </div>
+
+      <h3>📋 게임 · 모드별 성적표</h3>
+      <div class="tbl-wrap ops-tall"><table class="tbl"><thead><tr><th>게임</th><th>난이도 · 맵</th><th class="num">판 수</th><th class="num">최고 기록</th>
+        <th class="num">평균 정확도</th><th class="num">최근 3판</th><th class="num">처음→최근</th><th class="num">내 순위</th><th>판정</th><th>마지막</th></tr></thead>
+        <tbody>${rows.map(r => `<tr><td>${esc(gname(r.game))}</td><td>${esc(modeKo(r.game, r.mode))}</td><td class="num">${n(r.plays)}</td>
+          <td class="num">${r.game === 'wizard' ? `이김 ${r.best}` : scoreText(r.game, r.best)}</td>
+          <td class="num">${r.acc == null ? '-' : `<span class="st-pill ${tone(r.acc)}">${r.acc}%</span>`}</td><td class="num">${r.recent == null ? '-' : `${r.recent}%`}</td>
+          <td class="num">${r.diff == null ? '-' : r.diff > 0 ? `<b style="color:#6ff0a8">▲ ${r.diff}</b>` : r.diff < 0 ? `<b style="color:#ff8ab8">▼ ${-r.diff}</b>` : '='}</td>
+          <td class="num">${r.rank ? `${r.rank}위 / ${r.total}명` : '-'}</td><td>${verdict(r.acc, r.rank, r.total)}</td><td>${K.fmtDate(r.last)}</td></tr>`).join('')}</tbody></table></div>
+      <p class="note">판정: 정확도 80% 이상 💪 강점 · 60% 미만 ⚠ 약점. 정확도가 없는 게임(롱드라이브 등)은 회원 중 내 순위로 정해요. 처음→최근 = 첫 판과 마지막 판 정확도 차이.</p>
+
+      <h3>📅 날짜별 기록 <button class="abtn sm pri" type="button" id="stMyCsv" style="margin-left:8px">⬇ 엑셀(CSV)</button></h3>
+      <div class="tbl-wrap ops-tall"><table class="tbl"><thead><tr><th>날짜</th>${gamesIn.map(g => `<th class="num">${g.ic} ${esc(g.ko)}</th>`).join('')}<th class="num">합계</th><th class="num">평균 정확도</th></tr></thead>
+        <tbody>${M.csv.slice(1).map(row => `<tr><td class="${[0, 6].includes(new Date(row[0] + 'T00:00:00').getDay()) ? 'we' : ''}">${esc(row[0].slice(5).replace('-', '/'))} ${W[new Date(row[0] + 'T00:00:00').getDay()]}</td>
+          ${row.slice(1, -2).map(v => `<td class="num">${v ? n(v) : '<span style="color:var(--ink-faint)">·</span>'}</td>`).join('')}<td class="num"><b>${n(row[row.length - 2])}</b></td>
+          <td class="num">${row[row.length - 1] === '' ? '-' : `<span class="st-pill ${tone(row[row.length - 1])}">${row[row.length - 1]}%</span>`}</td></tr>`).join('')}</tbody></table></div>
+
+      ${parts.length ? `<h3>🔍 게임 기록에서 찾은 약한 부분 <small class="st-hint">낮은 순</small></h3>
+        <div class="tbl-wrap ops-tall"><table class="tbl"><thead><tr><th>게임</th><th>부분</th><th>종류</th><th>기록</th><th class="num">정답률</th><th>판정</th></tr></thead>
+          <tbody>${parts.slice(0, 40).map(x => `<tr><td>${esc(gname(x.game))}</td><td class="st-item">${esc(x.part)}</td><td>${esc(x.kind)}</td><td>${esc(x.rec)}</td>
+            <td class="num"><span class="st-pill ${tone(x.rate)}">${x.rate}%</span></td><td>${verdict(x.rate)}</td></tr>`).join('')}</tbody></table></div>
+        <p class="note">너에게 닿기를은 근육별 맞힌 수, 딴딴/딴은 놓친 용어, 뭐라구요!? 는 스테이지별 주문 성공을 모았어요 (못 들음은 정답률에서 빼요).</p>` : ''}`;
+  }
+
   Account.addPage({
     id: 'weak', ic: '📚', label: '내 약점 분석', login: true,
     async render() {
-      let d;
-      try { d = await rpc('my_weak', { p_game: M.game, p_days: M.days }); }
-      catch (e) { return '<h2>📚 내 약점 분석</h2>' + (MISSING(e) ? missingMsg : `<p class="empty2">${esc(K.KO_ERR(e))}</p>`); }
+      const [recHtml, d] = await Promise.all([gameRecordsHtml(), rpc('my_weak', { p_game: M.game, p_days: M.days }).catch(e => ({ _err: e }))]);
       const tabs = filt('wg', M.game, [[null, '전체'], ...GAMES.map(g => [g.id, `${g.ic} ${g.ko}`])]);
       const per = filt('wd', M.days, [[null, '전체 기간'], [30, '최근 30일'], [7, '최근 7일']]).replace('class="filt"', 'class="filt sm"');
       const head = `<h2>📚 내 약점 분석</h2>
-        <p class="sub">게임에서 푼 문제를 하나하나 모아서, 내가 어느 부분을 자주 틀리는지 보여 줘요. 로그인한 채로 게임을 하면 쌓여요.</p>${tabs}${per}`;
+        <p class="sub">내가 한 게임 기록으로 잘하는 것 · 약한 것을 표로 보여 줘요. 로그인한 채로 게임을 끝까지 하면 쌓여요.</p>${tabs}${per}`;
+      const qHead = `<h2 class="st-h2">📝 문제별 분석 <small class="st-hint">문제 하나하나 맞았는지 · 헷갈린 것 · 걸린 시간</small></h2>`;
+      if (d._err) {
+        return head + recHtml + qHead + (MISSING(d._err)
+          ? '<p class="empty2">문제별 기록은 곧 시작돼요. (관리자가 Supabase 에서 <b>answers.sql</b> 을 실행하면 그다음 게임부터 쌓여요)</p>'
+          : `<p class="empty2">${esc(K.KO_ERR(d._err))}</p>`) + dataNote;
+      }
       if (!d.total) {
-        return head + `<p class="empty2">${M.game || M.days ? '이 조건에는' : '아직'} 푼 문제 기록이 없어요.<br>로그인한 채로 게임을 하면 문제마다 맞았는지 틀렸는지가 쌓여요 🎮</p>` + dataNote;
+        return head + recHtml + qHead + `<p class="empty2">${M.game || M.days ? '이 조건에는' : '아직'} 문제별 기록이 없어요.<br>로그인한 채로 게임을 하면 문제마다 맞았는지 틀렸는지가 쌓여요 🎮</p>` + dataNote;
       }
       const rate = pct(d.right, d.total);
       const weakestCat = d.cats.filter(c => c.tries >= 3)[0] || d.cats[0];
@@ -68,9 +179,9 @@
       const days = d.days || [];
       const maxT = Math.max(1, ...days.map(x => x.tries));
 
-      return head + `
+      return head + recHtml + qHead + `
         <div class="kpis">
-          <div class="kpi c1"><small>정답률</small><b>${rate}%</b><span>${n(d.total)}문제 중 ${n(d.right)}개 맞힘</span></div>
+          <div class="kpi c1"><small>문제 정답률</small><b>${rate}%</b><span>${n(d.total)}문제 중 ${n(d.right)}개 맞힘</span></div>
           <div class="kpi c2"><small>가장 약한 부분</small><b style="font-size:20px">${weakestCat ? esc(weakestCat.cat) : '-'}</b>
             <span>${weakestCat ? `${M.game ? '' : esc(G[weakestCat.game] ? G[weakestCat.game].ko : weakestCat.game) + ' · '}정답률 ${weakestCat.rate}% (${weakestCat.tries}문제)` : '묶음 기록이 아직 없어요'}</span></div>
           <div class="kpi c3"><small>다시 볼 문제</small><b>${n(d.weak.length)}</b><span>한 번 이상 틀린 문제${d.weak.length >= 20 ? ' (많은 순 20개)' : ''}</span></div>
@@ -120,6 +231,8 @@
       const pg = K.pg;
       pg.querySelectorAll('[data-wg]').forEach(b => b.addEventListener('click', () => { M.game = b.dataset.wg || null; Account.page('weak'); }));
       pg.querySelectorAll('[data-wd]').forEach(b => b.addEventListener('click', () => { M.days = b.dataset.wd ? +b.dataset.wd : null; Account.page('weak'); }));
+      const cb = pg.querySelector('#stMyCsv');
+      if (cb) cb.addEventListener('click', () => { if (M.csv) download(`samgongyuk_my_records_${K.fmtDate(new Date())}.csv`, '\uFEFF' + M.csv.map(r => r.map(csvCell).join(',')).join('\r\n'), 'text/csv;charset=utf-8'); });
     },
   });
 
