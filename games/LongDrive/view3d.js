@@ -51,8 +51,8 @@ const V = (x = 0, y = 0, z = 0) => new THREE.Vector3(x, y, z);
 const UP = V(0, 1, 0);
 const glow = (hex, k = 2.2) => new THREE.Color(hex).multiplyScalar(k);   // 블룸으로 빛나게 (1보다 밝은 색)
 const OB_X = 70;   // index.html 의 OB_X 와 같은 값
-const RANGE = 3000;  // 연습장 길이(m): 표지판 · 선 · 아치가 여기까지 있어요 (부스터는 index.html BOOST_TO)
-const SEA_AT = 500, SKY_AT = 1000, SPACE_AT = 1500;   // 바깥 풍경: 0~500m 숲 · 500~1000m 바다 · 1000~1500m 하늘(구름 위) · 1500m~ 우주
+const RANGE = 5000;  // 연습장 길이(m): 표지판 · 선 · 아치가 여기까지 있어요 (부스터는 index.html BOOST_TO)
+const SEA_AT = 500, SKY_AT = 1000, SPACE_AT = 1500, NEON_AT = 3000;   // 바깥 풍경: 0~500m 숲 · 500~1000m 바다 · 1000~1500m 하늘(구름 위) · 1500~3000m 우주 · 3000m~ 네온 차원
 // 🎄 크리스마스 꾸미기 (눈 덮인 숲 · 눈 오는 바다 · 산타 썰매). 끝나면 false 로 바꾸면 원래 풍경으로 돌아가요
 const XMAS = true;
 
@@ -699,9 +699,103 @@ const spaceSky = new THREE.Group(); far.add(spaceSky); spaceSky.visible = false;
   }
   spaceZone.add(rocks);
 }
+/* ── 바깥 풍경 5: 3000m~ 네온 차원 (우주의 워프 게이트를 지나면 나오는 신스웨이브 세계) ─────────
+ *  보라·핑크 하늘 · 줄무늬 레트로 해 · 아래로 끝없는 네온 격자 · 와이어 산 · 빙글빙글 도는 네온 도형 */
+const neonZone = new THREE.Group(); scene.add(neonZone); neonZone.visible = false;
+const neonSky = new THREE.Group(); far.add(neonSky); neonSky.visible = false;   // 카메라를 따라다니는 하늘 · 해
+const neonSpin = [];   // 빙글빙글 도는 도형
+{
+  let s = 303; const r = () => (s = (s * 16807) % 2147483647) / 2147483647;
+  const L = RANGE + 300 - NEON_AT, zc = -(NEON_AT + L / 2);
+  // 하늘: 위는 깊은 남색 → 지평선은 핫핑크
+  const skyM = new THREE.Mesh(new THREE.SphereGeometry(2900, 32, 20), new THREE.ShaderMaterial({
+    side: THREE.BackSide, depthWrite: false, fog: false,
+    vertexShader: 'varying vec3 vP; void main(){ vP = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+    fragmentShader: `varying vec3 vP;
+      void main(){
+        float y = vP.y;
+        vec3 top = vec3(.02, .01, .07), mid = vec3(.22, .03, .32), hor = vec3(1.0, .18, .55);
+        vec3 c = y > .05 ? mix(mid, top, smoothstep(.05, .6, y)) : mix(hor, mid, smoothstep(-.12, .05, y));
+        if (y < -.12) c = mix(hor * .6, vec3(.05, .0, .1), smoothstep(-.12, -.45, y));
+        gl_FragColor = vec4(c, 1.0);
+      }`,
+  }));
+  skyM.renderOrder = -10; neonSky.add(skyM);
+  // 별 (작게)
+  const N = MOBILE ? 600 : 1200, pos = new Float32Array(N * 3);
+  for (let i = 0; i < N; i++) { const u = .1 + r() * .9, a = r() * Math.PI * 2, rr = Math.sqrt(1 - u * u); pos.set([Math.cos(a) * rr * 2500, u * 2500, Math.sin(a) * rr * 2500], i * 3); }
+  const sg = new THREE.BufferGeometry(); sg.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  neonSky.add(new THREE.Points(sg, new THREE.PointsMaterial({ size: 1.8, sizeAttenuation: false, color: 0xffd6f5, fog: false, depthWrite: false })));
+  // 레트로 해 (노랑 → 핑크, 아래쪽은 가로 줄무늬로 잘려 있어요)
+  const sunT = canvasTex(512, 512, (g, w, h) => {
+    const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, '#fff36b'); gr.addColorStop(.5, '#ff9f1c'); gr.addColorStop(1, '#ff2e88');
+    g.fillStyle = gr; g.beginPath(); g.arc(w / 2, h / 2, w / 2 - 4, 0, 7); g.fill();
+    g.globalCompositeOperation = 'destination-out';
+    for (let k = 0; k < 8; k++) { const y = h * (.52 + k * .06), t = 4 + k * 3.2; g.fillRect(0, y, w, t); }
+  });
+  const nsun = new THREE.Sprite(new THREE.SpriteMaterial({ map: sunT, fog: false, depthWrite: false, toneMapped: false, color: new THREE.Color(1.5, 1.5, 1.5) }));
+  nsun.scale.set(1100, 1100, 1); nsun.position.set(0, 260, -2400); neonSky.add(nsun);
+  // 아래로 끝없는 네온 격자 바닥
+  const gridT = canvasTex(128, 128, (g, w, h) => {
+    g.fillStyle = '#0d0220'; g.fillRect(0, 0, w, h);
+    g.strokeStyle = '#ff2e88'; g.lineWidth = 6; g.strokeRect(0, 0, w, h);
+    g.strokeStyle = 'rgba(255,120,200,.35)'; g.lineWidth = 14; g.strokeRect(0, 0, w, h);
+  });
+  gridT.wrapS = gridT.wrapT = THREE.RepeatWrapping; gridT.repeat.set(4000 / 40, (L + 2000) / 40); gridT.anisotropy = 8;
+  const grid = new THREE.Mesh(new THREE.PlaneGeometry(4000, L + 2000), new THREE.MeshBasicMaterial({ map: gridT, color: new THREE.Color(1.6, 1.6, 1.6), toneMapped: false }));
+  grid.rotation.x = -Math.PI / 2; grid.position.set(0, -60, zc - 600); neonZone.add(grid);
+  // 페어웨이 옆 땅도 네온 바닥으로 (어두운 보라 + 청록 격자)
+  const sideT = canvasTex(64, 64, (g, w, h) => { g.fillStyle = '#1a0638'; g.fillRect(0, 0, w, h); g.strokeStyle = '#2de2e6'; g.lineWidth = 3; g.strokeRect(0, 0, w, h); });
+  sideT.wrapS = sideT.wrapT = THREE.RepeatWrapping; sideT.repeat.set((OB_X - 32 + 6) / 8, L / 8); sideT.anisotropy = 8;
+  for (const sx of [-1, 1]) { const p = new THREE.Mesh(new THREE.PlaneGeometry(OB_X - 32 + 6, L), new THREE.MeshBasicMaterial({ map: sideT })); p.rotation.x = -Math.PI / 2; p.position.set(sx * (32 + (OB_X - 32 + 6) / 2), .008, zc); neonZone.add(p); }
+  // 페어웨이 섬 가장자리 네온 줄 (청록)
+  const edgeM = new THREE.MeshBasicMaterial({ color: glow(0x2de2e6, 2.4), toneMapped: false });
+  for (const sx of [-1, 1]) {
+    const e1 = new THREE.Mesh(new THREE.BoxGeometry(.5, .5, L), edgeM); e1.position.set(sx * (OB_X + 6.2), -.3, zc); neonZone.add(e1);
+    const e2 = new THREE.Mesh(new THREE.BoxGeometry(.4, .4, L), edgeM); e2.position.set(sx * (OB_X + 6.2), -6, zc); neonZone.add(e2);
+  }
+  // 와이어 산 (양옆 멀리, 핑크 · 보라 · 청록 선)
+  const mCols = [0xff2e88, 0x9b5cff, 0x2de2e6];
+  for (let i = 0; i < 36; i++) {
+    const side = i % 2 ? 1 : -1, hgt = 120 + r() * 320, rad = hgt * (1 + r() * .6);
+    const geo = new THREE.ConeGeometry(rad, hgt, 4 + Math.floor(r() * 3), 3);
+    const col = mCols[i % 3], g = new THREE.Group();
+    g.add(new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: 0x14042a })));
+    g.add(new THREE.LineSegments(new THREE.WireframeGeometry(geo), new THREE.LineBasicMaterial({ color: glow(col, 2.2), toneMapped: false })));
+    g.position.set(side * (380 + r() * 700), -60 + hgt / 2, -(NEON_AT + r() * (L + 800))); g.rotation.y = r() * 6.28; neonZone.add(g);
+  }
+  // 길 옆에 떠서 빙글빙글 도는 네온 도형 (팔면체 · 도넛 · 정이십면체)
+  const shapes = [new THREE.OctahedronGeometry(1), new THREE.TorusGeometry(1, .28, 10, 28), new THREE.IcosahedronGeometry(1), new THREE.TorusKnotGeometry(.8, .22, 64, 8)];
+  const sCols = [0xff2e88, 0x2de2e6, 0xffd23f, 0xb6ff3b, 0x9b5cff, 0xff9f1c];
+  for (let i = 0; i < 40; i++) {
+    const side = i % 2 ? 1 : -1, sc = 4 + r() * 12, col = sCols[i % sCols.length], geo = shapes[i % shapes.length];
+    const g = new THREE.Group(); g.scale.setScalar(sc);
+    g.add(new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: .18, depthWrite: false })));
+    g.add(new THREE.LineSegments(new THREE.EdgesGeometry(geo, 20), new THREE.LineBasicMaterial({ color: glow(col, 2.6), toneMapped: false })));
+    g.position.set(side * (95 + r() * 260), 10 + r() * 90, -(NEON_AT + 40 + r() * (L - 60)));
+    g.userData.spin = V((r() - .5) * .8, .3 + r() * .6, (r() - .5) * .5); g.userData.bob = r() * 6;
+    neonZone.add(g); neonSpin.push(g);
+  }
+}
+// 우주 → 네온 차원 워프 게이트 (3000m 아치 위에 서 있는 빛나는 고리, 우주 구역에서 보여요)
+{
+  const gate = new THREE.Group(); gate.position.set(0, 30, -NEON_AT); spaceZone.add(gate);
+  const ringM = (c, k) => new THREE.MeshBasicMaterial({ color: glow(c, k), toneMapped: false });
+  gate.add(new THREE.Mesh(new THREE.TorusGeometry(62, 2.2, 12, 96), ringM(0xff2e88, 2.6)));
+  gate.add(new THREE.Mesh(new THREE.TorusGeometry(56, 1.2, 10, 96), ringM(0x2de2e6, 2.4)));
+  const swirlT = canvasTex(512, 512, (g, w, h) => {
+    const gr = g.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w / 2); gr.addColorStop(0, 'rgba(255,255,255,.9)'); gr.addColorStop(.25, 'rgba(255,90,200,.55)'); gr.addColorStop(.7, 'rgba(120,60,255,.35)'); gr.addColorStop(1, 'rgba(40,0,80,0)');
+    g.fillStyle = gr; g.fillRect(0, 0, w, h);
+    g.translate(w / 2, h / 2); g.strokeStyle = 'rgba(255,255,255,.35)';
+    for (let k = 0; k < 6; k++) { g.rotate(Math.PI / 3); g.lineWidth = 6; g.beginPath(); for (let t = 0; t < 1; t += .02) { const a = t * 5, rr = t * w * .48; g.lineTo(Math.cos(a) * rr, Math.sin(a) * rr); } g.stroke(); }
+  });
+  const swirl = new THREE.Mesh(new THREE.CircleGeometry(56, 64), new THREE.MeshBasicMaterial({ map: swirlT, transparent: true, depthWrite: false, side: THREE.DoubleSide, toneMapped: false }));
+  gate.add(swirl); neonSpin.push(Object.assign(swirl, { userData: { spin: V(0, 0, -1.2), bob: 0, flat: true } }));
+}
+
 /* ── 멀리 있는 볼거리: 500m 마다 네온 아치 · 연못 · 열기구 ─────────────── */
 {
-  const gateCols = { 500: 0x2de2e6, 1000: 0xffd23f, 1500: 0xff2e88, 2000: 0xb6ff3b, 2500: 0x9b5cff, 3000: 0xff9f1c };
+  const gateCols = { 500: 0x2de2e6, 1000: 0xffd23f, 1500: 0xff2e88, 2000: 0xb6ff3b, 2500: 0x9b5cff, 3000: 0xff9f1c, 3500: 0x2de2e6, 4000: 0xff2e88, 4500: 0xffd23f, 5000: 0xb6ff3b };
   for (const [z, col] of Object.entries(gateCols)) {
     const g = new THREE.Group(); g.position.set(0, 0, -z); scene.add(g);
     const mat = new THREE.MeshStandardMaterial({ color: col, emissive: col, emissiveIntensity: .9, roughness: .4 });
@@ -713,7 +807,7 @@ const spaceSky = new THREE.Group(); far.add(spaceSky); spaceSky.visible = false;
       c.strokeStyle = hex; c.lineWidth = 10; c.strokeRect(8, 8, w - 16, h - 16);
       c.fillStyle = hex; c.textAlign = 'center'; c.textBaseline = 'middle';
       c.font = '700 92px Rajdhani, Arial, sans-serif'; c.fillText(z + 'm', w / 2, h / 2 - 8);
-      c.font = '700 30px Rajdhani, Arial, sans-serif'; c.fillStyle = '#ffffff'; c.fillText(+z === SEA_AT ? 'OCEAN ZONE' : +z === SKY_AT ? 'SKY ZONE' : +z === SPACE_AT ? 'SPACE ZONE' : z >= 2000 ? 'LEGEND ZONE' : 'NICE SHOT!', w / 2, h - 30);
+      c.font = '700 30px Rajdhani, Arial, sans-serif'; c.fillStyle = '#ffffff'; c.fillText(+z === SEA_AT ? 'OCEAN ZONE' : +z === SKY_AT ? 'SKY ZONE' : +z === SPACE_AT ? 'SPACE ZONE' : +z === NEON_AT ? 'NEON ZONE' : +z === RANGE ? 'THE END?!' : z >= 2000 ? 'LEGEND ZONE' : 'NICE SHOT!', w / 2, h - 30);
     });
     const sign = new THREE.Mesh(new THREE.PlaneGeometry(20, 6.25), new THREE.MeshBasicMaterial({ map: tex, toneMapped: false, side: THREE.DoubleSide, color: new THREE.Color(1.3, 1.3, 1.3) }));
     sign.position.set(0, 36, 0); g.add(sign);
@@ -1365,13 +1459,14 @@ function updateCamera(now, dt) {
   far.position.set(camera.position.x, 0, camera.position.z);
   const hillsOn = camera.position.z > -(SEA_AT - 30); if (farHills[0].visible !== hillsOn) farHills.forEach(h => h.visible = hillsOn);
   // 하늘 구역: 안개를 파란 하늘빛으로, 더 멀리까지 (아래 구름 바다가 보이게)
-  const cz = camera.position.z, zone = cz > -(SKY_AT - 40) ? 0 : cz > -(SPACE_AT - 40) ? 1 : 2;   // 0 땅·바다 · 1 하늘 · 2 우주
+  const cz = camera.position.z, zone = cz > -(SKY_AT - 40) ? 0 : cz > -(SPACE_AT - 40) ? 1 : cz > -(NEON_AT - 20) ? 2 : 3;   // 0 땅·바다 · 1 하늘 · 2 우주 · 3 네온 차원
   if (zone !== updateCamera.zone) {
     updateCamera.zone = zone;
-    const F = [[HAZE, 220, 1500], [0x8fbdea, 400, 2800], [0x0b1030, 900, 5000]][zone];
+    const F = [[HAZE, 220, 1500], [0x8fbdea, 400, 2800], [0x0b1030, 900, 5000], [0x3a0a4a, 700, 4200]][zone];
     scene.fog.color.set(F[0]); scene.fog.near = F[1]; scene.fog.far = F[2];
     sky.visible = sun.visible = zone < 2; farClouds.forEach(c => c.visible = zone < 2);
     spaceSky.visible = spaceZone.visible = zone === 2; cloudLayer.visible = zone < 2;
+    neonSky.visible = neonZone.visible = zone === 3;
   }
 }
 
@@ -1422,6 +1517,7 @@ function frame(now, dt) {
   if (spaceZone.visible) spaceZone.userData.earth.rotation.y = now / 60000;
   if (water) { water.material.map.offset.x = (now / 90000) % 1; water.material.map.offset.y = (now / 60000) % 1; }
   for (const f of xmasAnim) f(now, dt);   // 🎄 눈 · 썰매 · 전구
+  if (neonZone.visible || spaceZone.visible) for (const g of neonSpin) { const u = g.userData; g.rotation.x += u.spin.x * dt; g.rotation.y += u.spin.y * dt; g.rotation.z += u.spin.z * dt; if (!u.flat) g.position.y += Math.sin(now / 900 + u.bob) * .02; }
   balloons.forEach(g => { g.position.y += Math.sin(now / 1500 + g.userData.bob) * .01; g.rotation.y += dt * .05; });
   updateTrail();
   updateCamera(now, dt);
