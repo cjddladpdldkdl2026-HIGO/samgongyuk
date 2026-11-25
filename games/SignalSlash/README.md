@@ -79,8 +79,57 @@
 | 칼 색 · 칼 방향 | `const bladeMat`, `const BLADE` |
 | 조명 | `const keyLight`, `const rimLight` |
 
-- 다른 캐릭터로 바꾸려면 `.vrm` 파일을 `models/`에 넣고 `HERO3D.file`만 바꾸면 돼요.
+- 다른 캐릭터로 바꾸려면 `.vrm` 파일을 `models/`에 넣고 `HERO3D.file`만 바꾸면 돼요. 아래 **🧍 캐릭터 바꾸기**를 보세요.
 - **이용 조건(수정·재배포 허용)을 꼭 확인**하고 `models/README.md`에 적어 주세요.
+
+### 🧍 캐릭터 바꾸기 — 받는 곳과 넣는 법
+
+이 게임은 **VRM** 파일(`.vrm`, 사람 모양 3D 캐릭터 형식)이면 어떤 캐릭터든 쓸 수 있어요.
+VRoid로 만든 캐릭터는 뼈 이름이 같아서 자세(`POSES`)가 그대로 맞아요.
+
+#### ① 바로 쓸 수 있는 캐릭터 (이미 받아 둔 것)
+| 캐릭터 | 파일 | 어디 있나 | 이용 조건 |
+|---|---|---|---|
+| 로봇 오가론 (지금 캐릭터) | `ogreron.vrm` (10MB) | 이 폴더 `models/` | Vain · 사용·폭력·수정·재배포 허용 |
+| **여고생 '센다가야 시부'** (예전 캐릭터) | `shibu.vrm` (17MB) | GitHub `signal-dive` 갈래의 `games/SignalSlash/models/shibu.vrm` | VRoid 공식 샘플 · **CC0** (아무 조건 없음) |
+
+여고생으로 되돌리는 법:
+1. `signal-dive` 갈래에서 `shibu.vrm`을 이 폴더의 `models/`로 복사해요.
+   - GitHub 웹에서: 저장소 → 갈래를 `signal-dive`로 → `games/SignalSlash/models/shibu.vrm` → Download
+   - 명령어로: `git show signal-dive:games/SignalSlash/models/shibu.vrm > games/SignalSlash/models/shibu.vrm`
+2. `game.js` 맨 위 줄을 이렇게 바꿔요. 예전에 쓰던 값이에요.
+   ```js
+   const HERO3D = { file: 'models/shibu.vrm', pos: [-1.42, -0.05, 1.65], scale: 1, turn: 0.18 };
+   ```
+3. 로봇은 몸집이 커서 `scale: 0.85`였어요. 사람 캐릭터는 `scale: 1` 정도면 맞아요.
+
+#### ② 새 캐릭터를 받는 곳
+| 곳 | 주소 | 특징 |
+|---|---|---|
+| **VRoid Hub** | https://hub.vroid.com | 캐릭터가 제일 많아요. 무료 가입·로그인 필요. 작가가 **"다운로드 허용"**을 켠 캐릭터만 받을 수 있어요 |
+| **OpenGameArt (VRoid CC0 샘플)** | https://opengameart.org/content/vroid-studio-cc0-models | VRoid 공식 샘플 캐릭터 모음 (시부도 여기서 받았어요). 조건 없음 |
+| **VRoid Studio** | https://vroid.com/studio | 무료 프로그램. **우리만의 캐릭터를 직접 만들어** `.vrm`으로 내보낼 수 있어요. 저작권 걱정이 제일 적어요 |
+
+#### ③ VRoid Hub에서 받을 때 꼭 볼 것 (이용 조건)
+캐릭터 페이지의 **"이용 조건"**을 열어서 아래를 확인하세요.
+- **아바타 사용**: 허용 (또는 "누구나")
+- **폭력 표현**: 허용 ← 칼로 베는 게임이라 필요해요
+- **수정(개변)**: 허용 ← 자세를 바꾸고 칼을 쥐여 주니까 필요해요
+- **재배포**: 허용 ← 사이트에 파일을 올리니까 **꼭** 필요해요
+- **상업 이용**: 동아리·공모전용이면 "비영리 허용"이면 돼요. 상금이 있는 공모전이면 "허용"인 게 안전해요
+- **하나라도 "불가"면 쓰지 마세요.**
+
+#### ④ 넣는 법
+1. 받은 `.vrm` 파일을 `games/SignalSlash/models/`에 넣어요. 파일 이름은 영어로 짓는 게 좋아요 (예: `mychar.vrm`).
+2. `game.js` 맨 위 `HERO3D`에서 `file: 'models/mychar.vrm'`으로 바꿔요.
+3. 화면에서 위치가 어색하면 숫자를 조금씩 바꿔 보세요.
+   - `pos: [왼쪽(-)/오른쪽(+), 아래(-)/위(+), 앞(-)/뒤(+)]`
+   - `scale`: 크기
+   - `turn`: 몸을 돌리는 각도
+4. `models/README.md`에 **캐릭터 이름 · 만든 사람 · 받은 주소 · 이용 조건 · 받은 날짜**를 적어요.
+5. 파일이 크면(20MB 넘게) 폰에서 늦게 떠요. 가능하면 가벼운 캐릭터를 고르세요.
+
+> 3D 파일을 못 불러오면 게임이 자동으로 `img/pose-*.webp` 사진으로 바뀌어요. 이 사진은 예전 사람 검사예요.
 
 ### ⏱ 규칙 · 소리
 | 바꾸고 싶은 것 | 찾을 이름 (game.js 맨 위) |
