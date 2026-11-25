@@ -91,17 +91,14 @@ VRoid로 만든 캐릭터는 뼈 이름이 같아서 자세(`POSES`)가 그대�
 | 캐릭터 | 파일 | 어디 있나 | 이용 조건 |
 |---|---|---|---|
 | 로봇 오가론 (지금 캐릭터) | `ogreron.vrm` (10MB) | 이 폴더 `models/` | Vain · 사용·폭력·수정·재배포 허용 |
-| **여고생 '센다가야 시부'** (예전 캐릭터) | `shibu.vrm` (17MB) | GitHub `signal-dive` 갈래의 `games/SignalSlash/models/shibu.vrm` | VRoid 공식 샘플 · **CC0** (아무 조건 없음) |
+| **여고생 '센다가야 시부'** (예전 캐릭터) | `shibu.vrm` (17MB) | 이 폴더 `models/` | VRoid 공식 샘플 · **CC0** (아무 조건 없음) |
 
-여고생으로 되돌리는 법:
-1. `signal-dive` 갈래에서 `shibu.vrm`을 이 폴더의 `models/`로 복사해요.
-   - GitHub 웹에서: 저장소 → 갈래를 `signal-dive`로 → `games/SignalSlash/models/shibu.vrm` → Download
-   - 명령어로: `git show signal-dive:games/SignalSlash/models/shibu.vrm > games/SignalSlash/models/shibu.vrm`
-2. `game.js` 맨 위 줄을 이렇게 바꿔요. 예전에 쓰던 값이에요.
+여고생으로 되돌리는 법 (파일은 이미 `models/`에 있어요):
+1. `game.js` 맨 위 줄을 이렇게 바꿔요. 예전에 쓰던 값이에요.
    ```js
    const HERO3D = { file: 'models/shibu.vrm', pos: [-1.42, -0.05, 1.65], scale: 1, turn: 0.18 };
    ```
-3. 로봇은 몸집이 커서 `scale: 0.85`였어요. 사람 캐릭터는 `scale: 1` 정도면 맞아요.
+2. 로봇은 몸집이 커서 `scale: 0.85`였어요. 사람 캐릭터는 `scale: 1` 정도면 맞아요.
 
 #### ② 새 캐릭터를 받는 곳
 | 곳 | 주소 | 특징 |
