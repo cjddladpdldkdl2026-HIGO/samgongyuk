@@ -117,6 +117,8 @@
   .rank-x:hover { border-color: var(--gold); }
   .rank-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin: -4px 0 12px; }
   .rank-tabs button { padding: 6px 11px; border-radius: 999px; border: 1px solid var(--line); background: none; font-size: 13px; color: var(--ink-dim); }
+  .rank-per { margin-bottom: 6px; }
+  .rank-per button { font-weight: 700; }
   .rank-tabs button.on { background: rgba(253,231,76,.16); border-color: var(--gold); color: var(--ink); font-weight: 700; }
   .rank-mode { display: flex; align-items: center; gap: 8px; margin: 0 0 10px; font-size: 13px; color: var(--ink-dim); }
   .rank-mode select { flex: 1; padding: 7px 10px; border-radius: 10px; border: 1px solid var(--line); background: rgba(7,1,15,.7); color: var(--ink); font: 14px var(--font-ui); }
@@ -588,6 +590,7 @@
     <button class="rank-x" id="rankX" type="button" aria-label="닫기">✕</button>
     <p class="eyebrow" id="rankEyebrow">Ranking · 회원 종합 TOP 10</p>
     <h2 id="rankTitle">🏆 랭킹</h2>
+    <div class="rank-tabs rank-per" id="rankPer"></div>
     <div class="rank-tabs" id="rankTabs" role="tablist"></div>
     <div id="rankMode"></div>
     <ol class="rank-list" id="rankList"></ol>
@@ -1157,7 +1160,26 @@ const rankModeKo = (game, m) => {
   if (game === "neoege") { const [r, d] = m.split(":"); return `${RANK_REGION[r] || r}${d ? " · " + (DIFF_KO[d] || d) : ""}`; }
   return DIFF_KO[m] || m;
 };
-const RANK = { tab: "overall", mode: {}, cache: {}, busy: {} };
+const RANK = { tab: "overall", period: "week", mode: {}, cache: {}, busy: {} };   // period: day 일일 · week 주간 · month 월별 · all 전체
+const RANK_PERIODS = [["day", "📅 일일"], ["week", "🗓 주간"], ["month", "📆 월별"], ["all", "🏆 전체"]];
+const RANK_PERIOD_KO = { day: "일일", week: "주간", month: "월별", all: "전체" };
+// 기간별 순위 (auth.js SamAuth.rankPeriod) — 1분 동안 같은 결과를 다시 써요
+function rankPer(which, args) {
+  const key = which + RANK.period + JSON.stringify(args);
+  const hit = RANK.cache[key];
+  if (hit && Date.now() - hit.at < 60000) return Promise.resolve(hit.data);
+  if (RANK.busy[key]) return RANK.busy[key];
+  if (!window.SamAuth || !SamAuth.rankPeriod) return Promise.reject(new Error("offline"));
+  return (RANK.busy[key] = SamAuth.rankPeriod(which, args, RANK.period)
+    .then(data => { RANK.cache[key] = { data, at: Date.now() }; return data; })
+    .finally(() => { delete RANK.busy[key]; }));
+}
+function rankPeriodNote(d) {
+  if (RANK.period === "all" || !window.SamAuth || !SamAuth.periodText) return "";
+  const t = SamAuth.periodText(RANK.period);
+  return `<b style="color:var(--gold)">${RANK_PERIOD_KO[RANK.period]} 순위</b> · ${esc(t.range)} · 새로 시작까지 ${esc(t.left)}` +
+    (d && d._approx ? `<br>(지금은 최근 ${RANK.period === "day" ? 1 : RANK.period === "week" ? 7 : 30}일 기록 기준)` : "") + "<br>";
+}
 function rankRpc(fn, args) {
   const key = fn + JSON.stringify(args);
   const hit = RANK.cache[key];
@@ -1175,6 +1197,7 @@ function rankRpc(fn, args) {
   })());
 }
 const rankNum = (x) => Number(x || 0).toLocaleString("ko-KR");
+const rankDate = (t) => { const d = new Date(t), p = (x) => String(x).padStart(2, "0"); return isNaN(d) ? "" : `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`; };   // 이 기기 시각(한국)으로
 const rankMedal = (r) => ["🥇", "🥈", "🥉"][r - 1] || r;
 function rankMyRow(d, pts) {
   return d.myRank && !d.top.some(t => t.me)
@@ -1182,22 +1205,29 @@ function rankMyRow(d, pts) {
     : "";
 }
 async function renderRanking() {
-  const tab = RANK.tab, list = $("rankList"), mode = $("rankMode");
+  const tab = RANK.tab, list = $("rankList"), mode = $("rankMode"), per = RANK.period;
+  $("rankPer").innerHTML = RANK_PERIODS.map(([id, ko]) => `<button type="button" data-rp="${id}" class="${id === per ? "on" : ""}">${ko}</button>`).join("");
   $("rankTabs").innerHTML = RANK_GAMES.map(g =>
     `<button type="button" role="tab" data-rt="${g.id}" class="${g.id === tab ? "on" : ""}" aria-selected="${g.id === tab}">${g.ko}</button>`).join("");
   if (!$("rankPanel").classList.contains("open")) return;
-  const still = () => RANK.tab === tab && $("rankPanel").classList.contains("open");
+  const still = () => RANK.tab === tab && RANK.period === per && $("rankPanel").classList.contains("open");
   if (tab === "overall") {
     mode.innerHTML = "";
     let d = null;
-    try { d = await rankRpc("ranking_overall", { p_days: null, p_limit: 10 }); } catch { /* 이 기기 기록으로 */ }
+    try { d = await rankPer("overall", { p_limit: 10 }); } catch { /* 이 기기 기록으로 */ }
     if (!still()) return;
     if (d && d.top && d.top.length) {
       list.innerHTML = d.top.map(t => `<li class="${t.me ? "me" : ""}"><span class="no">${rankMedal(t.rank)}</span>
         <span class="who"><b>${esc(t.nickname)}${t.me ? " (나)" : ""}</b><small>게임 ${t.games}개 · ${rankNum(t.plays)}판</small></span>
         <span class="pts">${rankNum(t.points)}<small>점</small></span></li>`).join("") + rankMyRow(d, `${rankNum(d.myPoints)}<small>점</small>`);
-      $("rankEyebrow").textContent = "Ranking · 회원 종합 TOP 10";
-      $("rankNote").innerHTML = `종합 점수 = 게임·난이도마다 내 최고 기록이 상위 몇 %인지를 점수로 바꿔 더한 값 (1등 100점).<br>여러 게임을 골고루 잘할수록 올라가요 · 참여 ${rankNum(d.total)}명`;
+      $("rankEyebrow").textContent = `Ranking · ${RANK_PERIOD_KO[per]} · 회원 종합 TOP 10`;
+      $("rankNote").innerHTML = rankPeriodNote(d) + `종합 점수 = 게임·난이도마다 내 최고 기록이 상위 몇 %인지를 점수로 바꿔 더한 값 (1등 100점).<br>여러 게임을 골고루 잘할수록 올라가요 · 참여 ${rankNum(d.total)}명`;
+      return;
+    }
+    if (per !== "all" && d) {   // 이번 기간에는 아직 아무도 안 함
+      list.innerHTML = `<li class="empty-row">이번 ${RANK_PERIOD_KO[per]} 순위는 아직 비어 있어요.<br>지금 한 판 끝까지 하면 1등! 🏆</li>`;
+      $("rankEyebrow").textContent = `Ranking · ${RANK_PERIOD_KO[per]} · 회원 종합 TOP 10`;
+      $("rankNote").innerHTML = rankPeriodNote(d);
       return;
     }
     const rows = collectScores().slice(0, 10);
@@ -1210,8 +1240,8 @@ async function renderRanking() {
   }
   // 게임별
   const g = RANK_GAMES.find(x => x.id === tab);
-  $("rankEyebrow").textContent = `Ranking · ${g.ko.replace(/^\S+\s/, "")} TOP 10`;
-  $("rankNote").innerHTML = "로그인한 회원이 게임을 끝까지 한 기록 중 각자 최고 점수예요.";
+  $("rankEyebrow").textContent = `Ranking · ${RANK_PERIOD_KO[per]} · ${g.ko.replace(/^\S+\s/, "")} TOP 10`;
+  $("rankNote").innerHTML = rankPeriodNote() + "로그인한 회원이 게임을 끝까지 한 기록 중 각자 최고 점수예요.";
   if (!list.querySelector(".empty-row")) list.innerHTML = `<li class="empty-row">불러오는 중…</li>`;
   try {
     const modes = await rankRpc("ranking_modes", { p_game: tab });
@@ -1229,13 +1259,14 @@ async function renderRanking() {
       : "";
     const sel = $("rankModeSel");
     if (sel) sel.onchange = () => { RANK.mode[tab] = sel.value; renderRanking(); };
-    const d = await rankRpc("ranking_board", { p_game: tab, p_mode: cur, p_days: null, p_limit: 10 });
+    const d = await rankPer("board", { p_game: tab, p_mode: cur, p_limit: 10 });
     if (!still() || RANK.mode[tab] !== cur) return;
     list.innerHTML = d.top.length
       ? d.top.map(t => `<li class="${t.me ? "me" : ""}"><span class="no">${rankMedal(t.rank)}</span>
-          <span class="who"><b>${esc(t.nickname)}${t.me ? " (나)" : ""}</b><small>${t.accuracy == null ? "" : `정확도 ${Math.round(t.accuracy)}% · `}${esc(String(t.at).slice(0, 10))}</small></span>
+          <span class="who"><b>${esc(t.nickname)}${t.me ? " (나)" : ""}</b><small>${t.accuracy == null ? "" : `정확도 ${Math.round(t.accuracy)}% · `}${esc(rankDate(t.at))}</small></span>
           <span class="pts">${rankNum(t.score)}</span></li>`).join("") + rankMyRow(d, rankNum(d.myBest))
-      : `<li class="empty-row">아직 기록이 없어요.</li>`;
+      : `<li class="empty-row">${per === "all" ? "아직 기록이 없어요." : `이번 ${RANK_PERIOD_KO[per]} 순위는 아직 비어 있어요.<br>지금 한 판 끝까지 하면 1등! 🏆`}</li>`;
+    $("rankNote").innerHTML = rankPeriodNote(d) + "로그인한 회원이 게임을 끝까지 한 기록 중 각자 최고 점수예요.";
     if (tab === "wizard") $("rankNote").innerHTML = "뭐라구요!? 는 몬스터마다 이기면 1점으로 기록돼요.";
   } catch {
     if (!still()) return;
@@ -1243,7 +1274,7 @@ async function renderRanking() {
     list.innerHTML = `<li class="empty-row">랭킹을 불러오지 못했어요.<br>인터넷 연결을 확인하고 다시 눌러 주세요.</li>`;
   }
 }
-rankRpc("ranking_overall", { p_days: null, p_limit: 10 }).catch(() => {});   // 미리 받아 두기
+rankPer("overall", { p_limit: 10 }).catch(() => {});   // 미리 받아 두기 (주간)
 (function rankingPanel() {
   const btn = $("rankBtn"), panel = $("rankPanel");
   const isOpen = () => panel.classList.contains("open");
@@ -1262,6 +1293,8 @@ rankRpc("ranking_overall", { p_days: null, p_limit: 10 }).catch(() => {});   // 
     if (e.target === panel) return close();   // 바깥(어두운 곳)을 누르면 닫기
     const t = e.target.closest("[data-rt]");
     if (t) { RANK.tab = t.dataset.rt; renderRanking(); }
+    const pp = e.target.closest("[data-rp]");
+    if (pp) { RANK.period = pp.dataset.rp; renderRanking(); }
   });
   document.addEventListener("keydown", (e) => { if (e.key === "Escape" && isOpen()) close(); });
 })();

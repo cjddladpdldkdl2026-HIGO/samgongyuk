@@ -21,6 +21,7 @@
 --   admin_activity(days)       관리자: 회원별 활동 (게임별 · 주 시간대 · 머문 시간 · 정답률) · 요일×시간 · 머문 시간 · 재방문
 --   admin_plays(days)          관리자: 게임별 끝까지 한 비율 · 몇 문제째에서 그만두나
 --   ops_purge()                보관 기간 정리 (매달 1일 자동, pg_cron 이 켜져 있으면)
+--   ranking_board_since · ranking_overall_since   일일 · 주간 · 월별 순위 (누구나)
 
 -- ── 문항 기록 ─────────────────────────────────────────────────────
 create table if not exists public.answers (
@@ -334,3 +335,59 @@ do $$ begin
     raise notice '자동 작업을 등록했어요: samgongyuk-purge (매달 1일 보관 기간 정리), samgongyuk-backup-expire (매일 30일 지난 백업 삭제)';
   end if;
 end $$;
+
+-- ── 기간별 순위 (일일 · 주간 · 월별) — 2026-11-26 ────────────────────────────
+-- ranking_board / ranking_overall(ops.sql)과 같은데, "며칠 전부터" 대신 정확한 시작 시각(p_since)을 받아요.
+-- 화면이 한국 시간으로 오늘 0시 · 이번 주 월요일 0시 · 이번 달 1일 0시를 계산해서 보내요. p_since 를 비우면 전체 기간.
+create or replace function public.ranking_board_since(p_game text, p_mode text default '', p_since timestamptz default null, p_limit int default 20)
+returns json language sql stable security definer set search_path = '' as $$
+  with best as (
+    select distinct on (r.user_id) r.user_id, r.score, r.accuracy, r.created_at
+    from public.runs r
+    where r.game = p_game and r.mode = coalesce(p_mode, '') and (p_since is null or r.created_at >= p_since)
+    order by r.user_id, r.score desc, r.created_at asc
+  ), ranked as (
+    select b.*, public.display_name(p) as nickname, rank() over (order by b.score desc) as rnk,
+           row_number() over (order by b.score desc, b.created_at asc) as rn
+    from best b join public.profiles p on p.id = b.user_id
+  )
+  select json_build_object(
+    'top', coalesce((select json_agg(json_build_object('rank', rnk, 'nickname', nickname, 'score', score, 'accuracy', accuracy,
+                                                       'at', created_at, 'me', user_id = auth.uid()) order by rn)
+                     from ranked where rn <= least(greatest(coalesce(p_limit, 20), 1), 100)), '[]'::json),
+    'myBest', (select score from ranked where user_id = auth.uid()),
+    'myRank', (select rnk from ranked where user_id = auth.uid()),
+    'total',  (select count(*) from ranked)
+  );
+$$;
+
+create or replace function public.ranking_overall_since(p_since timestamptz default null, p_limit int default 20)
+returns json language sql stable security definer set search_path = '' as $$
+  with runs as (
+    select r.* from public.runs r where p_since is null or r.created_at >= p_since
+  ), best as (
+    select distinct on (user_id, game, mode) user_id, game, mode, score from runs
+    order by user_id, game, mode, score desc
+  ), pts as (
+    select user_id, game, round(100 * cume_dist() over (partition by game, mode order by score))::int as pt from best
+  ), per_user as (
+    select user_id, sum(pt) as points, count(*) as boards, count(distinct game) as games from pts group by user_id
+  ), ranked as (
+    select u.*, (select count(*) from runs x where x.user_id = u.user_id) as plays,
+           public.display_name(p) as nickname,
+           rank() over (order by u.points desc) as rnk,
+           row_number() over (order by u.points desc, u.games desc, u.user_id) as rn
+    from per_user u join public.profiles p on p.id = u.user_id
+  )
+  select json_build_object(
+    'top', coalesce((select json_agg(json_build_object('rank', rnk, 'nickname', nickname, 'points', points, 'games', games,
+                                                       'boards', boards, 'plays', plays, 'me', user_id = auth.uid()) order by rn)
+                     from ranked where rn <= least(greatest(coalesce(p_limit, 20), 1), 100)), '[]'::json),
+    'myPoints', (select points from ranked where user_id = auth.uid()),
+    'myRank',   (select rnk from ranked where user_id = auth.uid()),
+    'total',    (select count(*) from ranked)
+  );
+$$;
+
+revoke all on function public.ranking_board_since(text, text, timestamptz, int), public.ranking_overall_since(timestamptz, int) from public;
+grant execute on function public.ranking_board_since(text, text, timestamptz, int), public.ranking_overall_since(timestamptz, int) to anon, authenticated;

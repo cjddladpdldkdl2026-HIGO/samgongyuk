@@ -56,7 +56,14 @@
   };
 
   /* ═════════ 🏆 랭킹 (누구나) ═════════ */
-  const R = { tab: 'overall', days: null, mode: {} };
+  const R = { tab: 'overall', period: 'week', mode: {} };   // 기간: day 일일 · week 주간 · month 월별 · all 전체
+  const PERIODS = [['day', '📅 일일'], ['week', '🗓 주간'], ['month', '📆 월별'], ['all', '🏆 전체']];
+  const PERIOD_KO = { day: '일일', week: '주간', month: '월별', all: '전체' };
+  const periodLine = (r) => {
+    const t = SamAuth.periodText(R.period);
+    return `<p class="ops-period">${esc(PERIOD_KO[R.period])} 순위 · ${esc(t.range)}${t.left ? ` · 새로 시작까지 <b>${esc(t.left)}</b>` : ''}
+      ${r && r._approx ? `<br><small>지금은 최근 ${R.period === 'day' ? 1 : R.period === 'week' ? 7 : 30}일 기록으로 보여요 (관리자가 answers.sql 을 실행하면 정확한 기간으로 바뀌어요)</small>` : ''}</p>`;
+  };
 
   function myLine(rank, total, extra) {
     if (!K.me()) return `<p class="ops-my">로그인하면 내 순위가 보여요 · 지금 ${n(total)}명 참여</p>`;
@@ -67,12 +74,12 @@
   const who = (t) => `${esc(t.nickname)}${t.me ? ' <span class="chip update">나</span>' : ''}`;
 
   async function overallHtml() {
-    const r = await rpc('ranking_overall', { p_days: R.days, p_limit: 50 });
+    const r = await SamAuth.rankPeriod('overall', { p_limit: 50 }, R.period);
     const rows = r.top.map(t => `<tr class="${t.me ? 'me' : ''}"><td class="rk">${medal(t.rank)}</td><td>${who(t)}</td>
       <td class="num">${n(t.points)}</td><td class="num">${t.games}</td><td class="num">${t.boards}</td><td class="num">${n(t.plays)}</td></tr>`).join('');
-    return `${myLine(r.myRank, r.total, r.myPoints != null ? `${n(r.myPoints)}점` : '')}
+    return `${periodLine(r)}${myLine(r.myRank, r.total, r.myPoints != null ? `${n(r.myPoints)}점` : '')}
       <div class="tbl-wrap"><table class="tbl ops-rank"><thead><tr><th>순위</th><th>이름</th><th class="num">종합 점수</th><th class="num">게임</th><th class="num">종목</th><th class="num">판 수</th></tr></thead>
-      <tbody>${rows || `<tr><td colspan="6" class="empty2">${R.days ? '이 기간에는 기록이 없어요.' : '아직 기록이 없어요. 로그인하고 게임을 끝까지 해 보세요!'}</td></tr>`}</tbody></table></div>
+      <tbody>${rows || `<tr><td colspan="6" class="empty2">${R.period !== 'all' ? `이번 ${PERIOD_KO[R.period]} 순위는 아직 비어 있어요. 지금 한 판 하면 1등! 🏆` : '아직 기록이 없어요. 로그인하고 게임을 끝까지 해 보세요!'}</td></tr>`}</tbody></table></div>
       <p class="note">종합 점수 = 게임·난이도(종목)마다 내 최고 기록이 상위 몇 %인지를 점수로 바꿔서 더한 값이에요 (1등 100점, 참여만 해도 점수가 있어요). 여러 게임을 골고루 할수록 올라가요.</p>`;
   }
 
@@ -81,14 +88,14 @@
     if (!modes.length) return '<p class="empty2">아직 이 게임의 기록이 없어요. 로그인하고 끝까지 해 보세요!</p>';
     if (!modes.some(m => m.mode === R.mode[game])) R.mode[game] = modes[0].mode;
     const mode = R.mode[game];
-    const r = await rpc('ranking_board', { p_game: game, p_mode: mode, p_days: R.days, p_limit: 50 });
+    const r = await SamAuth.rankPeriod('board', { p_game: game, p_mode: mode, p_limit: 50 }, R.period);
     const sel = `<label class="ops-sel">난이도 · 맵 <select data-rm>${modes.map(m =>
       `<option value="${esc(m.mode)}" ${m.mode === mode ? 'selected' : ''}>${esc(modeKo(game, m.mode))} (${n(m.players)}명)</option>`).join('')}</select></label>`;
     const rows = r.top.map(t => `<tr class="${t.me ? 'me' : ''}"><td class="rk">${medal(t.rank)}</td><td>${who(t)}</td>
       <td class="num">${n(t.score)}</td><td class="num">${t.accuracy == null ? '-' : Math.round(t.accuracy) + '%'}</td><td>${K.fmtDate(t.at)}</td></tr>`).join('');
-    return `<div class="row">${sel}</div>${myLine(r.myRank, r.total, r.myBest != null ? `내 최고 ${n(r.myBest)}점` : '')}
+    return `<div class="row">${sel}</div>${periodLine(r)}${myLine(r.myRank, r.total, r.myBest != null ? `내 최고 ${n(r.myBest)}점` : '')}
       <div class="tbl-wrap"><table class="tbl ops-rank"><thead><tr><th>순위</th><th>이름</th><th class="num">최고 점수</th><th class="num">정확도</th><th>날짜</th></tr></thead>
-      <tbody>${rows || `<tr><td colspan="5" class="empty2">${R.days ? '이 기간에는' : '아직'} 기록이 없어요.</td></tr>`}</tbody></table></div>
+      <tbody>${rows || `<tr><td colspan="5" class="empty2">${R.period !== 'all' ? `이번 ${PERIOD_KO[R.period]} 순위는 아직 비어 있어요. 지금 한 판 하면 1등! 🏆` : '아직 기록이 없어요.'}</td></tr>`}</tbody></table></div>
       ${game === 'wizard' ? '<p class="note">뭐라구요!? 는 몬스터마다 이기면 1점으로 기록돼요.</p>' : ''}`;
   }
 
@@ -97,19 +104,18 @@
     async render() {
       const tabs = [{ id: 'overall', ko: '종합', ic: '👑' }, ...GAMES]
         .map(t => `<button type="button" data-rt="${t.id}" class="${R.tab === t.id ? 'on' : ''}">${t.ic} ${esc(t.ko)}</button>`).join('');
-      const per = [[null, '전체 기간'], [7, '최근 7일'], [30, '최근 30일']]
-        .map(([d, l]) => `<button type="button" data-rd="${d ?? ''}" class="${R.days === d ? 'on' : ''}">${l}</button>`).join('');
+      const per = PERIODS.map(([d, l]) => `<button type="button" data-rd="${d}" class="${R.period === d ? 'on' : ''}">${l}</button>`).join('');
       let body;
       try { body = R.tab === 'overall' ? await overallHtml() : await boardHtml(R.tab); }
       catch (e) { body = MISSING(e) ? missingMsg : `<p class="empty2">${esc(K.KO_ERR(e))}</p>`; }
       return `<h2>🏆 순위</h2>
-        <p class="sub">로그인한 회원이 게임을 끝까지 한 기록으로 순위를 매겨요. 이름은 가운데를 가려서 보여요 (예: 김*수 (26)).</p>
-        <div class="filt">${tabs}</div><div class="filt sm">${per}</div>${body}`;
+        <p class="sub">로그인한 회원이 게임을 끝까지 한 기록으로 순위를 매겨요. 일일 · 주간 · 월별 순위는 기간이 바뀌면 새로 시작해요 (한국 시간). 이름은 가운데를 가려서 보여요.</p>
+        <div class="filt">${per}</div><div class="filt sm">${tabs}</div>${body}`;
     },
     bind() {
       const pg = K.pg;
       pg.querySelectorAll('[data-rt]').forEach(b => b.addEventListener('click', () => { R.tab = b.dataset.rt; Account.page('rank'); }));
-      pg.querySelectorAll('[data-rd]').forEach(b => b.addEventListener('click', () => { R.days = b.dataset.rd ? +b.dataset.rd : null; Account.page('rank'); }));
+      pg.querySelectorAll('[data-rd]').forEach(b => b.addEventListener('click', () => { R.period = b.dataset.rd; Account.page('rank'); }));
       const s = pg.querySelector('[data-rm]');
       if (s) s.addEventListener('change', () => { R.mode[R.tab] = s.value; Account.page('rank'); });
     },

@@ -98,3 +98,6 @@
 .pg h2.st-h2 { margin-top: 30px; font-size: 20px; }
 .pg h2.st-h2:first-of-type { margin-top: 18px; }
 .pg hr.st-sep { margin: 34px 0 18px; border: 0; border-top: 1px dashed var(--line); }
+.ops-period { margin: 2px 0 6px; padding: 8px 12px; border-radius: 10px; border: 1px solid rgba(253,231,76,.35); background: rgba(253,231,76,.06); font-size: 13px; color: var(--ink-dim); }
+.ops-period b { color: var(--gold); }
+.ops-period small { color: var(--ink-faint); }

@@ -53,6 +53,7 @@
     A.record = async () => null;
     A.answer = () => {};
     A.ranking = async () => { throw new Error('auth unavailable'); };
+    A.rankPeriod = async () => { throw new Error('auth unavailable'); };
     return;
   }
 
@@ -159,6 +160,47 @@
     addEventListener('pagehide', flushNow);
     document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') flushNow(); });
   })();
+
+  /* 기간별 순위: 일일(오늘 0시) · 주간(이번 주 월요일 0시) · 월별(이번 달 1일 0시) · 전체 — 한국 시간
+   * SamAuth.rankPeriod('overall' | 'board', { p_game, p_mode, p_limit }, 'day' | 'week' | 'month' | 'all')
+   * answers.sql 의 ranking_*_since 를 써요. 아직 없으면 예전 함수로 최근 1·7·30일 순위를 보여 주고 data._approx = true */
+  const PERIOD = { day: 1, week: 7, month: 30, all: null };
+  const KST = 9 * 3600e3;
+  A.periodStart = (kind) => {
+    if (!PERIOD[kind]) return null;
+    const k = new Date(Date.now() + KST);   // UTC 칸에 한국 시각이 들어 있어요
+    let t = Date.UTC(k.getUTCFullYear(), k.getUTCMonth(), kind === 'month' ? 1 : k.getUTCDate());
+    if (kind === 'week') t -= ((k.getUTCDay() + 6) % 7) * 864e5;
+    return new Date(t - KST);
+  };
+  A.periodEnd = (kind) => {
+    const s0 = A.periodStart(kind); if (!s0) return null;
+    if (kind !== 'month') return new Date(s0.getTime() + PERIOD[kind] * 864e5);
+    const k = new Date(s0.getTime() + KST);
+    return new Date(Date.UTC(k.getUTCFullYear(), k.getUTCMonth() + 1, 1) - KST);
+  };
+  A.periodText = (kind) => {   // 예: "11월 26일 (오늘)" · "11월 24일(월)부터" · "11월" · 다음 시작까지 남은 시간
+    const s0 = A.periodStart(kind); if (!s0) return { range: '처음부터 지금까지', left: '' };
+    const k = new Date(s0.getTime() + KST), mo = k.getUTCMonth() + 1, d = k.getUTCDate();
+    const ms = A.periodEnd(kind) - Date.now(), h = Math.floor(ms / 3600e3), dd = Math.floor(h / 24);
+    return { range: kind === 'day' ? `${mo}월 ${d}일 (오늘)` : kind === 'week' ? `${mo}월 ${d}일(월)부터` : `${mo}월`,
+             left: dd ? `${dd}일 ${h % 24}시간` : h ? `${h}시간 ${Math.floor(ms / 6e4) % 60}분` : `${Math.max(1, Math.floor(ms / 6e4))}분` };
+  };
+  let sinceOk = true;
+  A.rankPeriod = async (which, args, kind) => {
+    await A.ready;
+    const since = A.periodStart(kind);
+    if (sinceOk) {
+      const { data, error } = await sb.rpc(`ranking_${which}_since`, Object.assign({}, args, { p_since: since ? since.toISOString() : null }));
+      if (!error) return data;
+      if (error.code !== 'PGRST202' && error.code !== '42883') throw error;
+      sinceOk = false;   // answers.sql 을 아직 안 돌림 → 예전 함수
+    }
+    const { data, error } = await sb.rpc(`ranking_${which}`, Object.assign({}, args, { p_days: PERIOD[kind] || null }));
+    if (error) throw error;
+    if (since && data) data._approx = true;
+    return data;
+  };
 
   /* 지금 접속 중 알리기 (part3 · supabase/ops.sql) — 화면을 보고 있을 때 1분마다 한 번.
    * 관리자 '데이터 관리'의 동시 접속 숫자와 자동 백업 기준(동시 접속 4만 명)에 쓰여요.
