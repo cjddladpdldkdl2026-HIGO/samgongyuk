@@ -93,7 +93,7 @@
   }
 
   Account.addPage({
-    id: 'rank', ic: '🏆', label: '랭킹',
+    id: 'rank', ic: '🏆', label: '순위',
     async render() {
       const tabs = [{ id: 'overall', ko: '종합', ic: '👑' }, ...GAMES]
         .map(t => `<button type="button" data-rt="${t.id}" class="${R.tab === t.id ? 'on' : ''}">${t.ic} ${esc(t.ko)}</button>`).join('');
@@ -102,7 +102,7 @@
       let body;
       try { body = R.tab === 'overall' ? await overallHtml() : await boardHtml(R.tab); }
       catch (e) { body = MISSING(e) ? missingMsg : `<p class="empty2">${esc(K.KO_ERR(e))}</p>`; }
-      return `<h2>🏆 랭킹</h2>
+      return `<h2>🏆 순위</h2>
         <p class="sub">로그인한 회원이 게임을 끝까지 한 기록으로 순위를 매겨요. 이름은 가운데를 가려서 보여요 (예: 김*수 (26)).</p>
         <div class="filt">${tabs}</div><div class="filt sm">${per}</div>${body}`;
     },

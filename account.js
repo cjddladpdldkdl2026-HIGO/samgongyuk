@@ -135,7 +135,7 @@
     const items = [
       '<li class="sec">COMMUNITY</li>',
       menu('board', '📢', '공지사항 · 이용자 게시판'),
-      S.me ? menu('mine', '🙋', '내 정보 · 랭킹') : '',
+      S.me ? menu('mine', '🙋', '내 정보') : '',
       ...EXTRA.filter(p => !p.admin && extraOk(p)).map(p => menu(p.id, p.ic, p.label)),
     ];
     if (isAdmin()) items.push('<li class="sec">ADMIN</li>', menu('stats', '📊', '이용자 현황'), menu('members', '👥', '회원 관리', S.openPosts ? '' : ''),
@@ -466,7 +466,7 @@
           <tbody>${rows.map(tr).join('') || '<tr><td colspan="9" class="empty2">아직 회원이 없어요.</td></tr>'}</tbody></table></div>
         <p class="note">비밀번호 초기화: 임시 비밀번호를 정해 학생에게 직접 알려 주고, 로그인한 뒤 '내 정보'에서 바꾸게 해 주세요.</p>`;
     },
-    /* 내 정보 · 랭킹 */
+    /* 내 정보 */
     async mine() {
       const m = S.me;
       const { count } = await sb.from('visits').select('id', { count: 'exact', head: true }).eq('user_id', m.id).neq('game', 'hub');
