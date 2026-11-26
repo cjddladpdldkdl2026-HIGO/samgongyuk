@@ -441,6 +441,17 @@
       width: max(min(880px, 116%), calc(94.8vw - 751px)); }
     .slide.big-art .hero-inner { padding-top: 18vh; padding-bottom: 9vh; }
   }
+  /* 배너 높낮이 · 제목 크기 맞추기 (2026-11-27): 넘겨도 글자 · 그림이 같은 높이, 제목은 모두 한 줄 · 같은 크기.
+     그림 종류 · 크기 · 효과는 그대로. 제목 크기는 가장 긴 제목이 한 줄에 들어가게 fitHeroTitles() 가 --h1-fit 으로 줄여요 */
+  .slide { display: flex; }                   /* 모든 배너 높이를 가장 큰 배너에 맞춰 같게 */
+  .slide > .hero-inner { flex: 1; }
+  .hero-inner > div:first-child { min-width: 0; }   /* 긴 제목이 그림 자리를 밀지 않게 (대신 제목 크기를 줄여요) */
+  .hero h1 { white-space: nowrap; font-size: calc(clamp(40px, 6vw, 76px) * var(--h1-fit, 1)); }
+  @media (min-width: 821px) {
+    .slide .hero-inner, .slide.big-art .hero-inner { padding-top: 40px; padding-bottom: 14vh; }   /* 딴딴/딴 · 큰 상자 배너도 같은 높이 */
+    .hero .lead { min-height: 6.4em; }        /* 설명이 1~4줄이어도 버튼 · 숫자 자리가 같게 */
+    .hero-inner > div:first-child { align-self: start; padding-top: var(--hero-text-pad, 0px); }   /* 모든 배너 글자가 같은 높이에서 시작 */
+  }
 
   /* ── 상세 팝업 ── */
   .modal-bg {
@@ -954,6 +965,23 @@ addEventListener("pageshow", () => $("loader")?.classList.remove("open"));   // 
 const AUTO_MS = 7000;   // 자동으로 다음 장으로 넘어가는 시간 (0이면 자동 넘김 끔)
 let slide = 0, slideCount = 0, autoTimer = null;
 
+/* 배너 제목: 모두 같은 크기로 한 줄에 — 가장 긴 제목이 칸을 넘으면 모든 제목을 같은 비율로 줄여요 */
+function fitHeroTitles() {
+  const h = $("hero"); if (!h) return;
+  h.style.removeProperty("--h1-fit");
+  let r = 1;
+  h.querySelectorAll(".slide h1").forEach(t => { if (t.clientWidth && t.scrollWidth > t.clientWidth) r = Math.min(r, t.clientWidth / t.scrollWidth); });
+  if (r < 1) h.style.setProperty("--h1-fit", (r * 0.97).toFixed(3));
+  // 글자 시작 높이: 가장 긴 글 묶음이 가운데 오게 하고, 다른 배너도 같은 높이에서 시작
+  h.style.removeProperty("--hero-text-pad");
+  if (!matchMedia("(min-width: 821px)").matches) return;
+  const inner = h.querySelector(".slide .hero-inner"); if (!inner) return;
+  const cs = getComputedStyle(inner), room = inner.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+  const tallest = Math.max(...[...h.querySelectorAll(".slide .hero-inner > div:first-child")].map(d => d.offsetHeight));
+  h.style.setProperty("--hero-text-pad", Math.max(0, Math.round((room - tallest) / 2)) + "px");
+}
+addEventListener("resize", () => { clearTimeout(window.__fitT); window.__fitT = setTimeout(fitHeroTitles, 120); });
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitHeroTitles);
 function renderHero() {
   let list = APPS.filter(x => x.featured);
   if (!list.length) list = [APPS[0]];
@@ -986,6 +1014,7 @@ function renderHero() {
     </div>`;
   }).join("");
   const many = list.length > 1;
+  $("hero").style.removeProperty("--h1-fit");
   $("hero").innerHTML = `
     <div class="slides" id="slides">${slides}</div>
     ${many ? `
@@ -1386,6 +1415,7 @@ rankPer("overall", { p_limit: 10 }).catch(() => {});   // 미리 받아 두기 (
 })();
 
 renderHero();
+fitHeroTitles();
 renderRows();
 
 // upgrade 3: service worker (app install + fast second visit). Only on http(s), never file://.
