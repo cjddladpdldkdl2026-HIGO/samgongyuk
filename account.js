@@ -19,6 +19,19 @@
   const sb = SamAuth.client, URL_ = SamAuth.url, KEY = SamAuth.key;
 
   const S = { session: null, me: null, loginRequired: false, page: null, tab: 'login', openPosts: 0 };
+  // ☰ 메뉴 선 아이콘 (이모지는 컴퓨터마다 다르게 보여서 바꿈). 없는 메뉴는 원래 이모지를 써요.
+  const sv = d => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
+  const ICON = {
+    board: sv('<path d="M3 11v2a1 1 0 0 0 1 1h3l5 4V6L7 10H4a1 1 0 0 0-1 1z"/><path d="M16 9a4 4 0 0 1 0 6M19 6a8 8 0 0 1 0 12"/>'),
+    mine: sv('<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>'),
+    rank: sv('<path d="M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M7 6H4a3 3 0 0 0 3 4M17 6h3a3 3 0 0 1-3 4M12 14v4M8 21h8"/>'),
+    weak: sv('<rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3h6v1M9 10h6M9 14h6M9 18h3"/>'),
+    stats: sv('<path d="M4 20h16M7 16v-5M12 16V7M17 16v-8"/>'),
+    members: sv('<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14a6 6 0 0 1 3.5 6"/>'),
+    data: sv('<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 15l3-3 3 2 4-5"/>'),
+    ops: sv('<path d="M14.7 6.3a4 4 0 0 0 5 5L12 19a2.1 2.1 0 0 1-3-3z"/><path d="M14.7 6.3 17 4l3 3-2.3 2.3"/>'),
+    out: sv('<path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3M10 8l-4 4 4 4M6 12h10"/>'),
+  };
   // 다른 파일이 붙이는 메뉴·페이지 (Account.addPage, 예: ops.js 의 랭킹 · 데이터 관리 · 서버 점검)
   const EXTRA = [];
   const extra = (id) => EXTRA.find(p => p.id === id);
@@ -121,28 +134,28 @@
     if (locked) openSide();
 
     const menu = (id, ic, label, badge) =>
-      `<li><button type="button" data-page="${id}" class="${S.page === id ? 'on' : ''}"><span class="ic">${ic}</span>${label}${badge ? `<span class="badge">${badge}</span>` : ''}</button></li>`;
+      `<li><button type="button" data-page="${id}" class="${S.page === id ? 'on' : ''}"><span class="ic t-${id}">${ICON[id] || ic}</span><span class="lb">${label}</span>${badge ? `<span class="badge">${badge}</span>` : ''}<span class="ar" aria-hidden="true">›</span></button></li>`;
 
     let me = '';
     if (S.me) {
       const g = gradeOf(S.me);
       const tag = S.me.kind === 'admin' ? (S.me.approved ? '<span class="tag admin">관리자</span>' : '<span class="tag pending">승인 대기</span>') : '<span class="tag student">학생</span>';
-      me = `<div class="acc-me"><b>${esc(S.me.name)}님</b>${tag}
-        <small>${S.me.kind === 'student' ? `${esc(S.me.dept)} · ${g}학년 · ${esc(S.me.login_id)}` : `관리자 아이디 · ${esc(S.me.login_id)}`}</small></div>`;
+      me = `<div class="acc-me"><span class="av" aria-hidden="true">${esc([...S.me.name][0] || '?')}</span><div><b>${esc(S.me.name)}님</b>${tag}
+        <small>${S.me.kind === 'student' ? `${esc(S.me.dept)} · ${g}학년 · ${esc(S.me.login_id)}` : `관리자 아이디 · ${esc(S.me.login_id)}`}</small></div></div>`;
     }
 
     const auth = S.me ? '' : authForm();
-    const items = [
-      '<li class="sec">COMMUNITY</li>',
+    const comm = [
       menu('board', '📢', '공지사항 · 이용자 게시판'),
       S.me ? menu('mine', '🙋', '내 정보') : '',
       ...EXTRA.filter(p => !p.admin && extraOk(p)).map(p => menu(p.id, p.ic, p.label)),
     ];
-    if (isAdmin()) items.push('<li class="sec">ADMIN</li>', menu('stats', '📊', '이용자 현황'), menu('members', '👥', '사용자 등록 현황', S.openPosts ? '' : ''),
-      ...EXTRA.filter(p => p.admin).map(p => menu(p.id, p.ic, p.label)));
-    body.innerHTML = `${me}${auth}<ul class="acc-menu">${items.join('')}</ul>
-      <div class="acc-foot">${S.me ? '<button class="abtn sm" type="button" id="accOut">↩ 로그아웃</button>' : ''}
-        <small>삼공육 계정 ${VERSION}${S.loginRequired ? ' · 🔒 로그인 필수' : ''}</small></div>`;
+    let groups = `<p class="acc-sec">커뮤니티</p><ul class="acc-menu">${comm.join('')}</ul>`;
+    if (isAdmin()) groups += `<p class="acc-sec">관리자</p><ul class="acc-menu">${[menu('stats', '📊', '이용자 현황'), menu('members', '👥', '사용자 등록 현황'),
+      ...EXTRA.filter(p => p.admin).map(p => menu(p.id, p.ic, p.label))].join('')}</ul>`;
+    body.innerHTML = `${me}${auth}${groups}
+      <div class="acc-foot">${S.me ? `<button class="acc-out" type="button" id="accOut">${ICON.out} 로그아웃</button>` : ''}
+        <small>${VERSION.replace(' (', ' · ').replace(')', '')}${S.loginRequired ? ' · 🔒 로그인 필수' : ''}</small></div>`;
 
     body.querySelectorAll('[data-page]').forEach(b => b.addEventListener('click', () => openPage(b.dataset.page)));
     const out = $('#accOut', body); if (out) out.addEventListener('click', logout);
