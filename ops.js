@@ -57,7 +57,7 @@
 
   /* ═════════ 🏆 랭킹 (누구나) ═════════ */
   const R = { tab: 'overall', period: 'week', mode: {} };   // 기간: day 일일 · week 주간 · month 월별 · all 전체
-  const PERIODS = [['day', '📅 일일'], ['week', '🗓 주간'], ['month', '📆 월별'], ['all', '🏆 전체']];
+  const PERIODS = [['all', '🏆 전체'], ['day', '📅 일일'], ['week', '🗓 주간'], ['month', '📆 월별']];
   const PERIOD_KO = { day: '일일', week: '주간', month: '월별', all: '전체' };
   const periodLine = (r) => {
     const t = SamAuth.periodText(R.period);

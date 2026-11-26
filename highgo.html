@@ -1161,7 +1161,7 @@ const rankModeKo = (game, m) => {
   return DIFF_KO[m] || m;
 };
 const RANK = { tab: "overall", period: "week", mode: {}, cache: {}, busy: {} };   // period: day 일일 · week 주간 · month 월별 · all 전체
-const RANK_PERIODS = [["day", "📅 일일"], ["week", "🗓 주간"], ["month", "📆 월별"], ["all", "🏆 전체"]];
+const RANK_PERIODS = [["all", "🏆 전체"], ["day", "📅 일일"], ["week", "🗓 주간"], ["month", "📆 월별"]];
 const RANK_PERIOD_KO = { day: "일일", week: "주간", month: "월별", all: "전체" };
 // 기간별 순위 (auth.js SamAuth.rankPeriod) — 1분 동안 같은 결과를 다시 써요
 function rankPer(which, args) {
