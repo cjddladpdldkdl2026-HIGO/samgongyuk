@@ -6,7 +6,7 @@
  *     학생   2612113  → s2612113@samgongyuk.invalid   (표시 이름 = 실명)
  *     관리자 admin1   → a.admin1@samgongyuk.invalid   (표시 이름 = 닉네임, 다른 관리자가 승인해야 관리자 권한.
  *                                                       맨 처음 관리자는 자동 승인)
- *  로그인 필수 스위치: settings 표의 login_required (관리자 → 회원 관리 화면에서 켜고 끄기)
+ *  로그인 필수 스위치: settings 표의 login_required (관리자 → 사용자 등록 현황 화면에서 켜고 끄기)
  *  허브(highgo.html)가 쓰는 것: Account.logPlay(app) — 게임을 열 때 이용 기록 한 줄
  *  처음 버전: 팀원 soos3497 (e4e4a09). 11-17 동아리 Supabase 로 옮기고 관리자 닉네임으로 바꿈.
  */
@@ -138,7 +138,7 @@
       S.me ? menu('mine', '🙋', '내 정보') : '',
       ...EXTRA.filter(p => !p.admin && extraOk(p)).map(p => menu(p.id, p.ic, p.label)),
     ];
-    if (isAdmin()) items.push('<li class="sec">ADMIN</li>', menu('stats', '📊', '이용자 현황'), menu('members', '👥', '회원 관리', S.openPosts ? '' : ''),
+    if (isAdmin()) items.push('<li class="sec">ADMIN</li>', menu('stats', '📊', '이용자 현황'), menu('members', '👥', '사용자 등록 현황', S.openPosts ? '' : ''),
       ...EXTRA.filter(p => p.admin).map(p => menu(p.id, p.ic, p.label)));
     body.innerHTML = `${me}${auth}<ul class="acc-menu">${items.join('')}</ul>
       <div class="acc-foot">${S.me ? '<button class="abtn sm" type="button" id="accOut">↩ 로그아웃</button>' : ''}
@@ -455,7 +455,7 @@
           </div></td></tr>`;
       };
       const students = rows.filter(r => r.kind === 'student'), admins = rows.filter(r => r.kind === 'admin');
-      return `<h2>👥 회원 관리</h2>
+      return `<h2>👥 사용자 등록 현황</h2>
         <p class="sub">학생 ${students.length}명 · 관리자 ${admins.filter(a => a.approved).length}명${admins.some(a => !a.approved) ? ` · <b style="color:#ff8ab8">승인 대기 ${admins.filter(a => !a.approved).length}명</b>` : ''}</p>
         <h3>⚙️ 사이트 설정</h3>
         <div class="switch"><div class="txt"><b>🔒 로그인 필수</b>
