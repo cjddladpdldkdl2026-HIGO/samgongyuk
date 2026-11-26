@@ -1,6 +1,6 @@
 /* 삼공육 part3 — 데이터베이스 관리 (2026-11-18)
  *   🏆 랭킹               누구나        게임·모드별 랭킹 + 종합 랭킹, 기간(전체·7일·30일)
- *   🗂 데이터 관리         관리자        날짜 × 콘텐츠 표, 시간대·학년별, 지금 접속자, CSV 내려받기
+ *   🗂 관리자 전력 분석 자료 (예전 이름: 데이터 관리)  관리자        날짜 × 콘텐츠 표, 시간대·학년별, 지금 접속자, CSV 내려받기
  *   🛠 서버 점검 · 백업    관리자        매일 보고서, 지금 점검, 자동 백업(동시 접속 기준) · 지금 백업 · 내려받기
  *
  *  ☰ 사이드바(account.js)에 Account.addPage 로 붙어요. 허브(highgo.html)에서 account.js 다음에 불러요.
@@ -115,14 +115,14 @@
     },
   });
 
-  /* ═════════ 🗂 데이터 관리 (관리자) ═════════ */
+  /* ═════════ 🗂 관리자 전력 분석 자료 (관리자, 예전 이름: 데이터 관리) ═════════ */
   const D = { days: 30, csv: null };
 
   Account.addPage({
-    id: 'data', ic: '🗂', label: '데이터 관리', admin: true,
+    id: 'data', ic: '🗂', label: '관리자 전력 분석 자료', admin: true,
     async render() {
       let s;
-      try { s = await rpc('admin_data', { p_days: D.days }); } catch (e) { return errBox(e, '🗂 데이터 관리'); }
+      try { s = await rpc('admin_data', { p_days: D.days }); } catch (e) { return errBox(e, '🗂 관리자 전력 분석 자료'); }
       const tot = Object.fromEntries(s.contents.map(c => [c.game, c]));
       const games = s.contents.filter(c => c.game !== 'hub').map(c => c.game);
       const cell = {};
@@ -144,7 +144,7 @@
       const maxC = Math.max(1, ...games.map(g => tot[g].plays));
       const maxG = Math.max(1, ...s.grades.map(g => g.users));
 
-      return `<h2>🗂 데이터 관리</h2>
+      return `<h2>🗂 관리자 전력 분석 자료</h2>
         <p class="sub">이용자 현황을 날짜별 · 콘텐츠별로 모아 봐요. ${s.from} ~ ${s.to} (한국 시간) · 불러온 시각 ${K.fmtDate(new Date(), true)}</p>
         <div class="row"><div class="filt" style="margin:0">${per}</div><span class="spacer"></span>
           <button class="abtn sm" type="button" id="opsReload">↻ 새로고침</button>
