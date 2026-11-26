@@ -185,10 +185,12 @@
         <div class="tbl-wrap"><table class="tbl"><thead><tr><th>게임</th><th class="num">판 수</th><th class="num">플레이한 회원</th><th class="num">최고 점수</th><th class="num">평균 정확도</th></tr></thead>
           <tbody>${s.runs.map(r => `<tr><td>${esc((GAMES.find(g => g.id === r.game) || {}).ko || r.game)}</td><td class="num">${n(r.runs)}</td><td class="num">${n(r.players)}</td>
             <td class="num">${n(r.best)}</td><td class="num">${r.avg_acc == null ? '-' : r.avg_acc + '%'}</td></tr>`).join('')
-            || '<tr><td colspan="5" class="empty2">이 기간에는 기록이 없어요.</td></tr>'}</tbody></table></div>`;
+            || '<tr><td colspan="5" class="empty2">이 기간에는 기록이 없어요.</td></tr>'}</tbody></table></div>
+        ${window.StudyAdmin ? await window.StudyAdmin.render(D.days).catch(e => `<p class="empty2">${esc(K.KO_ERR(e))}</p>`) : ''}`;
     },
     bind() {
       const pg = K.pg;
+      if (window.StudyAdmin) window.StudyAdmin.bind();   // 회원 활동 · 문항 분석 부분 (study.js)
       pg.querySelectorAll('[data-dd]').forEach(b => b.addEventListener('click', () => { D.days = +b.dataset.dd; Account.page('data'); }));
       pg.querySelector('#opsReload').addEventListener('click', () => Account.page('data'));
       pg.querySelector('#opsCsv').addEventListener('click', () => { if (D.csv) download(D.csv.name, toCSV(D.csv.rows), 'text/csv;charset=utf-8'); });

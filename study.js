@@ -1,6 +1,6 @@
 /* 삼공육 — 문항 분석 (2026-11-24)
  *   📚 my 전력분석 노트        로그인한 회원   게임 · 묶음별 정답률, 자주 틀리는 문제, 최근 14일 정답률
- *   🧑‍🎓 회원 활동 · 문항 분석   관리자          요일×시간 표, 회원별 활동(게임별 · 주 시간대 · 정답률), 모두가 자주 틀리는 문제
+ *   (관리자) 회원 활동 · 문항 분석 — 메뉴는 없고 🗂 관리자 전력 분석 자료(ops.js) 아래쪽에 붙어요          요일×시간 표, 회원별 활동(게임별 · 주 시간대 · 정답률), 모두가 자주 틀리는 문제
  *
  *  게임이 문제를 판정할 때마다 SamAuth.answer(...) 로 남긴 기록(answers 표)을 읽어요.
  *  DB: supabase/answers.sql 을 SQL Editor 에서 한 번 실행해야 열려요 (안 돌렸으면 "준비 중" 안내).
@@ -240,15 +240,16 @@
   /* ═════════ 🧑‍🎓 회원 활동 · 문항 분석 (관리자) ═════════ */
   const A = { days: 30, game: null, sort: 'plays', csv: null };
 
-  Account.addPage({
-    id: 'activity', ic: '🧑‍🎓', label: '회원 활동 · 문항 분석', admin: true,
-    async render() {
+  // 관리자 전력 분석 자료(ops.js) 페이지 아래쪽에 붙는 부분 — 예전엔 따로 있던 '회원 활동 · 문항 분석' 메뉴
+  window.StudyAdmin = {
+    async render(days) {
+      if (days) A.days = days;   // 위쪽 기간 버튼과 같은 기간
       let act, it, plays;
       try {
         [act, it, plays] = await Promise.all([rpc('admin_activity', { p_days: A.days }), rpc('admin_items', { p_game: A.game, p_days: A.days }),
           rpc('admin_plays', { p_days: A.days })]);
       }
-      catch (e) { return '<h2>🧑‍🎓 회원 활동 · 문항 분석</h2>' + (MISSING(e) ? missingMsg : `<p class="empty2">${esc(K.KO_ERR(e))}</p>`); }
+      catch (e) { return '<hr class="st-sep">' + (MISSING(e) ? '<p class="empty2">회원별 활동 · 문항 분석은 Supabase 에서 <b>supabase/answers.sql</b> 을 한 번 실행하면 여기에 이어서 보여요.</p>' : `<p class="empty2">${esc(K.KO_ERR(e))}</p>`); }
 
       // 요일 × 시간 표
       const heat = Array.from({ length: 7 }, () => Array(24).fill(0));
@@ -292,9 +293,9 @@
       const per = filt('ad', A.days, [[7, '7일'], [14, '14일'], [30, '30일'], [90, '90일'], [365, '1년']]);
       const tabs = filt('ag', A.game, [[null, '전체'], ...GAMES.map(g => [g.id, `${g.ic} ${g.ko}`])]);
 
-      return `<h2>🧑‍🎓 회원 활동 · 문항 분석</h2>
-        <p class="sub">누가 · 언제 · 어떤 게임을 얼마나 하는지, 그리고 회원들이 어떤 문제를 많이 틀리는지 모아 봐요. 최근 ${act.days}일 (한국 시간)</p>
-        <div class="row">${per}<span class="spacer"></span><button class="abtn sm pri" type="button" id="stCsv">⬇ 회원 활동 엑셀(CSV)</button></div>
+      return `<hr class="st-sep">
+        <div class="row"><span class="st-hint" style="margin:0">누가 · 언제 · 어떤 게임을 얼마나 하는지, 회원들이 어떤 문제를 많이 틀리는지 · 위와 같은 기간 (최근 ${act.days}일)</span>
+          <span class="spacer"></span><button class="abtn sm pri" type="button" id="stCsv">⬇ 회원 활동 엑셀(CSV)</button></div>
 
         <div class="kpis" style="margin-top:12px">
           <div class="kpi c1"><small>활동한 회원</small><b>${n(active.length)}</b><span>전체 회원 ${n(act.users.length)}명 중</span></div>
@@ -368,14 +369,13 @@
     },
     bind() {
       const pg = K.pg;
-      pg.querySelectorAll('[data-ad]').forEach(b => b.addEventListener('click', () => { A.days = +b.dataset.ad; Account.page('activity'); }));
-      pg.querySelectorAll('[data-ag]').forEach(b => b.addEventListener('click', () => { A.game = b.dataset.ag || null; Account.page('activity'); }));
-      pg.querySelectorAll('[data-as]').forEach(b => b.addEventListener('click', () => { A.sort = b.dataset.as; Account.page('activity'); }));
+      pg.querySelectorAll('[data-ag]').forEach(b => b.addEventListener('click', () => { A.game = b.dataset.ag || null; Account.page('data'); }));
+      pg.querySelectorAll('[data-as]').forEach(b => b.addEventListener('click', () => { A.sort = b.dataset.as; Account.page('data'); }));
       const c = pg.querySelector('#stCsv');
       if (c) c.addEventListener('click', () => {
         if (!A.csv) return;
         download(`samgongyuk_members_${K.fmtDate(new Date())}_${A.days}d.csv`, '﻿' + A.csv.map(r => r.map(csvCell).join(',')).join('\r\n'), 'text/csv;charset=utf-8');
       });
     },
-  });
+  };
 })();
