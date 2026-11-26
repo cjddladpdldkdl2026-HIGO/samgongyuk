@@ -69,14 +69,31 @@
   const avg = (xs) => (xs.length ? Math.round(xs.reduce((a, b) => a + b, 0) / xs.length) : null);
   const scoreText = (game, v) => (game === 'golf' ? `${n(v)}m` : game === 'wizard' ? (v ? '이김' : '-') : n(v));
 
+  // 차트 머리: 제목 · 차트 번호 · 종합 소견 도장 · 환자 정보
+  function chartHead(acc, plays, lastAt) {
+    const me = K.me() || {};
+    const now = new Date(), sy = now.getMonth() < 2 ? now.getFullYear() - 1 : now.getFullYear();
+    const grade = me.kind === 'student' ? (me.grade_override || Math.max(1, sy - (me.entry_year || sy) + 1)) : null;
+    const st = acc == null ? ['none', '진찰 대기', '기록이 쌓이면 나와요'] : acc >= 80 ? ['good', '건강 양호', '지금처럼!'] : acc >= 60 ? ['mid', '경과 관찰', '조금만 더!'] : ['low', '집중 치료', '처방대로 연습해요'];
+    return `<div class="chart-head"><div><h3>진료 차트</h3><span class="no">No. ${esc(me.login_id || '-')} · 청암대학교 물리치료과</span></div>
+        <div class="stamp ${st[0]}">${st[1]}<small>${st[2]}</small></div></div>
+      <div class="pt-info">
+        <div><small>환자명</small><b>${esc(me.name || '-')}</b></div>
+        <div><small>${me.kind === 'student' ? '학번 · 학년' : '구분'}</small><b>${me.kind === 'student' ? `${esc(me.login_id)} · ${grade}학년` : '관리자'}</b></div>
+        <div><small>첫 내원</small><b>${me.created_at ? K.fmtDate(me.created_at) : '-'}</b></div>
+        <div><small>최근 내원</small><b>${lastAt ? K.fmtDate(lastAt) : '-'}</b></div>
+        <div><small>총 진료</small><b>${n(plays)}회</b></div>
+      </div>`;
+  }
+
   async function gameRecordsHtml() {
     const me = K.me();
     let q = sb.from('runs').select('game,mode,score,accuracy,detail,created_at').eq('user_id', me.id).order('created_at', { ascending: true }).limit(2000);
     if (M.game) q = q.eq('game', M.game);
     if (M.days) q = q.gte('created_at', new Date(Date.now() - M.days * 864e5).toISOString());
     const { data: runs, error } = await q;
-    if (error) return `<h2 class="st-h2">🩺 진찰 결과</h2><p class="empty2">${esc(K.KO_ERR(error))}</p>`;
-    if (!runs.length) return `<h2 class="st-h2">🩺 진찰 결과</h2><p class="empty2">${M.game || M.days ? '이 조건에는' : '아직'} 끝까지 한 게임이 없어요. 로그인한 채로 한 판 끝까지 해 보세요! 🎮</p>`;
+    if (error) return chartHead(null, 0, null) + `<p class="empty2">${esc(K.KO_ERR(error))}</p>`;
+    if (!runs.length) return chartHead(null, 0, null) + `<p class="empty2">${M.game || M.days ? '이 조건에는' : '아직'} 진료 기록이 없어요.<br>로그인한 채로 게임을 한 판 끝까지 하면 첫 진찰 결과가 나와요 🎮</p>`;
 
     // ① 게임 · 모드별
     const groups = new Map();
@@ -126,35 +143,61 @@
       rec: `성공 ${o.hits} · 틀림 ${o.wrong} · 못 들음 ${o.silent} (이김 ${o.win}/${o.n})`, rate: pct(o.hits, Math.max(1, o.tries - o.silent)) }));
     parts.sort((a, b) => a.rate - b.rate);
 
-    return `<h2 class="st-h2">🩺 진찰 결과 <small class="st-hint">내 게임 성적 · 끝까지 한 판 기준</small></h2>
-      <div class="kpis">
-        <div class="kpi c1"><small>끝까지 한 판</small><b>${n(runs.length)}</b><span>${gamesIn.length}개 게임 · 마지막 ${K.fmtDate(runs[runs.length - 1].created_at)}</span></div>
-        <div class="kpi c3"><small>평균 정확도</small><b>${allAcc == null ? '-' : `${allAcc}%`}</b><span>정확도를 남기는 게임만</span></div>
-        <div class="kpi c4"><small>💪 가장 건강한 부위 <i class="st-orig">잘하는 것</i></small><b style="font-size:18px">${strong ? label(strong) : '-'}</b><span>${strong ? `정확도 ${strong.acc}%` : ''}</span></div>
-        <div class="kpi c2"><small>⚠ 치료가 가장 필요한 부위 <i class="st-orig">약한 것</i></small><b style="font-size:18px">${weakest && weakest !== strong ? label(weakest) : '-'}</b><span>${weakest && weakest !== strong ? `정확도 ${weakest.acc}%` : ''}</span></div>
+    // ④ 진료 차트 용지 — 환자 정보 · 종합 소견 도장 · 바이탈 · 게임별 진찰 카드 · 처방전 · 치료가 필요한 부위 · 날짜별 기록(접기)
+    const week = runs.filter(r => Date.now() - new Date(r.created_at) < 7 * 864e5).length;
+    const visitDays = byDay.size;
+    const rxRows = withAcc.filter(r => r.acc < 80).sort((a, b) => a.acc - b.acc).slice(0, 2);
+    const rxParts = parts.filter(x => x.rate < 60).slice(0, 2);
+    const untried = GAMES.filter(g => g.id !== 'yesno' && !runs.some(r => r.game === g.id) && !M.game)[0];
+    const rx = [
+      ...rxRows.map(r => ({ txt: `<b>${label(r)}</b> 3판 더 연습하기 <small>지금 정확도 ${r.acc}% → 목표 80%</small>`, url: G[r.game] && G[r.game].url })),
+      ...rxParts.map(x => ({ txt: `<b>${esc(x.part)}</b> 다시 보기 <small>${esc(G[x.game] ? G[x.game].ko : x.game)} · ${esc(x.kind)} · ${x.rate}%</small>`, url: G[x.game] && G[x.game].url })),
+    ];
+    if (!rx.length) rx.push(untried
+      ? { txt: `지금처럼 꾸준히! <b>${esc(untried.ko)}</b>에도 도전해 보세요 <small>아직 안 해 본 게임</small>`, url: untried.url }
+      : { txt: '<b>건강 양호!</b> 지금처럼 꾸준히 해 주세요 <small>모든 게임 정확도 80% 이상</small>', url: '' });
+    const accTone = (a) => (a == null ? '' : tone(a));
+    const dxCard = (r) => {
+      const st = r.acc != null ? tone(r.acc) : (r.rank && r.total >= 3 ? (r.rank <= Math.ceil(r.total / 3) ? 'good' : r.rank > r.total - Math.ceil(r.total / 3) ? 'low' : 'mid') : '');
+      return `<div class="dx ${st}"><div class="t"><b>${esc(gname(r.game))}</b>${verdict(r.acc, r.rank, r.total)}</div>
+        <div class="md">${esc(modeKo(r.game, r.mode))}</div>
+        ${r.acc != null ? `<div class="acc ${st}">${r.acc}<small>%</small></div><div class="bar"><i class="${st}" style="width:${Math.max(3, r.acc)}%"></i></div>`
+          : `<div class="acc">${r.game === 'wizard' ? `이김 ${r.best}` : scoreText(r.game, r.best)}</div><div class="bar"></div>`}
+        <dl><dt>최고 기록</dt><dd>${r.game === 'wizard' ? `이김 ${r.best}` : scoreText(r.game, r.best)}</dd><dt>진료 횟수</dt><dd>${n(r.plays)}판</dd>
+          <dt>처음 → 최근</dt><dd>${r.diff == null ? '-' : r.diff > 0 ? `<span class="up">▲ ${r.diff}%p</span>` : r.diff < 0 ? `<span class="down">▼ ${-r.diff}%p</span>` : '그대로'}</dd>
+          <dt>내 순위</dt><dd>${r.rank ? `${r.rank}위 / ${r.total}명` : '-'}</dd></dl></div>`;
+    };
+    const needRow = (x) => `<li><span class="nm"><b>${esc(x.part)}</b><small>${esc(gname(x.game))} · ${esc(x.kind)}</small></span>
+      <span class="bar"><i class="${tone(x.rate)}" style="width:${Math.max(3, x.rate)}%"></i></span><span class="pc ${tone(x.rate)}">${x.rate}%</span><small class="rec">${esc(x.rec)}</small></li>`;
+
+    return `${chartHead(allAcc, runs.length, runs[runs.length - 1].created_at)}
+      <h4>🩺 바이탈 <small>기본 수치</small></h4>
+      <div class="vitals">
+        <div class="vital ${accTone(allAcc)}"><small>평균 정확도</small><b>${allAcc == null ? '-' : `${allAcc}%`}</b><span>정확도를 남기는 게임만</span></div>
+        <div class="vital"><small>진료 횟수</small><b>${n(runs.length)}판</b><span>끝까지 한 판 · ${gamesIn.length}개 게임</span></div>
+        <div class="vital"><small>최근 7일</small><b>${n(week)}판</b><span>내원 ${n(visitDays)}일째</span></div>
+        <div class="vital ${strong ? 'good' : ''}"><small>💪 가장 건강한 부위</small><b class="sm">${strong ? label(strong) : '-'}</b><span>${strong ? `정확도 ${strong.acc}%` : ''}</span></div>
+        <div class="vital ${weakest && weakest !== strong ? 'low' : ''}"><small>⚠ 치료가 가장 필요한 부위</small><b class="sm">${weakest && weakest !== strong ? label(weakest) : '-'}</b><span>${weakest && weakest !== strong ? `정확도 ${weakest.acc}%` : ''}</span></div>
       </div>
 
-      <h3>📋 검사 결과표 <small class="st-hint">게임 · 모드별 성적</small></h3>
-      <div class="tbl-wrap ops-tall"><table class="tbl"><thead><tr><th>게임</th><th>난이도 · 맵</th><th class="num">판 수</th><th class="num">최고 기록</th>
-        <th class="num">평균 정확도</th><th class="num">최근 3판</th><th class="num">처음→최근</th><th class="num">내 순위</th><th>판정</th><th>마지막</th></tr></thead>
-        <tbody>${rows.map(r => `<tr><td>${esc(gname(r.game))}</td><td>${esc(modeKo(r.game, r.mode))}</td><td class="num">${n(r.plays)}</td>
-          <td class="num">${r.game === 'wizard' ? `이김 ${r.best}` : scoreText(r.game, r.best)}</td>
-          <td class="num">${r.acc == null ? '-' : `<span class="st-pill ${tone(r.acc)}">${r.acc}%</span>`}</td><td class="num">${r.recent == null ? '-' : `${r.recent}%`}</td>
-          <td class="num">${r.diff == null ? '-' : r.diff > 0 ? `<b style="color:#6ff0a8">▲ ${r.diff}</b>` : r.diff < 0 ? `<b style="color:#ff8ab8">▼ ${-r.diff}</b>` : '='}</td>
-          <td class="num">${r.rank ? `${r.rank}위 / ${r.total}명` : '-'}</td><td>${verdict(r.acc, r.rank, r.total)}</td><td>${K.fmtDate(r.last)}</td></tr>`).join('')}</tbody></table></div>
-      <p class="note">판정: 정확도 80% 이상 💪 건강(강점) · 60~79% 👀 관찰 · 60% 미만 ⚠ 치료 필요(약점). 정확도가 없는 게임(롱드라이브 등)은 회원 중 내 순위로 정해요. 처음→최근 = 첫 판과 마지막 판 정확도 차이.</p>
+      <h4>💊 처방전 <small>지금 하면 좋은 것</small></h4>
+      <ul class="rx">${rx.map(x => `<li><span>${x.txt}</span>${x.url ? `<a class="go" href="${esc(x.url)}">▶ 처방대로 연습하기</a>` : ''}</li>`).join('')}</ul>
 
-      <h3>📅 날짜별 기록 <button class="abtn sm pri" type="button" id="stMyCsv" style="margin-left:8px">⬇ 엑셀(CSV)</button></h3>
-      <div class="tbl-wrap ops-tall"><table class="tbl"><thead><tr><th>날짜</th>${gamesIn.map(g => `<th class="num">${g.ic} ${esc(g.ko)}</th>`).join('')}<th class="num">합계</th><th class="num">평균 정확도</th></tr></thead>
-        <tbody>${M.csv.slice(1).map(row => `<tr><td class="${[0, 6].includes(new Date(row[0] + 'T00:00:00').getDay()) ? 'we' : ''}">${esc(row[0].slice(5).replace('-', '/'))} ${W[new Date(row[0] + 'T00:00:00').getDay()]}</td>
-          ${row.slice(1, -2).map(v => `<td class="num">${v ? n(v) : '<span style="color:var(--ink-faint)">·</span>'}</td>`).join('')}<td class="num"><b>${n(row[row.length - 2])}</b></td>
-          <td class="num">${row[row.length - 1] === '' ? '-' : `<span class="st-pill ${tone(row[row.length - 1])}">${row[row.length - 1]}%</span>`}</td></tr>`).join('')}</tbody></table></div>
+      <h4>📋 검사 결과표 <small>게임 · 모드별 진찰 · 💪 건강 80%↑ · 👀 관찰 60~79% · ⚠ 치료 필요 60%↓</small></h4>
+      <div class="dx-grid">${rows.map(dxCard).join('')}</div>
 
-      ${parts.length ? `<h3>⚠ 치료가 필요한 부위 <small class="st-hint">게임 기록에서 찾은 약한 부분 · 낮은 순</small></h3>
-        <div class="tbl-wrap ops-tall"><table class="tbl"><thead><tr><th>게임</th><th>부분</th><th>종류</th><th>기록</th><th class="num">정답률</th><th>판정</th></tr></thead>
-          <tbody>${parts.slice(0, 40).map(x => `<tr><td>${esc(gname(x.game))}</td><td class="st-item">${esc(x.part)}</td><td>${esc(x.kind)}</td><td>${esc(x.rec)}</td>
-            <td class="num"><span class="st-pill ${tone(x.rate)}">${x.rate}%</span></td><td>${verdict(x.rate)}</td></tr>`).join('')}</tbody></table></div>
-        <p class="note">너에게 닿기를은 근육별 맞힌 수, 딴딴/딴은 놓친 용어, 뭐라구요!? 는 스테이지별 주문 성공을 모았어요 (못 들음은 정답률에서 빼요).</p>` : ''}`;
+      ${parts.length ? `<h4>⚠ 치료가 필요한 부위 <small>게임 기록에서 찾은 약한 부분 · 낮은 순</small></h4>
+        <ul class="need">${parts.slice(0, 6).map(needRow).join('')}</ul>
+        ${parts.length > 6 ? `<details class="more"><summary>나머지 ${parts.length - 6}개 더 보기</summary><ul class="need">${parts.slice(6, 40).map(needRow).join('')}</ul></details>` : ''}
+        <p class="note">너에게 닿기를은 근육별 맞힌 수, 딴딴/딴은 놓친 용어, 뭐라구요!? 는 스테이지별 주문 성공이에요 (못 들음은 빼요).</p>` : ''}
+
+      <details class="more"><summary>📅 날짜별 기록 펼쳐 보기 <small>${n(days.length)}일</small></summary>
+        <div class="row" style="margin:8px 0"><button class="abtn sm pri" type="button" id="stMyCsv">⬇ 엑셀(CSV)로 내려받기</button></div>
+        <div class="tbl-wrap ops-tall"><table class="tbl"><thead><tr><th>날짜</th>${gamesIn.map(g => `<th class="num">${g.ic} ${esc(g.ko)}</th>`).join('')}<th class="num">합계</th><th class="num">평균 정확도</th></tr></thead>
+          <tbody>${M.csv.slice(1).map(row => `<tr><td class="${[0, 6].includes(new Date(row[0] + 'T00:00:00').getDay()) ? 'we' : ''}">${esc(row[0].slice(5).replace('-', '/'))} ${W[new Date(row[0] + 'T00:00:00').getDay()]}</td>
+            ${row.slice(1, -2).map(v => `<td class="num">${v ? n(v) : '<span class="dim">·</span>'}</td>`).join('')}<td class="num"><b>${n(row[row.length - 2])}</b></td>
+            <td class="num">${row[row.length - 1] === '' ? '-' : `<span class="st-pill ${tone(row[row.length - 1])}">${row[row.length - 1]}%</span>`}</td></tr>`).join('')}</tbody></table></div>
+      </details>`;
   }
 
   Account.addPage({
@@ -164,15 +207,16 @@
       const tabs = filt('wg', M.game, [[null, '전체'], ...GAMES.map(g => [g.id, `${g.ic} ${g.ko}`])]);
       const per = filt('wd', M.days, [[null, '전체 기간'], [30, '최근 30일'], [7, '최근 7일']]).replace('class="filt"', 'class="filt sm"');
       const head = `<h2>📋 진료 차트</h2>
-        <p class="sub">내가 한 게임 기록으로 진찰해서, 건강한 부위(잘하는 것)와 치료가 필요한 부위(약한 것)를 차트로 보여 줘요. 로그인한 채로 게임을 끝까지 하면 쌓여요.</p>${tabs}${per}`;
-      const qHead = `<h2 class="st-h2">📝 문제별 분석 <small class="st-hint">문제 하나하나 맞았는지 · 헷갈린 것 · 걸린 시간</small></h2>`;
+        <p class="sub">내 게임 기록으로 진찰한 결과예요. 건강한 부위(잘하는 것) · 치료가 필요한 부위(약한 것) · 처방을 확인해 보세요.</p>${tabs}${per}`;
+      const qHead = `</div><div class="chart chart2"><div class="chart-head"><div><h3>📝 문제별 분석</h3><span class="no">세부 검사 기록지 · 문제 하나하나 맞았는지 · 헷갈린 것 · 걸린 시간</span></div></div>`;
+      const sheet = `<div class="chart">${recHtml}`;
       if (d._err) {
-        return head + recHtml + qHead + (MISSING(d._err)
+        return head + sheet + qHead + (MISSING(d._err)
           ? '<p class="empty2">문제별 기록은 곧 시작돼요. (관리자가 Supabase 에서 <b>answers.sql</b> 을 실행하면 그다음 게임부터 쌓여요)</p>'
-          : `<p class="empty2">${esc(K.KO_ERR(d._err))}</p>`) + dataNote;
+          : `<p class="empty2">${esc(K.KO_ERR(d._err))}</p>`) + dataNote + '</div>';
       }
       if (!d.total) {
-        return head + recHtml + qHead + `<p class="empty2">${M.game || M.days ? '이 조건에는' : '아직'} 문제별 기록이 없어요.<br>로그인한 채로 게임을 하면 문제마다 맞았는지 틀렸는지가 쌓여요 🎮</p>` + dataNote;
+        return head + sheet + qHead + `<p class="empty2">${M.game || M.days ? '이 조건에는' : '아직'} 문제별 기록이 없어요.<br>로그인한 채로 게임을 하면 문제마다 맞았는지 틀렸는지가 쌓여요 🎮</p>` + dataNote + '</div>';
       }
       const rate = pct(d.right, d.total);
       const weakestCat = d.cats.filter(c => c.tries >= 3)[0] || d.cats[0];
@@ -180,7 +224,7 @@
       const days = d.days || [];
       const maxT = Math.max(1, ...days.map(x => x.tries));
 
-      return head + recHtml + qHead + `
+      return head + sheet + qHead + `
         <div class="kpis">
           <div class="kpi c1"><small>문제 정답률</small><b>${rate}%</b><span>${n(d.total)}문제 중 ${n(d.right)}개 맞힘</span></div>
           <div class="kpi c2"><small>가장 약한 부분</small><b style="font-size:20px">${weakestCat ? esc(weakestCat.cat) : '-'}</b>
@@ -226,7 +270,7 @@
             <i class="${tone(x.rate)}" style="height:${Math.max(4, x.rate)}%;opacity:${(0.45 + 0.55 * x.tries / maxT).toFixed(2)}"></i>
             <span>${esc(x.day.slice(5).replace('-', '/'))}</span></div>`).join('')}</div>
           <p class="note">막대 높이 = 정답률, 진할수록 그날 많이 풀었어요.</p>` : ''}
-        ${dataNote}`;
+        ${dataNote}</div>`;
     },
     bind() {
       const pg = K.pg;

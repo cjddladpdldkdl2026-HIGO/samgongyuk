@@ -104,3 +104,102 @@
 /* ☰ 순위 페이지의 시상대 (모양은 highgo.html .podium) — 넓은 창이라 가운데에 알맞은 폭으로 */
 .ops-podium { max-width: 360px; margin: 10px auto 12px; }
 .kpi small i.st-orig { font-style: normal; font-size: 11px; color: var(--ink-faint); margin-left: 4px; }
+
+/* ── 📋 진료 차트 (study.js): 클립보드에 끼운 차트 용지 — 밝은 종이 · 진한 글씨로 읽기 쉽게 ── */
+.chart { --p-ink: #1f2433; --p-dim: #5b6375; --p-line: #e2ddcf; --p-good: #138a5b; --p-mid: #a86a00; --p-low: #c53030;
+  position: relative; margin: 26px 0 8px; padding: 28px 26px 22px; border-radius: 14px; background: #fbf9f3; color: var(--p-ink);
+  font-size: 15px; line-height: 1.6; box-shadow: 0 18px 40px rgba(0,0,0,.45), inset 0 0 0 1px rgba(0,0,0,.05); animation: chartIn .35s ease-out both; }
+.chart::before { content: ""; position: absolute; top: -13px; left: 50%; transform: translateX(-50%); width: 120px; height: 26px; border-radius: 8px;
+  background: linear-gradient(180deg, #d5dae3, #8d95a5); box-shadow: 0 3px 6px rgba(0,0,0,.4), inset 0 -3px 0 rgba(0,0,0,.15); }   /* 클립 */
+.chart.chart2 { margin-top: 34px; animation-delay: .08s; }
+@keyframes chartIn { from { transform: translateY(14px) rotate(-.5deg); opacity: 0; } to { transform: none; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .chart { animation: none; } }
+@media (max-width: 600px) { .chart { padding: 24px 14px 18px; font-size: 14px; } }
+
+.chart-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; padding-bottom: 10px; border-bottom: 2px solid var(--p-ink); }
+.chart-head h3 { margin: 0; font-size: 22px; font-weight: 900; color: var(--p-ink); }
+.chart-head .no { font-size: 13px; color: var(--p-dim); }
+.stamp { flex-shrink: 0; padding: 4px 12px; border: 3px solid currentColor; border-radius: 10px; font-size: 18px; font-weight: 900; line-height: 1.2;
+  text-align: center; transform: rotate(-6deg); opacity: .9; }
+.stamp small { display: block; font-size: 11px; font-weight: 700; }
+.stamp.good { color: var(--p-good); } .stamp.mid { color: var(--p-mid); } .stamp.low { color: var(--p-low); } .stamp.none { color: var(--p-dim); }
+.pt-info { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); margin: 12px 0 2px; border: 1px solid var(--p-line); border-radius: 8px; overflow: hidden; background: #fff; }
+.pt-info div { padding: 8px 12px; border-right: 1px solid var(--p-line); border-bottom: 1px solid var(--p-line); margin: 0 -1px -1px 0; }
+.pt-info small { display: block; font-size: 12px; color: var(--p-dim); }
+.pt-info b { font-size: 15px; color: var(--p-ink); }
+
+.chart h4 { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; margin: 22px 0 10px; font-size: 17px; font-weight: 800; color: var(--p-ink); }
+.chart h4 small { font-size: 12px; font-weight: 500; color: var(--p-dim); }
+
+.vitals { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+.vital { padding: 10px 14px; border: 1px solid var(--p-line); border-radius: 10px; background: #fff; }
+.vital small, .vital span { display: block; font-size: 12px; color: var(--p-dim); }
+.vital b { display: block; font-size: 26px; font-weight: 800; line-height: 1.25; color: var(--p-ink); }
+.vital b.sm { font-size: 15px; line-height: 1.4; margin: 4px 0 2px; }
+.vital.good b { color: var(--p-good); } .vital.mid b { color: var(--p-mid); } .vital.low b { color: var(--p-low); }
+
+.rx { list-style: none; margin: 0; padding: 4px 16px; border: 2px dashed #8a96ad; border-radius: 12px; background: #fff; }
+.rx li { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px 12px; padding: 10px 0; border-bottom: 1px dashed var(--p-line); }
+.rx li:last-child { border-bottom: 0; }
+.rx li small { display: block; font-size: 12px; color: var(--p-dim); }
+.rx .go { flex-shrink: 0; padding: 7px 14px; border-radius: 8px; background: #1f6feb; color: #fff; font-size: 13px; font-weight: 700; text-decoration: none; }
+.rx .go:hover { background: #1558c4; }
+
+.dx-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; }
+.dx { padding: 12px 14px; border: 1px solid var(--p-line); border-left: 5px solid #9aa3b5; border-radius: 10px; background: #fff; }
+.dx.good { border-left-color: #1aa06d; } .dx.mid { border-left-color: #d69e2e; } .dx.low { border-left-color: #e53e3e; }
+.dx .t { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.dx .t b { font-size: 15px; }
+.dx .md { font-size: 13px; color: var(--p-dim); }
+.dx .acc { margin-top: 4px; font-size: 30px; font-weight: 800; line-height: 1.1; color: var(--p-ink); }
+.dx .acc small { font-size: 15px; }
+.dx .acc.good { color: var(--p-good); } .dx .acc.mid { color: var(--p-mid); } .dx .acc.low { color: var(--p-low); }
+.dx .bar, .need .bar { height: 8px; margin: 6px 0 8px; border-radius: 4px; background: #ece8dc; overflow: hidden; }
+.dx .bar i, .need .bar i { display: block; height: 100%; border-radius: 4px; background: #9aa3b5; }
+.chart .bar i.good { background: #1aa06d; } .chart .bar i.mid { background: #d69e2e; } .chart .bar i.low { background: #e53e3e; }
+.dx dl { display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; margin: 0; font-size: 13px; }
+.dx dt { color: var(--p-dim); } .dx dd { margin: 0; text-align: right; font-weight: 700; }
+.dx .up { color: var(--p-good); } .dx .down { color: var(--p-low); }
+
+.need { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.need li { display: grid; grid-template-columns: minmax(140px, 1.2fr) 2fr auto; grid-template-areas: "nm bar pc" "nm rec rec"; align-items: center; gap: 0 12px;
+  padding: 8px 12px; border: 1px solid var(--p-line); border-radius: 10px; background: #fff; }
+.need .nm { grid-area: nm; } .need .nm b { display: block; font-size: 14px; } .need .nm small { font-size: 12px; color: var(--p-dim); }
+.need .bar { grid-area: bar; margin: 0; } .need .pc { grid-area: pc; font-weight: 800; }
+.need .pc.good { color: var(--p-good); } .need .pc.mid { color: var(--p-mid); } .need .pc.low { color: var(--p-low); }
+.need .rec { grid-area: rec; font-size: 12px; color: var(--p-dim); }
+@media (max-width: 600px) { .need li { grid-template-columns: 1fr auto; grid-template-areas: "nm pc" "bar bar" "rec rec"; } }
+
+.chart details.more { margin-top: 14px; padding: 10px 14px; border: 1px solid var(--p-line); border-radius: 10px; background: #fff; }
+.chart details.more summary { cursor: pointer; font-weight: 800; color: var(--p-ink); }
+.chart details.more summary small { font-weight: 500; color: var(--p-dim); margin-left: 6px; }
+.chart details.more[open] summary { margin-bottom: 8px; }
+
+/* 종이 위의 기존 요소 (표 · 숫자 카드 · 막대 · 짝 · 칩) 를 밝은 색으로 */
+.chart .tbl-wrap { border-color: var(--p-line); background: #fff; }
+.chart .tbl th { background: #f2efe6; color: #3d4455; }
+.chart .tbl td { color: var(--p-ink); border-bottom-color: #efebdf; }
+.chart .tbl td.we { color: var(--p-low); } .chart .tbl .dim { color: #b5b9c4; }
+.chart .kpis { gap: 10px; }
+.chart .kpi { background: #fff; border-color: var(--p-line); }
+.chart .kpi small, .chart .kpi span { color: var(--p-dim); }
+.chart .kpi b { color: var(--p-ink) !important; font-family: inherit; font-weight: 800; }
+.chart h3 { color: var(--p-ink); }
+.chart .note, .chart .empty2, .chart .st-hint, .chart .st-g { color: var(--p-dim); }
+.chart .bar2 .lab { color: #3d4455; }
+.chart .bar2 .track { background: #ece8dc; }
+.chart .bar2 .val { color: var(--p-ink); text-shadow: none; }
+.chart .bar2 .val i { color: var(--p-dim); }
+.chart .st-pill.good, .chart .lv.ok { background: #e3f5ec; color: var(--p-good); }
+.chart .st-pill.mid { background: #fdf1d8; color: var(--p-mid); }
+.chart .st-pill.low { background: #fde5e5; color: var(--p-low); }
+.chart .st-pair { background: #fff6f8; border-color: #f2bccb; }
+.chart .st-pair b { color: var(--p-ink); } .chart .st-pair span:not(.vs) { color: #9b2c4a; } .chart .st-pair .vs { color: var(--p-low); } .chart .st-pair small { color: var(--p-dim); }
+.chart .chip { background: #eef1f6; color: var(--p-ink); } .chart .chip.update { background: #e3f5ec; color: var(--p-good); }
+.chart .ops-cols { background: #fff; border-color: var(--p-line); } .chart .ops-cols .c span { color: var(--p-dim); }
+.chart .st-data { background: #fff; border-color: var(--p-line); color: #3d4455; } .chart .st-data summary { color: var(--p-ink); }
+.chart .bar2.st-rate .fill { box-shadow: none; }
+.chart .bar2.st-rate.good .fill { background: #9fe1c2; } .chart .bar2.st-rate.mid .fill { background: #f6d98c; } .chart .bar2.st-rate.low .fill { background: #f6b0b0; }
+.chart .bar2 .fill { background: #b9c6ea; box-shadow: none; }
+.chart .st-pill { white-space: nowrap; }
+.dx .t b { min-width: 0; }
