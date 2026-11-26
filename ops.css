@@ -232,3 +232,50 @@
 /* 표 숫자 읽기 쉽게: 0 에 빗금이 있는 Orbitron 대신 보통 글꼴 · 자리 맞춤, 0 은 흐린 점 */
 .tbl td.num { font-family: inherit; font-variant-numeric: tabular-nums; font-weight: 600; }
 .tbl td .z { color: rgba(185,167,216,.35); }
+
+/* ── 가독성 손보기 (관리자 전력 분석 자료) ── */
+/* ① 막대 숫자는 막대 밖 오른쪽에 진하게 · ② 이름 칸 넓게 (두 줄까지) */
+.bar2.out { grid-template-columns: minmax(90px, 170px) 1fr minmax(64px, auto); gap: 10px; }
+.bar2.out .lab { text-align: right; white-space: normal; line-height: 1.25; color: var(--ink); font-size: 13px; }
+.bar2.out .lab .lab { width: auto !important; }
+.bar2.out .track { height: 14px; }
+.bar2.out .v { display: flex; flex-direction: column; line-height: 1.2; font-size: 13px; white-space: nowrap; }
+.bar2.out .v b { color: var(--ink); font-weight: 800; }
+.bar2.out .v i { font-style: normal; font-size: 11px; color: var(--ink-dim); }
+.chart .bar2.out .lab, .chart .bar2.out .v b { color: var(--p-ink); }
+.chart .bar2.out .v i { color: var(--p-dim); }
+/* ③ 설명 글씨 조금 크고 밝게 */
+.pg .note { font-size: 13px; color: var(--ink-dim); }
+.pg .st-hint { color: var(--ink-dim); }
+/* ⑥ 목차 탭 (스크롤해도 위에 붙어 있어요) */
+.ops-toc { position: sticky; top: -26px; z-index: 4; display: flex; flex-wrap: wrap; gap: 6px; margin: 18px -6px 4px; padding: 8px 6px;
+  background: linear-gradient(180deg, rgba(24,7,58,.98), rgba(20,6,48,.95)); border-bottom: 1px solid var(--line); }
+.ops-toc button { padding: 6px 12px; border-radius: 999px; border: 1px solid var(--line); background: rgba(255,255,255,.04); font-size: 13px; color: var(--ink); }
+.ops-toc button:hover { border-color: var(--cyan); }
+/* ④ 접어 둔 표 */
+.pg details.ops-more { margin-top: 12px; padding: 10px 14px; border: 1px solid var(--line); border-radius: 12px; background: rgba(255,255,255,.03); }
+.pg details.ops-more summary { cursor: pointer; font-weight: 700; color: var(--ink); }
+.pg details.ops-more summary small { font-weight: 500; color: var(--ink-dim); margin-left: 6px; }
+.pg details.ops-more[open] summary { margin-bottom: 10px; }
+/* 회원 표: 게임별 작은 막대 · 범례 */
+.st-mini { display: flex; width: 100%; min-width: 120px; height: 12px; border-radius: 4px; overflow: hidden; background: rgba(255,255,255,.06); }
+.st-mini i { display: block; height: 100%; border-right: 2px solid #160632; }
+.st-mini i:last-child { border-right: 0; }
+.st-legend { display: flex; flex-wrap: wrap; gap: 4px 12px; margin: 0 0 8px; font-size: 12px; color: var(--ink); }
+.st-legend span { display: inline-flex; align-items: center; gap: 5px; }
+.st-legend i { width: 10px; height: 10px; border-radius: 3px; }
+/* 요일 × 시간: 숫자 대신 색 + 범례 */
+.st-heat i { font-size: 0; height: 24px; }
+.st-heat-lg { display: flex; align-items: center; gap: 4px; margin-top: 6px; font-size: 12px; color: var(--ink-dim); }
+.st-heat-lg i { width: 22px; height: 12px; border-radius: 3px; background: rgba(45,226,230,var(--a)); }
+.st-heat-lg span { margin: 0 4px; }
+/* 그만둔 지점 막대 크게 */
+.st-quit { height: 58px; gap: 5px; }
+.st-quit span { width: 40px; grid-template-rows: 1fr 16px; }
+.st-quit small { font-size: 11px; line-height: 16px; }
+/* 헷갈리는 짝 표 */
+.st-clamp { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.tbl td.st-vs { color: #ff8ab8; font-weight: 800; text-align: center; padding-left: 0; padding-right: 0; }
+.st-hbar { display: flex; align-items: center; gap: 8px; }
+.st-hbar i { display: block; height: 10px; min-width: 3px; border-radius: 3px; background: #e24d8b; }
+.st-hbar b { font-weight: 700; color: var(--ink); white-space: nowrap; }

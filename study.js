@@ -29,9 +29,13 @@
   }
   const pct = (right, tries) => (tries ? Math.round(right * 100 / tries) : 0);
   const tone = (rate) => (rate >= 80 ? 'good' : rate >= 60 ? 'mid' : 'low');
-  const rateBar = (label, rate, sub) =>
-    `<div class="bar2 st-rate ${tone(rate)}"><span class="lab" style="width:auto">${label}</span><div class="track"><div class="fill" style="width:${Math.max(2, rate)}%"></div>
-      <span class="val">${rate}%${sub ? `<i>${sub}</i>` : ''}</span></div></div>`;
+  const rateBar = (label, rate, sub) =>   // 숫자는 막대 밖 오른쪽에
+    `<div class="bar2 out st-rate ${tone(rate)}"><span class="lab">${label}</span><div class="track"><div class="fill" style="width:${Math.max(2, rate)}%"></div></div>
+      <span class="v"><b>${rate}%</b>${sub ? `<i>${sub}</i>` : ''}</span></div>`;
+  const outBar = (label, w, val, extra) =>
+    `<div class="bar2 out"><span class="lab">${label}</span><div class="track"><div class="fill" style="width:${Math.max(1, w).toFixed(1)}%"></div></div>
+      <span class="v"><b>${val}</b>${extra ? `<i>${extra}</i>` : ''}</span></div>`;
+  const ALIAS2 = { '롱드라이브': '사랑하는 그대에게 기대세요', '뭐라구요!?': '뭐라구요!? 안들려요' };
   const W = ['일', '월', '화', '수', '목', '금', '토'];
   const filt = (attr, cur, list) => `<div class="filt">${list.map(([v, l]) =>
     `<button type="button" data-${attr}="${v ?? ''}" class="${cur === v ? 'on' : ''}">${l}</button>`).join('')}</div>`;
@@ -302,7 +306,8 @@
       const order = [1, 2, 3, 4, 5, 6, 0];   // 월요일부터
       const heatHtml = `<div class="st-heat"><div class="hr"><span></span>${Array.from({ length: 24 }, (_, h) => `<span class="hh">${h % 3 === 0 ? h : ''}</span>`).join('')}</div>
         ${order.map(d => `<div class="hr"><span class="dl ${d % 6 === 0 ? 'we' : ''}">${W[d]}</span>${heat[d].map((v, h) =>
-          `<i title="${W[d]}요일 ${h}시: ${v}회" style="--a:${v ? (0.15 + 0.85 * v / maxH).toFixed(2) : 0}">${v || ''}</i>`).join('')}</div>`).join('')}</div>`;
+          `<i title="${W[d]}요일 ${h}시: ${v}회" style="--a:${v ? (0.15 + 0.85 * v / maxH).toFixed(2) : 0}"></i>`).join('')}</div>`).join('')}</div>
+        <div class="st-heat-lg"><span>적음</span>${[0.15, 0.36, 0.57, 0.78, 1].map(a => `<i style="--a:${a}"></i>`).join('')}<span>많음 (${n(maxH)}회)</span></div>`;
       const byHour = Array(24).fill(0); act.heat.forEach(h => { byHour[h.h] += h.n; });
       const peakH = byHour.indexOf(Math.max(...byHour));
       const byDow = Array(7).fill(0); act.heat.forEach(h => { byDow[h.dow] += h.n; });
@@ -312,7 +317,14 @@
       const active = act.users.filter(u => u.plays || u.answers || u.runs);
       const sorters = { plays: (a, b) => b.plays - a.plays, rate: (a, b) => (a.rate ?? 101) - (b.rate ?? 101), days: (a, b) => b.active_days - a.active_days, mins: (a, b) => b.minutes - a.minutes, seen: (a, b) => String(b.last_seen_at || '').localeCompare(String(a.last_seen_at || '')) };
       const users = act.users.slice().sort(sorters[A.sort] || sorters.plays);
+      act.users.forEach(u => { if (!u.by_game) return; const m = {}; Object.entries(u.by_game).forEach(([g, c]) => { const k = ALIAS2[g] || g; m[k] = (m[k] || 0) + c; }); u.by_game = m; });
       const gameCols = [...new Set(act.users.flatMap(u => Object.keys(u.by_game || {})))];
+      const GCOL = { '딴딴/딴': '#338ced', '너에게 닿기를': '#e76624', 'LandMark': '#00a888', '뭐라구요!? 안들려요': '#d28e05',
+        '사랑하는 그대에게 기대세요': '#e24d8b', '말해 YES OR NO': '#0aac23', '시그널 슬래시': '#9887ef' };
+      const gcol = (g) => GCOL[g] || '#8a86a3';
+      const mini = (bg) => { const e = Object.entries(bg || {}).sort((a, b) => b[1] - a[1]), t = e.reduce((a, x) => a + x[1], 0);
+        return t ? `<span class="st-mini" title="${esc(e.map(([g, c]) => `${g} ${c}`).join(' · '))}">${e.map(([g, c]) => `<i style="width:${(c / t * 100).toFixed(1)}%;background:${gcol(g)}"></i>`).join('')}</span>` : '-'; };
+      const legend = gameCols.map(g => `<span><i style="background:${gcol(g)}"></i>${esc(g)}</span>`).join('');
       A.csv = [['구분', '아이디/학번', '이름', '학년', '게임 실행', ...gameCols, '활동한 날', '주로 하는 시간', '머문 시간(분)', '끝까지 한 판', '푼 문제', '정답률(%)', '최근 접속'],
         ...users.map(u => [u.kind === 'admin' ? '관리자' : '학생', u.login_id, u.name, u.kind === 'admin' ? '' : u.grade, u.plays,
           ...gameCols.map(g => (u.by_game || {})[g] || 0), u.active_days, u.top_hour == null ? '' : `${u.top_hour}시`, u.minutes, u.runs, u.answers, u.rate ?? '',
@@ -331,14 +343,14 @@
               <td class="num">${g.avg_steps_quit == null ? '-' : `${g.avg_steps_quit}문제`}</td>
               <td><div class="st-quit">${QUIT.map(k => `<span title="${k}문제째에서 그만둠: ${g.quit_at[k] || 0}판"><i style="height:${Math.round((g.quit_at[k] || 0) / mq * 100)}%"></i><small>${k}</small></span>`).join('')}</div></td></tr>`;
           }).join('')}</tbody></table></div>
-          <p class="note">로그인한 회원이 문제를 하나라도 푼 판만 세요. 막대가 높은 곳에서 많이 그만둬요 → 그 구간이 너무 어렵거나 길지 않은지 살펴보세요.</p>`
+          <p class="note">막대가 높은 곳 = 많이 그만둔 구간</p>`
         : '<p class="empty2">아직 기록이 없어요. (로그인한 회원이 게임에서 문제를 풀면 쌓여요)</p>';
       const sortBtn = (k, l) => `<button type="button" data-as="${k}" class="${A.sort === k ? 'on' : ''}">${l}</button>`;
       const per = filt('ad', A.days, [[7, '7일'], [14, '14일'], [30, '30일'], [90, '90일'], [365, '1년']]);
       const tabs = filt('ag', A.game, [[null, '전체'], ...GAMES.map(g => [g.id, `${g.ic} ${g.ko}`])]);
 
       return `<hr class="st-sep">
-        <div class="row"><span class="st-hint" style="margin:0">누가 · 언제 · 어떤 게임을 얼마나 하는지, 회원들이 어떤 문제를 많이 틀리는지 · 위와 같은 기간 (최근 ${act.days}일)</span>
+        <div class="row"><span class="st-hint" style="margin:0">👥 회원 · 📝 문항 (최근 ${act.days}일)</span>
           <span class="spacer"></span><button class="abtn sm pri" type="button" id="stCsv">⬇ 회원 활동 엑셀(CSV)</button></div>
 
         <div class="kpis" style="margin-top:12px">
@@ -350,37 +362,36 @@
         </div>
 
         <h3>🗓 요일 × 시간 (게임 실행 수)</h3>
-        ${act.heat.length ? heatHtml + '<p class="note">진할수록 많이 했어요. 칸에 마우스를 올리면 숫자가 보여요. 로그인 안 한 실행도 포함돼요.</p>'
+        ${act.heat.length ? heatHtml
           : '<p class="empty2">이 기간에는 게임 실행 기록이 없어요.</p>'}
 
         <div class="two">
           <div><h3>⏱ 한 번에 머무는 시간</h3>
-            ${ses.count ? `<div class="bars2">${Object.keys(bucketLab).map(k => `<div class="bar2"><span class="lab">${bucketLab[k]}</span><div class="track"><div class="fill" style="width:${((bk[k] || 0) / maxB * 100).toFixed(1)}%"></div><span class="val">${n(bk[k] || 0)}번</span></div></div>`).join('')}</div>`
+            ${ses.count ? `<div class="bars2">${Object.keys(bucketLab).map(k => outBar(bucketLab[k], (bk[k] || 0) / maxB * 100, `${n(bk[k] || 0)}번`)).join('')}</div>`
               : '<p class="empty2">아직 기록이 없어요. (창을 닫고 10분 뒤에 쌓여요)</p>'}</div>
           <div><h3>📄 화면별 평균 머문 시간</h3>
             <div class="bars2">${(act.session_pages || []).slice(0, 8).map(pg2 => { const mx = Math.max(1, ...act.session_pages.map(x => x.avg_min));
-              return `<div class="bar2"><span class="lab" style="width:auto">${esc(pg2.page || '?')}</span><div class="track"><div class="fill" style="width:${(pg2.avg_min / mx * 100).toFixed(1)}%"></div><span class="val">${pg2.avg_min}분<i>${n(pg2.n)}번</i></span></div></div>`; }).join('')
+              return outBar(esc(pg2.page || '?'), pg2.avg_min / mx * 100, `${pg2.avg_min}분`, `${n(pg2.n)}번`); }).join('')
               || '<p class="empty2">아직 기록이 없어요.</p>'}</div></div>
         </div>
-        <p class="note">창 하나를 열고 닫을 때까지예요 (1분 미만 제외). 화면은 마지막에 보던 곳 기준이에요.</p>
 
         <h3>🏁 게임별 끝까지 한 비율 · 어디서 그만두나</h3>
         ${playsHtml}
 
-        <h3>👥 회원별 활동</h3>
+        <h3 id="sec-members">👥 회원별 활동</h3>
         <div class="filt sm">${sortBtn('plays', '많이 한 순')}${sortBtn('days', '자주 온 순')}${sortBtn('mins', '오래 머문 순')}${sortBtn('rate', '정답률 낮은 순')}${sortBtn('seen', '최근 접속 순')}</div>
-        <div class="tbl-wrap ops-tall"><table class="tbl"><thead><tr><th>이름</th><th>학번</th><th>학년</th><th class="num">게임 실행</th><th>게임별</th>
-          <th class="num">활동한 날</th><th>주로 하는 시간</th><th class="num">머문 시간</th><th class="num">끝까지 한 판</th><th class="num">푼 문제</th><th class="num">정답률</th><th>최근 접속</th></tr></thead>
+        ${legend ? `<div class="st-legend">${legend}</div>` : ''}
+        <div class="tbl-wrap ops-tall"><table class="tbl"><thead><tr><th>이름</th><th>학번 · 학년</th><th class="num">게임 실행</th><th style="min-width:150px">게임별 (색)</th>
+          <th class="num">활동한 날</th><th class="num">머문 시간</th><th class="num">정답률</th><th>최근 접속</th></tr></thead>
           <tbody>${users.map(u => `<tr${u.plays || u.answers || u.runs ? '' : ' class="st-idle"'}>
-            <td>${esc(u.name)}${u.kind === 'admin' ? ' <span class="tag admin">관리자</span>' : ''}</td><td class="num">${esc(u.login_id)}</td>
-            <td>${u.kind === 'admin' ? '-' : `${u.grade}학년`}</td><td class="num">${n(u.plays)}</td>
-            <td><small>${Object.entries(u.by_game || {}).sort((a, b) => b[1] - a[1]).map(([g, c]) => `${esc(g)} ${n(c)}`).join(' · ') || '-'}</small></td>
-            <td class="num">${n(u.active_days)}</td><td>${u.top_hour == null ? '-' : `${u.top_hour}시대`}</td><td class="num">${u.minutes ? `${n(u.minutes)}분` : '-'}</td><td class="num">${n(u.runs)}</td>
-            <td class="num">${n(u.answers)}</td><td class="num">${u.rate == null ? '-' : `<span class="st-pill ${tone(u.rate)}">${u.rate}%</span>`}</td>
-            <td>${u.last_seen_at ? K.fmtDate(u.last_seen_at, true) : '-'}</td></tr>`).join('') || '<tr><td colspan="12" class="empty2">회원이 없어요.</td></tr>'}</tbody></table></div>
-        <p class="note">흐리게 보이는 줄은 이 기간에 활동이 없는 회원이에요. 게임 실행은 허브에서 ▶ 플레이를 누른 횟수예요.</p>
+            <td><b>${esc(u.name)}</b>${u.kind === 'admin' ? ' <span class="tag admin">관리자</span>' : ''}</td>
+            <td>${esc(u.login_id)}${u.kind === 'admin' ? '' : ` · ${u.grade}학년`}</td><td class="num">${n(u.plays)}</td><td>${mini(u.by_game)}</td>
+            <td class="num">${n(u.active_days)}일</td><td class="num">${u.minutes ? `${n(u.minutes)}분` : '-'}</td>
+            <td class="num" title="푼 문제 ${n(u.answers)}개">${u.rate == null ? '-' : `<span class="st-pill ${tone(u.rate)}">${u.rate}%</span>`}</td>
+            <td>${u.last_seen_at ? K.fmtDate(u.last_seen_at, true) : '-'}</td></tr>`).join('') || '<tr><td colspan="8" class="empty2">회원이 없어요.</td></tr>'}</tbody></table></div>
+        <p class="note">흐린 줄 = 이 기간 활동 없음 · 주로 하는 시간 · 끝까지 한 판 · 푼 문제는 엑셀(CSV)에 있어요</p>
 
-        <h3>📝 문항 분석 · 회원들이 자주 틀리는 문제</h3>
+        <h3 id="sec-items">📝 문항 분석 · 회원들이 자주 틀리는 문제</h3>
         ${tabs}
         <div class="two">
           <div><h3 style="margin-top:4px">🧩 부분별 정답률 (낮은 순)</h3>
@@ -396,18 +407,20 @@
             <td class="st-item">${esc(h.item)}</td>${A.game ? '' : `<td>${esc(G[h.game] ? G[h.game].ko : h.game)}</td>`}<td>${esc(h.cat || '-')}</td>
             <td class="num">${n(h.tries)}</td><td class="num">${n(h.users)}</td><td class="num"><span class="st-pill ${tone(h.rate)}">${h.rate}%</span></td>
             <td class="st-item"><small>${h.top_picked ? esc(h.top_picked) : '-'}</small></td><td class="num">${h.avg_ms ? `${(h.avg_ms / 1000).toFixed(1)}초` : '-'}</td></tr>`).join('')}</tbody></table></div>
-          <p class="note">정답률이 낮은 문제는 수업에서 한 번 더 짚거나, 문제 · 보기가 헷갈리게 되어 있지 않은지 확인해 보세요.</p>`
+`
           : '<p class="empty2">아직 3번 넘게 풀린 문제가 없어요.</p>'}
 
         <h3>🔀 회원들이 자주 헷갈리는 짝 TOP 20</h3>
-        ${it.confuse.length ? `<div class="st-pairs">${it.confuse.map(c => `<div class="st-pair"><b>${esc(c.item)}</b><span class="vs">↔</span><span>${esc(c.picked)}</span>
-            <small>${n(c.n)}번 · 👤${n(c.users)}${A.game ? '' : ` · ${esc(G[c.game] ? G[c.game].ko : c.game)}`}</small></div>`).join('')}</div>
-          <p class="note">수업에서 두 개를 나란히 비교해 주면 좋아요.</p>` : '<p class="empty2">아직 기록이 없어요.</p>'}
+        ${it.confuse.length ? (() => { const mx = Math.max(1, ...it.confuse.map(c => c.n));
+          return `<div class="tbl-wrap ops-tall"><table class="tbl"><thead><tr><th>문제 (정답)</th><th></th><th>대신 고른 것</th>${A.game ? '' : '<th>게임</th>'}<th style="min-width:120px">횟수</th><th class="num">회원</th></tr></thead>
+          <tbody>${it.confuse.map(c => `<tr><td class="st-item"><span class="st-clamp">${esc(c.item)}</span></td><td class="st-vs">↔</td><td class="st-item"><span class="st-clamp">${esc(c.picked)}</span></td>
+            ${A.game ? '' : `<td>${esc(G[c.game] ? G[c.game].ko : c.game)}</td>`}
+            <td><span class="st-hbar"><i style="width:${(c.n / mx * 100).toFixed(1)}%"></i><b>${n(c.n)}번</b></span></td><td class="num">${n(c.users)}</td></tr>`).join('')}</tbody></table></div>`; })()
+          : '<p class="empty2">아직 기록이 없어요.</p>'}
 
         ${!A.game || A.game === 'wizard' ? `<h3>🎤 음성 인식 점검 (뭐라구요!?)</h3>
           ${(() => { const w = it.games.find(g => g.game === 'wizard');
-            return `<p class="sub" style="margin-top:0">마이크가 아무 소리도 못 들은 횟수 <b>${n(w ? w.no_voice : 0)}번</b> (정답률에서 뺐어요).
-              아래는 틀렸을 때 <b>무엇으로 들렸는지</b>예요. 발음은 맞는데 엉뚱하게 들린다면 음성 인식 문제일 수 있어요.</p>`; })()}
+            return `<p class="sub" style="margin-top:0">🎤 못 들음 <b>${n(w ? w.no_voice : 0)}번</b> (정답률에서 뺌) · 아래 표 = 틀렸을 때 들린 말</p>`; })()}
           ${it.voice.length ? `<div class="tbl-wrap"><table class="tbl"><thead><tr><th>정답 용어</th><th>들린 말</th><th class="num">횟수</th></tr></thead><tbody>${it.voice.map(v =>
             `<tr><td>${esc(v.item)}</td><td>“${esc(v.heard)}”</td><td class="num">${n(v.n)}</td></tr>`).join('')}</tbody></table></div>` : '<p class="empty2">아직 기록이 없어요.</p>'}` : ''}`;
     },

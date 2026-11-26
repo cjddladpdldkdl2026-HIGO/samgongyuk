@@ -47,9 +47,9 @@
   }
   const csvCell = (v) => { const s = String(v ?? ''); return /[",\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
   const toCSV = (rows) => '﻿' + rows.map(r => r.map(csvCell).join(',')).join('\r\n');   // BOM: 엑셀에서 한글이 안 깨지게
-  const bar = (label, v, max, unit, extra) =>
-    `<div class="bar2"><span class="lab">${label}</span><div class="track"><div class="fill" style="width:${(v / Math.max(1, max) * 100).toFixed(1)}%"></div>
-      <span class="val">${n(v)}${unit}${extra ? `<i>${extra}</i>` : ''}</span></div></div>`;
+  const bar = (label, v, max, unit, extra) =>   // 숫자는 막대 밖 오른쪽에 (막대 색 위 글씨는 잘 안 보여서)
+    `<div class="bar2 out"><span class="lab">${label}</span><div class="track"><div class="fill" style="width:${Math.max(1, v / Math.max(1, max) * 100).toFixed(1)}%"></div></div>
+      <span class="v"><b>${n(v)}${unit}</b>${extra ? `<i>${extra}</i>` : ''}</span></div>`;
   const cols = (arr, val, label, tip) => {
     const mx = Math.max(1, ...arr.map(val));
     return `<div class="ops-cols">${arr.map(x => `<div class="c" title="${esc(tip(x))}"><i style="height:${(val(x) / mx * 100).toFixed(1)}%"></i><span>${esc(label(x))}</span></div>`).join('')}</div>`;
@@ -221,6 +221,11 @@
     async render() {
       let s;
       try { s = await rpc('admin_data', { p_days: D.days }); } catch (e) { return errBox(e, '🗂 관리자 전력 분석 자료'); }
+      // 이름이 바뀐 게임은 하나로 (롱드라이브 → 사랑하는 그대에게 기대세요)
+      const alias = (g) => ALIAS[g] || g, mergedC = new Map(), mergedM = new Map();
+      s.contents.forEach(c => { const k = alias(c.game), o = mergedC.get(k) || { game: k, plays: 0, users: 0 }; o.plays += c.plays; o.users = Math.max(o.users, c.users); mergedC.set(k, o); });
+      s.matrix.forEach(m => { const k = m.day + '|' + alias(m.game), o = mergedM.get(k) || { day: m.day, game: alias(m.game), plays: 0 }; o.plays += m.plays; mergedM.set(k, o); });
+      s.contents = [...mergedC.values()].sort((a, b) => b.plays - a.plays); s.matrix = [...mergedM.values()];
       const tot = Object.fromEntries(s.contents.map(c => [c.game, c]));
       const games = s.contents.filter(c => c.game !== 'hub').map(c => c.game);
       const cell = {};
@@ -256,17 +261,19 @@
         </div>
         ${L.pages.length ? `<p class="note">지금 보고 있는 화면: ${L.pages.map(p => `<span class="chip">${esc(p.page || '?')} ${n(p.n)}</span>`).join(' ')}</p>` : ''}
 
-        <h3>📊 날짜별 게임 실행 <small class="st-hint">게임마다 색이 달라요 · 막대에 마우스를 올리면 자세히</small></h3>
+        <nav class="ops-toc" aria-label="바로 가기">${[['sec-day', '📊 날짜별'], ['sec-content', '🕹 콘텐츠 · 학년'], ['sec-time', '🕘 시간대'], ['sec-runs', '🏁 게임 기록'],
+          ['sec-members', '👥 회원'], ['sec-items', '📝 문항']].map(([id, t]) => `<button type="button" data-goto="${id}">${t}</button>`).join('')}</nav>
+        <h3 id="sec-day">📊 날짜별 게임 실행 <small class="st-hint">막대에 마우스를 올리면 게임별 숫자</small></h3>
         ${usageChart(s, games, cell)}
 
-        <h3>📅 날짜 × 콘텐츠 (게임을 연 횟수)</h3>
+        <details class="ops-more"><summary>📅 날짜 × 콘텐츠 표로 보기 <small>그래프와 같은 숫자 · 엑셀로도 받을 수 있어요</small></summary>
         <div class="tbl-wrap ops-tall"><table class="tbl"><thead><tr>${head.map((h, i) => `<th${i ? ' class="num"' : ''}>${esc(h)}</th>`).join('')}</tr></thead>
           <tbody>${daily.map(tr).join('')}</tbody>
-          <tfoot><tr class="sum">${sumRow.map((v, i) => `<td class="${i ? 'num' : ''}">${typeof v === 'number' ? n(v) : esc(v)}</td>`).join('')}</tr></tfoot></table></div>
-        <p class="note">로그인 회원 = 그날 한 번이라도 들어온 회원 수 · 게임 기록 = 끝까지 해서 점수가 저장된 판 · 최대 동시 접속 = 5분마다 잰 값 중 가장 큰 값</p>
+          <tfoot><tr class="sum">${sumRow.map((v, i) => `<td class="${i ? 'num' : ''}">${typeof v === 'number' ? n(v) : esc(v)}</td>`).join('')}</tr></tfoot></table></div></details>
+
 
         <div class="two">
-          <div><h3>🕹 콘텐츠별 (기간 합계)</h3>
+          <div><h3 id="sec-content">🕹 콘텐츠별 (기간 합계)</h3>
             <div class="bars2">${games.map(g => bar(`<span class="lab" style="width:auto">${esc(g)}</span>`, tot[g].plays, maxC, '회', tot[g].users ? `👤 ${n(tot[g].users)}명` : '')).join('')
               || '<p class="empty2">아직 게임 실행 기록이 없어요.</p>'}</div></div>
           <div><h3>🎓 학년별 (로그인 회원)</h3>
@@ -275,14 +282,14 @@
         </div>
 
         <div class="two">
-          <div><h3>🕘 시간대별 게임 실행</h3>
+          <div><h3 id="sec-time">🕘 시간대별 게임 실행</h3>
             ${cols(s.hours, x => x.plays, x => (x.h % 3 === 0 ? String(x.h) : ''), x => `${x.h}시: ${x.plays}회`)}</div>
           <div><h3>📶 최근 24시간 동시 접속 (1시간 최대)</h3>
             ${L.last24.length ? cols(L.last24, x => x.live, x => x.h.slice(-2), x => `${x.h}시: ${x.live}명`)
               : '<p class="empty2">아직 기록이 없어요. (5분마다 자동으로 재요 — 서버 점검 화면에서 자동 작업이 켜져 있는지 확인)</p>'}</div>
         </div>
 
-        <h3>🏁 게임 기록 (점수 저장된 판)</h3>
+        <h3 id="sec-runs">🏁 게임 기록 (점수 저장된 판)</h3>
         <div class="tbl-wrap"><table class="tbl"><thead><tr><th>게임</th><th class="num">판 수</th><th class="num">플레이한 회원</th><th class="num">최고 점수</th><th class="num">평균 정확도</th></tr></thead>
           <tbody>${s.runs.map(r => `<tr><td>${esc((GAMES.find(g => g.id === r.game) || {}).ko || r.game)}</td><td class="num">${n(r.runs)}</td><td class="num">${n(r.players)}</td>
             <td class="num">${n(r.best)}</td><td class="num">${r.avg_acc == null ? '-' : r.avg_acc + '%'}</td></tr>`).join('')
@@ -295,6 +302,10 @@
       pg.querySelectorAll('[data-dd]').forEach(b => b.addEventListener('click', () => { D.days = +b.dataset.dd; Account.page('data'); }));
       pg.querySelector('#opsReload').addEventListener('click', () => Account.page('data'));
       bindUsageChart();
+      pg.querySelectorAll('[data-goto]').forEach(b => b.addEventListener('click', () => {
+        const t = pg.querySelector('#' + b.dataset.goto); if (!t) return;
+        pg.scrollTo({ top: t.getBoundingClientRect().top - pg.getBoundingClientRect().top + pg.scrollTop - 60, behavior: 'smooth' });
+      }));
       pg.querySelector('#opsCsv').addEventListener('click', () => { if (D.csv) download(D.csv.name, toCSV(D.csv.rows), 'text/csv;charset=utf-8'); });
     },
   });
