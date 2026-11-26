@@ -16,6 +16,7 @@
     { id: 'ddan', ko: '딴딴/딴', ic: '🎤', unit: '용어', url: 'games/DdanDdan/index.html' },
     { id: 'wizard', ko: '뭐라구요!?', ic: '🧙', unit: '용어', url: 'games/Vertebral_Wizard/index.html' },
     { id: 'golf', ko: '사랑하는 그대에게 기대세요', ic: '⛳', unit: '기출문제', url: 'games/LongDrive/index.html' },
+    { id: 'yesno', ko: '말해 YES OR NO', ic: '📝', unit: '뼈·근육', url: 'games/YesOrNo/index.html' },
   ];
   const G = Object.fromEntries(GAMES.map(g => [g.id, g]));
   const gname = (id) => (G[id] ? `${G[id].ic} ${G[id].ko}` : id);

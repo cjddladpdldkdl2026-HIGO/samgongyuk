@@ -22,7 +22,7 @@
 (function () {
   const URL_ = 'https://ptlhjxtvwcoyrhemimjw.supabase.co';
   const KEY_ = 'sb_publishable_cuv4DoFYqHSJFiL2FF28aQ_B03qGNkl';
-  const GAMES = ['landmark', 'ddan', 'wizard', 'neoege', 'golf'];
+  const GAMES = ['landmark', 'ddan', 'wizard', 'neoege', 'golf', 'yesno'];   // yesno = 문제풀기 (문항 기록만, 랭킹 없음)
 
   const listeners = [];
   const mask = (p) => p.length <= 1 ? p : p.length === 2 ? p[0] + '*' : p[0] + '*'.repeat(p.length - 2) + p[p.length - 1];
@@ -33,6 +33,14 @@
     get displayName() {
       const p = this.profile; if (!p) return '';
       return p.kind === 'student' ? `${mask(p.name)} (${String(p.login_id).slice(0, 2)})` : p.name;
+    },
+    // 학년: 관리자가 회원 관리에서 정한 학년(grade_override) → 없으면 학번(입학 연도)으로 계산. 관리자·비회원은 null
+    get grade() {
+      const p = this.profile; if (!p || p.kind !== 'student') return null;
+      if (p.grade_override) return p.grade_override;
+      if (!p.entry_year) return 1;
+      const now = new Date(), sy = now.getMonth() < 2 ? now.getFullYear() - 1 : now.getFullYear();
+      return Math.max(1, sy - p.entry_year + 1);
     },
     onChange(fn) { listeners.push(fn); try { fn(A); } catch { /* ignore */ } },
   };
@@ -54,7 +62,7 @@
 
   async function loadProfile() {
     if (!A.user) { A.profile = null; return; }
-    const { data } = await sb.from('profiles').select('id, kind, name, login_id, approved').eq('id', A.user.id).maybeSingle();
+    const { data } = await sb.from('profiles').select('id, kind, name, login_id, approved, entry_year, grade_override').eq('id', A.user.id).maybeSingle();
     A.profile = data || null;
   }
 

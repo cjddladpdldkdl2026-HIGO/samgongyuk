@@ -26,13 +26,16 @@
 create table if not exists public.answers (
   id         bigint generated always as identity primary key,
   user_id    uuid not null default auth.uid() references public.profiles(id) on delete cascade,
-  game       text not null check (game in ('landmark', 'ddan', 'wizard', 'neoege', 'golf')),
+  game       text not null,
   item       text not null check (char_length(item) between 1 and 120),
   cat        text not null default '' check (char_length(cat) <= 60),
   mode       text not null default '' check (char_length(mode) <= 30),
   ok         boolean not null,
   created_at timestamptz not null default now()
 );
+-- 게임 이름 허용 목록 (새 게임이 생기면 여기와 아래 log_answers 두 곳에 추가). 2026-11-26: yesno = 말해 YES OR NO
+alter table public.answers drop constraint if exists answers_game_check;
+alter table public.answers add constraint answers_game_check check (game in ('landmark', 'ddan', 'wizard', 'neoege', 'golf', 'yesno'));
 alter table public.answers add column if not exists picked text not null default '' check (char_length(picked) <= 120);
 alter table public.answers add column if not exists ms int check (ms between 0 and 600000);
 alter table public.answers add column if not exists reason text not null default '' check (reason in ('', 'timeout', 'no_voice'));
@@ -110,7 +113,7 @@ begin
          case when r.reason in ('timeout', 'no_voice') then r.reason else '' end,
          case when r.play ~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' then r.play::uuid end
   from jsonb_to_recordset(p_rows) as r(game text, item text, cat text, mode text, ok boolean, picked text, ms int, reason text, play text)
-  where r.game in ('landmark', 'ddan', 'wizard', 'neoege', 'golf') and r.ok is not null and char_length(btrim(coalesce(r.item, ''))) > 0;
+  where r.game in ('landmark', 'ddan', 'wizard', 'neoege', 'golf', 'yesno') and r.ok is not null and char_length(btrim(coalesce(r.item, ''))) > 0;
   get diagnostics n = row_count;
   return n;
 end $$;
