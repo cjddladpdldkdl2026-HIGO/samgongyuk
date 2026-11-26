@@ -101,3 +101,5 @@
 .ops-period { margin: 2px 0 6px; padding: 8px 12px; border-radius: 10px; border: 1px solid rgba(253,231,76,.35); background: rgba(253,231,76,.06); font-size: 13px; color: var(--ink-dim); }
 .ops-period b { color: var(--gold); }
 .ops-period small { color: var(--ink-faint); }
+/* ☰ 순위 페이지의 시상대 (모양은 highgo.html .podium) — 넓은 창이라 가운데에 알맞은 폭으로 */
+.ops-podium { max-width: 520px; margin: 10px auto 14px; }

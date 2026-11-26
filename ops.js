@@ -71,13 +71,22 @@
       ? `<p class="ops-my">내 순위 <b>${n(rank)}위</b> / ${n(total)}명${extra ? ` · ${extra}` : ''}</p>`
       : `<p class="ops-my">아직 이 랭킹에 내 기록이 없어요 · ${n(total)}명 참여</p>`;
   }
+  // 🏆 시상대 (모양은 허브 highgo.html 의 .podium 스타일) — 왼쪽 2위 · 가운데 1위 · 오른쪽 3위
+  const podium = (top, val, sub) => {
+    if (!top.length) return '';
+    const slot = (t, place) => t
+      ? `<div class="pod p${place}${t.me ? ' me' : ''}"><span class="face">${['🥇', '🥈', '🥉'][place - 1]}</span><span class="nm">${esc(t.nickname)}${t.me ? ' (나)' : ''}</span>
+          <span class="pt">${val(t)}</span><span class="sub">${sub(t)}</span><div class="step">${place}</div></div>`
+      : `<div class="pod p${place} empty"><span class="face">❔</span><span class="nm">도전!</span><span class="pt">&nbsp;</span><span class="sub">비어 있어요</span><div class="step">${place}</div></div>`;
+    return `<div class="podium ops-podium">${slot(top[1], 2)}${slot(top[0], 1)}${slot(top[2], 3)}</div>`;
+  };
   const who = (t) => `${esc(t.nickname)}${t.me ? ' <span class="chip update">나</span>' : ''}`;
 
   async function overallHtml() {
     const r = await SamAuth.rankPeriod('overall', { p_limit: 50 }, R.period);
     const rows = r.top.map(t => `<tr class="${t.me ? 'me' : ''}"><td class="rk">${medal(t.rank)}</td><td>${who(t)}</td>
       <td class="num">${n(t.points)}</td><td class="num">${t.games}</td><td class="num">${t.boards}</td><td class="num">${n(t.plays)}</td></tr>`).join('');
-    return `${periodLine(r)}${myLine(r.myRank, r.total, r.myPoints != null ? `${n(r.myPoints)}점` : '')}
+    return `${periodLine(r)}${podium(r.top, t => `${n(t.points)}<small>점</small>`, t => `게임 ${t.games}개 · ${n(t.plays)}판`)}${myLine(r.myRank, r.total, r.myPoints != null ? `${n(r.myPoints)}점` : '')}
       <div class="tbl-wrap"><table class="tbl ops-rank"><thead><tr><th>순위</th><th>이름</th><th class="num">종합 점수</th><th class="num">게임</th><th class="num">종목</th><th class="num">판 수</th></tr></thead>
       <tbody>${rows || `<tr><td colspan="6" class="empty2">${R.period !== 'all' ? `이번 ${PERIOD_KO[R.period]} 순위는 아직 비어 있어요. 지금 한 판 하면 1등! 🏆` : '아직 기록이 없어요. 로그인하고 게임을 끝까지 해 보세요!'}</td></tr>`}</tbody></table></div>
       <p class="note">종합 점수 = 게임·난이도(종목)마다 내 최고 기록이 상위 몇 %인지를 점수로 바꿔서 더한 값이에요 (1등 100점, 참여만 해도 점수가 있어요). 여러 게임을 골고루 할수록 올라가요.</p>`;
@@ -93,7 +102,7 @@
       `<option value="${esc(m.mode)}" ${m.mode === mode ? 'selected' : ''}>${esc(modeKo(game, m.mode))} (${n(m.players)}명)</option>`).join('')}</select></label>`;
     const rows = r.top.map(t => `<tr class="${t.me ? 'me' : ''}"><td class="rk">${medal(t.rank)}</td><td>${who(t)}</td>
       <td class="num">${n(t.score)}</td><td class="num">${t.accuracy == null ? '-' : Math.round(t.accuracy) + '%'}</td><td>${K.fmtDate(t.at)}</td></tr>`).join('');
-    return `<div class="row">${sel}</div>${periodLine(r)}${myLine(r.myRank, r.total, r.myBest != null ? `내 최고 ${n(r.myBest)}점` : '')}
+    return `<div class="row">${sel}</div>${periodLine(r)}${podium(r.top, t => n(t.score), t => (t.accuracy == null ? K.fmtDate(t.at) : `정확도 ${Math.round(t.accuracy)}%`))}${myLine(r.myRank, r.total, r.myBest != null ? `내 최고 ${n(r.myBest)}점` : '')}
       <div class="tbl-wrap"><table class="tbl ops-rank"><thead><tr><th>순위</th><th>이름</th><th class="num">최고 점수</th><th class="num">정확도</th><th>날짜</th></tr></thead>
       <tbody>${rows || `<tr><td colspan="5" class="empty2">${R.period !== 'all' ? `이번 ${PERIOD_KO[R.period]} 순위는 아직 비어 있어요. 지금 한 판 하면 1등! 🏆` : '아직 기록이 없어요.'}</td></tr>`}</tbody></table></div>
       ${game === 'wizard' ? '<p class="note">뭐라구요!? 는 몬스터마다 이기면 1점으로 기록돼요.</p>' : ''}`;
