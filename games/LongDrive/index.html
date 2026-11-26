@@ -10,7 +10,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Rajdhani:wght@600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <style>
-/* 사랑하는 그대에게 기대세요 (골프 비거리 게임, 폴더 이름은 예전 이름 LongDrive 그대로) — 문제 풀고 캐쉬 벌어서, 골프채·공·파워 사서 더 멀리!
+/* 사랑하는 그대에게 기대세요 (골프 비거리 게임, 폴더 이름은 예전 이름 LongDrive 그대로) — 삼공육 문제풀기에서 캐쉬 벌어서, 골프채·공·파워 사서 더 멀리!
  * 화면: 캔버스(밤의 네온 골프 연습장) 위에 HUD · 메뉴 · 문제 · 상점 · 랭킹 창이 올라가요. */
 :root {
   --bg: #0b0221; --panel: rgba(20, 6, 48, .92); --line: rgba(255, 255, 255, .14);
@@ -227,7 +227,7 @@ button { font: inherit; color: inherit; cursor: pointer; border: 0; background: 
 <div class="screen" id="sHome">
   <div class="card">
     <div class="logo">사랑하는 그대에게<br><span>기대세요</span></div>
-    <div class="tagline">문제 풀고 💰 캐쉬 벌어서, 장비 사서 더 멀리! ⛳</div>
+    <div class="tagline">문제풀기에서 💰 캐쉬 벌어서, 장비 사서 더 멀리! ⛳</div>
     <div class="stats">
       <div class="stat"><b id="hBest">0</b><span>내 최고 (m)</span></div>
       <div class="stat"><b id="hCash">0</b><span>캐쉬</span></div>
@@ -237,7 +237,7 @@ button { font: inherit; color: inherit; cursor: pointer; border: 0; background: 
     <div class="chars" id="charList"></div>
     <div class="menu">
       <button class="btn main" id="mPlay"><em>⛳</em><span>치러 가기<small>지금 장비로 최대한 멀리 날려 봐요</small></span></button>
-      <button class="btn lime" id="mQuiz"><em>📝</em><span>문제 풀고 캐쉬 벌기<small>한 문제 맞힐 때마다 💰 20 · 연속 정답 보너스</small></span></button>
+      <button class="btn lime" id="mQuiz"><em>📝</em><span>문제 풀러 가기<small>말해 YES OR NO · 맞힐 때마다 💰 · 캐쉬는 모든 게임 공용</small></span></button>
       <button class="btn gold" id="mShop"><em>🛒</em><span>상점<small>골프채 · 골프공 · 파워</small></span></button>
       <button class="btn" id="mRank"><em>🏆</em><span>랭킹<small>삼공육 회원 비거리 TOP 10</small></span></button>
     </div>
@@ -245,11 +245,6 @@ button { font: inherit; color: inherit; cursor: pointer; border: 0; background: 
     <a class="back" href="../../highgo.html">🏠 삼공육 홈으로</a>
     <div class="escHint">게임 중 <kbd>ESC</kbd> 를 누르면 이 메뉴가 열려요 · 기록과 캐쉬는 자동 저장돼요</div>
   </div>
-</div>
-
-<!-- 문제 -->
-<div class="screen hidden" id="sQuiz">
-  <div class="card" id="quizCard"></div>
 </div>
 
 <!-- 상점 -->
@@ -283,8 +278,7 @@ button { font: inherit; color: inherit; cursor: pointer; border: 0; background: 
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script src="../../auth.js"></script>
-<script src="questions.js"></script>
-<script src="units.js"></script>   <!-- 기출 단원 (자동 분류, 검수 필요) → 내 약점 분석 -->
+<script src="../../wallet.js"></script>   <!-- 공용 캐쉬 지갑: 문제풀기(말해 YES OR NO)에서 벌고 여기서 써요 -->
 <script type="importmap">
 { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/" } }
@@ -296,10 +290,8 @@ button { font: inherit; color: inherit; cursor: pointer; border: 0; background: 
  *  설정 — 숫자를 바꾸면 게임 밸런스가 바뀌어요
  * ═══════════════════════════════════════════════════════════════ */
 const GAME_ID = "golf";                 // 서버 기록 이름 (supabase/golf.sql)
-const CASH_PER_RIGHT = 20;               // 한 문제 맞히면
-const COMBO_BONUS = 5;                   // 3연속 정답부터 한 문제마다 추가
-const PERFECT_BONUS = 50;                // 한 세트 다 맞히면
-const SET_SIZE = 10;                     // 한 세트 문제 수
+const QUIZ_URL = "../YesOrNo/index.html?back=golf";   // 문제풀기 (캐쉬 버는 곳). 문제는 이제 골프 안에 없어요
+const CASH_PER_RIGHT = 20;               // 상점 안내용: 문제풀기에서 한 문제 맞히면 받는 캐쉬 (YesOrNo 의 CASH_RIGHT 와 같게)
 const OB_X = 70;                         // 옆으로 이만큼(m) 벗어나면 OB (기록 없음)
 
 // 골프채 (뼈 골프채 4개, 약한 순서): speed = 공 속도 + (m/s). 3D 모양은 view3d.js buildClub()
@@ -348,6 +340,8 @@ const esc = (s) => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt
 const blank = () => ({ v: 1, cv: 3, bv: 3, cash: 0, club: 0, ball: 0, char: 0, power: 0, owned: { club: [0], ball: [0] }, best: 0, sent: 0, shots: 0, solved: 0, correct: 0, updated: 0 });
 let S = blank();
 const A = () => window.SamAuth;
+const cash = () => window.Wallet ? Wallet.cash : 0;   // 공용 지갑 캐쉬
+if (window.Wallet) Wallet.onChange(() => { if (typeof refreshAll === "function" && S) { try { refreshAll(); } catch { /* 아직 준비 전 */ } } });
 const member = () => !!(A() && A().joined && A().user);
 const localKey = () => `samgongyuk-golf/v1/${member() ? A().user.id : "guest"}`;
 
@@ -399,6 +393,9 @@ async function load() {
     if (!best) best = readLocal("samgongyuk-golf/v1/guest");
   }
   S = fix(best);
+  // 2026-11-26: 캐쉬가 공용 지갑(wallet.js)으로 옮겨 갔어요. 골프에 남아 있던 캐쉬는 한 번만 지갑에 넣어 줘요
+  try { await Wallet.ready; } catch { /* 지갑 못 읽음 */ }
+  if (S.cash > 0) { Wallet.add(S.cash, "golf 예전 캐쉬"); S.cash = 0; save(); }
   refreshAll();
   if (member() && remoteOK) pushRemote();
 }
@@ -522,7 +519,7 @@ function setupShot() {
   if (!setupShot.hinted) { setupShot.hinted = true; setTimeout(() => toast("필드의 💣폭탄 · 💥대포에 공이 닿으면<br>더 멀리 날아가요!"), 400); }
 }
 function tap() {
-  if (!$("sHome").classList.contains("hidden") || !$("sQuiz").classList.contains("hidden") || !$("sShop").classList.contains("hidden") || !$("sRank").classList.contains("hidden")) return;
+  if (!$("sHome").classList.contains("hidden") || !$("sShop").classList.contains("hidden") || !$("sRank").classList.contains("hidden")) return;
   if (phase === "ready") { phase = "power"; meterPos = 0; meterDir = 1; $("swingHint").textContent = "한 번 더 탭해서 파워 결정! (오른쪽 끝 = MAX)"; snd("tick"); }
   else if (phase === "power") {
     setPower = meterPos; phase = "accuracy"; meterDir = -1;
@@ -664,7 +661,7 @@ function moveTrackBall(d) {
 /* ═══════════════════════════════════════════════════════════════
  *  화면 전환 · 메뉴
  * ═══════════════════════════════════════════════════════════════ */
-const SCREENS = ["sHome", "sQuiz", "sShop", "sRank"];
+const SCREENS = ["sHome", "sShop", "sRank"];
 function show(id) {
   SCREENS.forEach(s => $(s).classList.toggle("hidden", s !== id));
   if (id === "sShop") renderShop();
@@ -674,14 +671,14 @@ function show(id) {
 function play() { show(null); if (phase !== "fly" && phase !== "roll" && phase !== "down") setupShot(); }
 function refreshHome() {
   $("hBest").textContent = S.best ? S.best.toFixed(0) : "0";
-  $("hCash").textContent = fmt(S.cash);
+  $("hCash").textContent = fmt(cash());
   $("hRank").textContent = topBoard && topBoard.myRank ? topBoard.myRank + "위" : "-";
   const a = A();
   $("whoLine").innerHTML = member() ? `🙋 <b>${esc(a.displayName)}</b> 로 플레이 중 · 기록이 랭킹에 올라가요`
     : "로그인 안 됨 · 삼공육 첫 화면 오른쪽 위 ☰ 에서 로그인하면<br>기록이 랭킹에 올라가고 다른 기기에서도 이어서 할 수 있어요";
 }
 function refreshAll() {
-  $("cashChip").textContent = fmt(S.cash);
+  $("cashChip").textContent = fmt(cash());
   $("gearChip").innerHTML = `${CLUBS[S.club].ic} ${esc(CLUBS[S.club].name)}<br>${BALLS[S.ball].ic} ${esc(BALLS[S.ball].name)} · 💪 Lv.${S.power}${curChar().power ? ` <b style="color:var(--lime)">+${curChar().power}</b>` : ""}`;
   drawTrackMarks(); refreshHome(); renderChars();
 }
@@ -699,76 +696,9 @@ let toastT = null;
 function toast(t) { const el = $("toast"); el.innerHTML = t; el.classList.add("on"); clearTimeout(toastT); toastT = setTimeout(() => el.classList.remove("on"), 1800); }
 
 /* ═══════════════════════════════════════════════════════════════
- *  문제 풀기 → 캐쉬
+ *  문제 풀기 → 삼공육 문제풀기 페이지로 (2026-11-26: 골프 안의 문제는 뺐어요)
  * ═══════════════════════════════════════════════════════════════ */
-const POOL = (window.GOLF_QUESTIONS || []).filter(q => q && q.q && Array.isArray(q.choices) && q.choices.length >= 2 && q.answer >= 1 && q.answer <= q.choices.length);
-let Q = null;   // { list, i, right, combo, earned, picked }
-const shuffle = (a) => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
-const isOX = (q) => q.choices.length === 2 && q.choices.every(c => /^[OX○×]$/i.test(String(c).trim()));
-function startQuiz() {
-  if (!POOL.length) { toast("문제가 아직 없어요 (questions.js)"); return; }
-  const list = shuffle(POOL.slice()).slice(0, Math.min(SET_SIZE, POOL.length)).map(q => {
-    const opts = q.choices.map((c, i) => ({ t: c, ok: i === q.answer - 1 }));
-    return { q: q.q, explain: q.explain || "", src: q.src || "", ox: isOX(q), opts: isOX(q) ? opts : shuffle(opts) };
-  });
-  Q = { list, i: 0, right: 0, combo: 0, earned: 0, picked: false };
-  show("sQuiz"); renderQ();
-}
-function renderQ() {
-  const q = Q.list[Q.i];
-  q._t0 = q._t0 || performance.now();   // 내 약점 분석: 걸린 시간
-  $("quizCard").innerHTML = `
-    <button class="x" id="qx">✕</button>
-    <div class="qtop"><span>📝 ${Q.i + 1} / ${Q.list.length}${Q.combo >= 2 ? ` · 🔥 ${Q.combo}연속` : ""}</span><span class="cash">💰 ${fmt(S.cash)}</span></div>
-    <div class="qbar"><i style="width:${Q.i / Q.list.length * 100}%"></i></div>
-    ${q.src ? `<div class="qsrc">📘 ${esc(q.src)} 기출</div>` : ""}<div class="qtext">${esc(q.q)}</div>
-    <div class="choices${q.ox ? " ox" : ""}" id="choices">${q.opts.map((o, i) => `<button class="choice" data-i="${i}">${q.ox ? "" : `<span class="n">${i + 1}</span>`}${esc(o.t)}</button>`).join("")}</div>
-    <div id="fb"></div>`;
-  $("qx").onclick = () => { Q = null; show("sHome"); };
-  $("choices").querySelectorAll(".choice").forEach(b => b.onclick = (e) => pick(+b.dataset.i, e));
-}
-function pick(i, e) {
-  if (Q.picked) return; Q.picked = true;
-  const q = Q.list[Q.i], ok = q.opts[i].ok, box = $("choices");
-  box.classList.add("done");
-  box.children[i].classList.add(ok ? "right" : "wrong");
-  q.opts.forEach((o, k) => { if (o.ok) box.children[k].classList.add("right"); });
-  S.solved++;
-  window.SamAuth && SamAuth.answer && SamAuth.answer({ game: "golf", item: `${q.src ? q.src + " · " : ""}${String(q.q).replace(/\s+/g, " ").slice(0, 70)}`,
-    cat: (window.GOLF_UNITS || {})[q.src] || (String(q.src || "").match(/^\d{4}년/) || ["기출"])[0], ok,
-    mode: (String(q.src || "").match(/^\d{4}년/) || [""])[0], picked: ok ? "" : String(q.opts[i].t), ms: performance.now() - (q._t0 || performance.now()) });   // 내 약점 분석 (auth.js): 단원 · 고른 보기 · 걸린 시간
-  let gain = 0;
-  if (ok) { Q.right++; Q.combo++; S.correct++; gain = CASH_PER_RIGHT + (Q.combo >= 3 ? COMBO_BONUS * Math.min(Q.combo - 2, 4) : 0); S.cash += gain; Q.earned += gain; snd("right"); setTimeout(() => snd("coin"), 150); coinPop(e, "+" + gain); }
-  else { Q.combo = 0; snd("wrong"); }
-  const ans = q.opts.find(o => o.ok).t;
-  $("fb").innerHTML = `<div class="feedback ${ok ? "good" : "bad"}">${ok ? `⭕ 정답! 💰 +${gain}${Q.combo >= 3 ? ` (🔥${Q.combo}연속 보너스)` : ""}` : `❌ 아쉬워요. 정답: ${esc(ans)}`}${q.explain ? `<small>${esc(q.explain)}</small>` : ""}</div>
-    <div class="row" style="margin-top:12px"><button class="btn main" id="qn">${Q.i + 1 < Q.list.length ? "다음 문제 →" : "결과 보기"}</button></div>`;
-  $("qn").onclick = nextQ;
-  save(); refreshAll();
-  document.querySelector("#quizCard .cash").textContent = "💰 " + fmt(S.cash);
-}
-function nextQ() {
-  Q.i++; Q.picked = false;
-  if (Q.i < Q.list.length) { renderQ(); return; }
-  let bonus = 0;
-  if (Q.right === Q.list.length && Q.list.length >= 5) { bonus = PERFECT_BONUS; S.cash += bonus; Q.earned += bonus; save(); refreshAll(); snd("best"); }
-  $("quizCard").innerHTML = `
-    <button class="x" id="qx">✕</button>
-    <div class="summary">
-      <h2>세트 끝!</h2>
-      <div class="score">${Q.right} / ${Q.list.length}</div>
-      <p class="lead">이번 세트로 💰 <b style="color:var(--gold)">${fmt(Q.earned)}</b> 벌었어요${bonus ? ` (만점 보너스 +${bonus} 🎉)` : ""}<br>지금 캐쉬 💰 ${fmt(S.cash)}</p>
-    </div>
-    <div class="row"><button class="btn lime" id="qa">📝 한 세트 더</button><button class="btn gold" id="qs">🛒 상점 가기</button></div>
-    <div class="row" style="margin-top:8px"><button class="btn main" id="qp">⛳ 치러 가기</button></div>`;
-  $("qx").onclick = () => show("sHome");
-  $("qa").onclick = startQuiz; $("qs").onclick = () => show("sShop"); $("qp").onclick = play;
-}
-function coinPop(e, t) {
-  const el = document.createElement("div"); el.className = "coinpop"; el.textContent = t;
-  el.style.left = ((e && e.clientX) || innerWidth / 2) - 20 + "px"; el.style.top = ((e && e.clientY) || innerHeight / 2) - 20 + "px";
-  document.body.appendChild(el); setTimeout(() => el.remove(), 950);
-}
+function startQuiz() { save(); location.href = QUIZ_URL; }
 
 /* ═══════════════════════════════════════════════════════════════
  *  상점
@@ -776,7 +706,7 @@ function coinPop(e, t) {
 let shopTab = "club";
 document.querySelectorAll(".tab").forEach(b => b.onclick = () => { shopTab = b.dataset.tab; document.querySelectorAll(".tab").forEach(x => x.classList.toggle("on", x === b)); renderShop(); });
 function renderShop() {
-  $("shopCash").textContent = fmt(S.cash);
+  $("shopCash").textContent = fmt(cash());
   const body = $("shopBody");
   if (shopTab === "power") {
     const lv = S.power, price = POWER_PRICE[lv];
@@ -785,10 +715,10 @@ function renderShop() {
       <div style="font:400 26px var(--title)">파워 Lv.${lv} <span style="color:var(--sub);font-size:16px">/ ${POWER_MAX}</span></div>
       <div class="pips">${Array.from({ length: POWER_MAX }, (_, i) => `<i class="${i < lv ? "on" : ""}"></i>`).join("")}</div>
       <p class="lead" style="margin-bottom:12px">레벨마다 공 속도 +${POWER_SPEED} m/s · 지금 +${(lv * POWER_SPEED).toFixed(1)} m/s</p>
-      ${lv < POWER_MAX ? `<button class="btn gold" id="buyPow" ${S.cash < price ? "disabled" : ""}>Lv.${lv + 1} 올리기 · 💰 ${fmt(price)}</button>${S.cash < price ? `<p class="note">💰 ${fmt(price - S.cash)} 더 필요해요 → 문제 ${Math.ceil((price - S.cash) / CASH_PER_RIGHT)}개쯤 맞히면 돼요</p>` : ""}`
+      ${lv < POWER_MAX ? `<button class="btn gold" id="buyPow" ${cash() < price ? "disabled" : ""}>Lv.${lv + 1} 올리기 · 💰 ${fmt(price)}</button>${cash() < price ? `<p class="note">💰 ${fmt(price - cash())} 더 필요해요 → 문제풀기에서 ${Math.ceil((price - cash()) / CASH_PER_RIGHT)}문제쯤 맞히면 돼요</p>` : ""}`
         : `<div class="tag" style="font-size:18px">MAX 달성! 🔥</div>`}
     </div>`;
-    const bp = $("buyPow"); if (bp) bp.onclick = () => { if (S.cash < price) return; S.cash -= price; S.power++; snd("buy"); toast(`💪 파워 Lv.${S.power}!`); save(); refreshAll(); renderShop(); };
+    const bp = $("buyPow"); if (bp) bp.onclick = () => { if (!Wallet.spend(price, "golf:power")) return; S.power++; snd("buy"); toast(`💪 파워 Lv.${S.power}!`); save(); refreshAll(); renderShop(); };
     return;
   }
   const LIST = shopTab === "club" ? CLUBS : BALLS, cur = S[shopTab], owned = S.owned[shopTab];
@@ -799,12 +729,12 @@ function renderShop() {
     if (isCur) act = `<span class="tag">✔ 사용 중</span>`;
     else if (own) act = `<button class="buy" data-use="${i}" style="background:rgba(182,255,59,.2);color:var(--lime)">쓰기</button>`;
     else if (!prevOwned) act = `<span class="tag" style="color:var(--sub)">🔒 앞 단계 먼저</span>`;
-    else act = `<button class="buy" data-buy="${i}" ${S.cash < it.price ? "disabled" : ""}>💰 ${fmt(it.price)}</button>`;
+    else act = `<button class="buy" data-buy="${i}" ${cash() < it.price ? "disabled" : ""}>💰 ${fmt(it.price)}</button>`;
     return `<div class="item ${isCur ? "cur" : own ? "own" : !prevOwned ? "lock" : ""}"><div class="ic">${it.ic}</div><div class="info"><b>${esc(it.name)}</b><small>${esc(it.desc)} · ${stat}</small></div>${act}</div>`;
   }).join("")}</div>`;
   body.querySelectorAll("[data-buy]").forEach(b => b.onclick = () => {
-    const i = +b.dataset.buy, it = LIST[i]; if (S.cash < it.price) return;
-    S.cash -= it.price; S.owned[shopTab].push(i); S[shopTab] = i; snd("buy"); toast(`${it.ic} ${esc(it.name)} 장착!`); save(); refreshAll(); renderShop();
+    const i = +b.dataset.buy, it = LIST[i]; if (!Wallet.spend(it.price, "golf:" + shopTab)) return;
+    S.owned[shopTab].push(i); S[shopTab] = i; snd("buy"); toast(`${it.ic} ${esc(it.name)} 장착!`); save(); refreshAll(); renderShop();
   });
   body.querySelectorAll("[data-use]").forEach(b => b.onclick = () => { S[shopTab] = +b.dataset.use; save(); refreshAll(); renderShop(); });
 }
