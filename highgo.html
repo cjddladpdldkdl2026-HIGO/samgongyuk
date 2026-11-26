@@ -104,31 +104,42 @@
   .rank-panel.open .rank-card { transform: none; }
   .rank-card h2 { font-family: var(--font-display); font-size: 26px; margin: 2px 0 14px; color: var(--gold); text-shadow: 0 0 14px rgba(253,231,76,.5); }
   .rank-list { list-style: none; display: grid; gap: 6px; }
-  /* 🏆 시상대: 1 · 2 · 3위 (가운데 1위가 제일 높아요). 단상이 아래에서 차례로 솟아올라요 */
-  .podium { display: grid; grid-template-columns: 1fr 1.15fr 1fr; align-items: end; gap: 8px; margin: 2px 0 12px; }
+  /* 🏆 시상대 (트로피): 1 · 2 · 3위 — 가운데 1위가 제일 높아요. 트로피가 튀어나오고 단상이 솟아올라요.
+     트로피 그림은 아래 <svg id="podDefs"> 의 #trophy (그림 파일 없이 코드로 그림) */
+  .podium { display: grid; grid-template-columns: 1fr 1.1fr 1fr; align-items: end; gap: 6px; max-width: 360px; margin: 0 auto 10px; }
   .podium:empty { display: none; }
   .pod { min-width: 0; text-align: center; }
-  .pod .face { font-size: 30px; line-height: 1.1; animation: podPop .45s .35s cubic-bezier(.2,1.6,.4,1) both; }
-  .pod.p1 .face { font-size: 36px; }
-  .pod.p1 .face::before { content: "👑"; display: block; font-size: 22px; margin-bottom: -4px; animation: podCrown 2.4s 1s ease-in-out infinite; }
-  .pod .nm { display: block; margin-top: 2px; font-weight: 700; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; animation: podFade .4s .45s both; }
-  .pod .pt { display: block; font-family: 'Orbitron', sans-serif; font-weight: 700; font-size: 15px; color: var(--cyan-soft); text-shadow: var(--glow-cyan); animation: podFade .4s .5s both; }
-  .pod .pt small { font-family: var(--font-ui); font-size: 11px; color: var(--ink-dim); text-shadow: none; }
-  .pod .sub { display: block; font-size: 11px; color: var(--ink-faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .pod .step { display: grid; place-items: center; margin-top: 6px; border-radius: 10px 10px 4px 4px; font: 900 24px 'Orbitron', sans-serif;
-    transform-origin: bottom; animation: podRise .55s cubic-bezier(.2,1.3,.4,1) both; }
-  .pod.p1 .step { height: 92px; color: #5a4500; background: linear-gradient(180deg, #fff1a8, #e2b400); box-shadow: 0 0 24px rgba(253,231,76,.6); }
-  .pod.p2 .step { height: 68px; color: #3d4452; background: linear-gradient(180deg, #f2f5fa, #9aa3b5); box-shadow: 0 0 14px rgba(220,228,240,.35); animation-delay: .12s; }
-  .pod.p3 .step { height: 52px; color: #4a2410; background: linear-gradient(180deg, #f7bf8f, #b0612e); box-shadow: 0 0 14px rgba(240,150,90,.35); animation-delay: .24s; }
+  .pod .ic { display: block; margin: 0 auto; height: 26px; animation: podPop .45s .3s cubic-bezier(.2,1.6,.4,1) both; }
+  .pod.p1 .ic { height: 34px; filter: drop-shadow(0 0 6px rgba(253,231,76,.55)); }
+  .pod .nm { display: block; margin-top: 1px; font-weight: 700; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; animation: podFade .4s .4s both; }
+  .pod .pt { display: block; font-family: 'Orbitron', sans-serif; font-weight: 700; font-size: 12px; color: var(--cyan-soft); text-shadow: var(--glow-cyan); animation: podFade .4s .45s both; }
+  .pod .pt small { font-family: var(--font-ui); font-size: 10px; color: var(--ink-dim); text-shadow: none; }
+  .pod .sub { display: block; font-size: 10px; color: var(--ink-faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pod .step { display: grid; place-items: center; margin-top: 3px; border-radius: 5px 5px 2px 2px; font: 900 12px 'Orbitron', sans-serif; color: rgba(255,255,255,.9);
+    transform-origin: bottom; animation: podRise .5s cubic-bezier(.2,1.3,.4,1) both; }
+  .pod.p1 .step { height: 26px; background: linear-gradient(180deg, #5b3fb0, #2c1366); box-shadow: inset 0 2px 0 rgba(253,231,76,.85); }
+  .pod.p2 .step { height: 19px; background: linear-gradient(180deg, #4a3592, #25105a); box-shadow: inset 0 2px 0 rgba(220,228,240,.85); animation-delay: .1s; }
+  .pod.p3 .step { height: 14px; background: linear-gradient(180deg, #43307f, #200c4d); box-shadow: inset 0 2px 0 rgba(240,150,90,.85); animation-delay: .2s; }
   .pod.me .nm { color: var(--gold); }
-  .pod.me .step { outline: 2px solid var(--gold); outline-offset: 2px; }
-  .pod.empty .face, .pod.empty .nm { opacity: .35; }
-  .pod.empty .step { opacity: .35; }
+  .pod.me .ic { filter: drop-shadow(0 0 6px var(--gold)); }
+  .pod.empty .ic, .pod.empty .nm, .pod.empty .step { opacity: .35; }
+  /* 내 기록 카드: 순위 창 맨 위 (내 순위 · 내 점수 · 다음 순위까지) — ☰ 순위 화면도 같이 써요 */
+  .my-card { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 4px 12px; margin: 0 0 12px; padding: 10px 14px;
+    border-radius: 12px; border: 1px solid var(--gold); background: linear-gradient(90deg, rgba(253,231,76,.16), rgba(45,226,230,.08)); box-shadow: 0 0 14px rgba(253,231,76,.18); }
+  .my-card:empty { display: none; }
+  .my-card .rk { font: 900 26px 'Orbitron', sans-serif; color: var(--gold); text-shadow: 0 0 10px rgba(253,231,76,.6); line-height: 1; }
+  .my-card .rk small { font: 700 12px var(--font-ui); color: var(--ink-dim); text-shadow: none; margin-left: 2px; }
+  .my-card .lab { font-size: 11px; color: var(--ink-dim); }
+  .my-card .me-nm { display: block; font-weight: 700; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .my-card .sc { text-align: right; font: 700 20px 'Orbitron', sans-serif; color: var(--cyan-soft); text-shadow: var(--glow-cyan); line-height: 1.1; }
+  .my-card .sc small { display: block; font: 11px var(--font-ui); color: var(--ink-dim); text-shadow: none; }
+  .my-card .goal { grid-column: 1 / -1; font-size: 12px; color: var(--ink); }
+  .my-card .goal b { color: var(--gold); }
+  .my-card.dim { border-color: var(--line); background: rgba(255,255,255,.04); box-shadow: none; grid-template-columns: 1fr; text-align: center; font-size: 13px; color: var(--ink-dim); }
   @keyframes podRise { from { transform: scaleY(0); opacity: 0; } to { transform: scaleY(1); opacity: 1; } }
-  @keyframes podPop { from { transform: translateY(14px) scale(.4); opacity: 0; } to { transform: none; opacity: 1; } }
+  @keyframes podPop { from { transform: translateY(10px) scale(.4); opacity: 0; } to { transform: none; opacity: 1; } }
   @keyframes podFade { from { opacity: 0; } to { opacity: 1; } }
-  @keyframes podCrown { 0%, 100% { transform: translateY(0) rotate(-6deg); } 50% { transform: translateY(-3px) rotate(6deg); } }
-  @media (prefers-reduced-motion: reduce) { .pod .step, .pod .face, .pod .nm, .pod .pt, .pod.p1 .face::before { animation: none; } }
+  @media (prefers-reduced-motion: reduce) { .pod .step, .pod .ic, .pod .nm, .pod .pt { animation: none; } }
   .rank-list li {
     display: grid; grid-template-columns: 34px 1fr auto; align-items: center; gap: 10px;
     padding: 9px 12px; border-radius: 10px; background: rgba(17,4,42,.7); border: 1px solid var(--line);
@@ -610,6 +621,14 @@
   <input class="search" id="search" placeholder="🔍 검색">
 </header>
 
+<!-- 시상대 트로피 그림 (금 · 은 · 동) — 허브 🏆 창과 ☰ 순위 화면이 같이 써요 -->
+<svg id="podDefs" width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <linearGradient id="podG1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff3b0"/><stop offset=".5" stop-color="#f5c400"/><stop offset="1" stop-color="#b98a00"/></linearGradient>
+  <linearGradient id="podG2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset=".5" stop-color="#c9d1de"/><stop offset="1" stop-color="#8a94a6"/></linearGradient>
+  <linearGradient id="podG3" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffd2ad"/><stop offset=".5" stop-color="#d9864a"/><stop offset="1" stop-color="#94471d"/></linearGradient>
+  <symbol id="trophy" viewBox="0 0 64 64"><path d="M18 6h28v14c0 9-6 16-14 16S18 29 18 20z"/><path d="M18 10H8c0 9 5 14 11 15M46 10h10c0 9-5 14-11 15" fill="none" stroke="currentColor" stroke-width="4"/>
+    <rect x="28" y="36" width="8" height="10"/><rect x="20" y="46" width="24" height="6" rx="2"/><rect x="16" y="52" width="32" height="6" rx="2"/></symbol>
+</defs></svg>
 <!-- 랭킹: 🏆 버튼을 누르면 열려요. 종합 · 게임별 탭 -->
 <div class="rank-panel" id="rankPanel" aria-hidden="true">
   <div class="rank-card" role="dialog" aria-modal="true" aria-labelledby="rankTitle">
@@ -619,6 +638,7 @@
     <div class="rank-tabs rank-per" id="rankPer"></div>
     <div class="rank-tabs" id="rankTabs" role="tablist"></div>
     <div id="rankMode"></div>
+    <div id="rankMine"></div>
     <div class="podium" id="rankPodium"></div>
     <ol class="rank-list" id="rankList"></ol>
     <p class="rank-note" id="rankNote"></p>
@@ -1201,6 +1221,7 @@ function rankPer(which, args) {
     .then(data => { RANK.cache[key] = { data, at: Date.now() }; return data; })
     .finally(() => { delete RANK.busy[key]; }));
 }
+const rankPeriodWord = (per) => ({ day: "오늘은", week: "이번 주에는", month: "이번 달에는", all: "" })[per] || "";
 function rankPeriodNote(d) {
   if (RANK.period === "all" || !window.SamAuth || !SamAuth.periodText) return "";
   const t = SamAuth.periodText(RANK.period);
@@ -1226,12 +1247,33 @@ function rankRpc(fn, args) {
 const rankNum = (x) => Number(x || 0).toLocaleString("ko-KR");
 const rankDate = (t) => { const d = new Date(t), p = (x) => String(x).padStart(2, "0"); return isNaN(d) ? "" : `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`; };   // 이 기기 시각(한국)으로
 const rankMedal = (r) => ["🥇", "🥈", "🥉"][r - 1] || r;
+// 내 기록 카드 — d = 순위 결과, kind = 'overall' | 'board', periodKo = '이번 주에는' 같은 말 (window.rankMineCard 로 ☰ 순위 화면도 같이 써요)
+function rankMineCard(d, kind, periodKo) {
+  const A = window.SamAuth;
+  if (!A || !A.profile) return `<div class="my-card dim">🔒 로그인하면 <b>내 순위와 점수</b>가 여기에 크게 보여요</div>`;
+  const val = (t) => Number(kind === "overall" ? t.points : t.score);
+  const mine = kind === "overall" ? d.myPoints : d.myBest, unit = kind === "overall" ? "점" : "";
+  if (!d.myRank) return `<div class="my-card dim">${esc(periodKo)} 아직 내 기록이 없어요 · 한 판 끝까지 하면 순위에 올라가요! 🎮</div>`;
+  const above = d.top.filter(t => t.rank < d.myRank).pop();   // 바로 위 순위
+  const tenth = d.top.length >= 10 ? d.top[d.top.length - 1] : null;
+  const goal = d.myRank === 1 ? `👑 <b>1위</b>를 지키는 중이에요!${d.top[1] ? ` 2위와 <b>${rankNum(Number(mine) - val(d.top[1]))}${unit}</b> 차이` : ""}`
+    : above ? `⬆ <b>${rankNum(val(above) - Number(mine) + 1)}${unit}</b> 더 올리면 <b>${above.rank}위</b>!`
+    : tenth ? `⬆ <b>${rankNum(val(tenth) - Number(mine) + 1)}${unit}</b> 더 올리면 <b>TOP 10</b>!` : "";
+  return `<div class="my-card"><span class="rk">${d.myRank}<small>위</small></span>
+    <span><span class="lab">내 순위 · ${rankNum(d.total)}명 중</span><span class="me-nm">${esc(A.displayName || "나")}</span></span>
+    <span class="sc">${rankNum(mine)}${unit}<small>${kind === "overall" ? "종합 점수" : "내 최고 기록"}</small></span>
+    ${goal ? `<span class="goal">${goal}</span>` : ""}</div>`;
+}
+window.rankMineCard = rankMineCard;
+// 금 · 은 · 동 트로피 (그림은 <svg id="podDefs">)
+const rankTrophy = (place) => `<svg class="ic" viewBox="0 0 64 64" style="fill:url(#podG${place});color:${["#f5c400", "#c9d1de", "#d9864a"][place - 1]}" aria-label="${place}위"><use href="#trophy"/></svg>`;
+window.rankTrophy = rankTrophy;   // ☰ 순위 화면(ops.js)도 같이 써요
 // 시상대 HTML: top 3 (없는 자리는 "도전!") — val(t) = 점수 글자, sub(t) = 작은 설명
 function rankPodium(top, val, sub) {
   const slot = (t, place) => t
-    ? `<div class="pod p${place}${t.me ? " me" : ""}"><span class="face">${["🥇", "🥈", "🥉"][place - 1]}</span><span class="nm">${esc(t.nickname)}${t.me ? " (나)" : ""}</span>
+    ? `<div class="pod p${place}${t.me ? " me" : ""}">${rankTrophy(place)}<span class="nm">${esc(t.nickname)}${t.me ? " (나)" : ""}</span>
         <span class="pt">${val(t)}</span><span class="sub">${sub(t)}</span><div class="step">${place}</div></div>`
-    : `<div class="pod p${place} empty"><span class="face">❔</span><span class="nm">도전!</span><span class="pt">&nbsp;</span><span class="sub">비어 있어요</span><div class="step">${place}</div></div>`;
+    : `<div class="pod p${place} empty">${rankTrophy(place)}<span class="nm">도전!</span><span class="pt">&nbsp;</span><span class="sub">비어 있어요</span><div class="step">${place}</div></div>`;
   return slot(top[1], 2) + slot(top[0], 1) + slot(top[2], 3);   // 왼쪽 2위 · 가운데 1위 · 오른쪽 3위
 }
 function rankMyRow(d, pts) {
@@ -1247,7 +1289,7 @@ async function renderRanking() {
   if (!$("rankPanel").classList.contains("open")) return;
   const still = () => RANK.tab === tab && RANK.period === per && $("rankPanel").classList.contains("open");
   const keepPodium = $("rankPodium").dataset.k === tab + per;   // 같은 탭이면 다시 그리기 전까지 그대로 (깜빡임 방지)
-  if (!keepPodium) $("rankPodium").innerHTML = "";
+  if (!keepPodium) { $("rankPodium").innerHTML = ""; $("rankMine").innerHTML = ""; }
   $("rankPodium").dataset.k = tab + per;
   if (tab === "overall") {
     mode.innerHTML = "";
@@ -1255,6 +1297,7 @@ async function renderRanking() {
     try { d = await rankPer("overall", { p_limit: 10 }); } catch { /* 이 기기 기록으로 */ }
     if (!still()) return;
     if (d && d.top && d.top.length) {
+      $("rankMine").innerHTML = rankMineCard(d, "overall", rankPeriodWord(per));
       $("rankPodium").innerHTML = rankPodium(d.top, t => `${rankNum(t.points)}<small>점</small>`, t => `게임 ${t.games}개 · ${rankNum(t.plays)}판`);
       list.innerHTML = d.top.slice(3).map(t => `<li class="${t.me ? "me" : ""}"><span class="no">${rankMedal(t.rank)}</span>
         <span class="who"><b>${esc(t.nickname)}${t.me ? " (나)" : ""}</b><small>게임 ${t.games}개 · ${rankNum(t.plays)}판</small></span>
@@ -1264,6 +1307,7 @@ async function renderRanking() {
       return;
     }
     $("rankPodium").innerHTML = "";
+    $("rankMine").innerHTML = d ? rankMineCard(d, "overall", rankPeriodWord(per)) : "";
     if (per !== "all" && d) {   // 이번 기간에는 아직 아무도 안 함
       list.innerHTML = `<li class="empty-row">이번 ${RANK_PERIOD_KO[per]} 순위는 아직 비어 있어요.<br>지금 한 판 끝까지 하면 1등! 🏆</li>`;
       $("rankEyebrow").textContent = `Ranking · ${RANK_PERIOD_KO[per]} · 회원 종합 TOP 10`;
@@ -1287,7 +1331,7 @@ async function renderRanking() {
     const modes = await rankRpc("ranking_modes", { p_game: tab });
     if (!still()) return;
     if (!modes.length) {
-      mode.innerHTML = ""; $("rankPodium").innerHTML = "";
+      mode.innerHTML = ""; $("rankPodium").innerHTML = ""; $("rankMine").innerHTML = "";
       list.innerHTML = `<li class="empty-row">아직 이 게임의 기록이 없어요.<br>로그인하고 끝까지 하면 첫 번째로 올라가요! 🎮</li>`;
       return;
     }
@@ -1301,6 +1345,7 @@ async function renderRanking() {
     if (sel) sel.onchange = () => { RANK.mode[tab] = sel.value; renderRanking(); };
     const d = await rankPer("board", { p_game: tab, p_mode: cur, p_limit: 10 });
     if (!still() || RANK.mode[tab] !== cur) return;
+    $("rankMine").innerHTML = rankMineCard(d, "board", rankPeriodWord(per));
     $("rankPodium").innerHTML = d.top.length ? rankPodium(d.top, t => rankNum(t.score), t => (t.accuracy == null ? esc(rankDate(t.at)) : `정확도 ${Math.round(t.accuracy)}%`)) : "";
     list.innerHTML = d.top.length
       ? d.top.slice(3).map(t => `<li class="${t.me ? "me" : ""}"><span class="no">${rankMedal(t.rank)}</span>
@@ -1311,7 +1356,7 @@ async function renderRanking() {
     if (tab === "wizard") $("rankNote").innerHTML = "뭐라구요!? 는 몬스터마다 이기면 1점으로 기록돼요.";
   } catch {
     if (!still()) return;
-    mode.innerHTML = ""; $("rankPodium").innerHTML = "";
+    mode.innerHTML = ""; $("rankPodium").innerHTML = ""; $("rankMine").innerHTML = "";
     list.innerHTML = `<li class="empty-row">랭킹을 불러오지 못했어요.<br>인터넷 연결을 확인하고 다시 눌러 주세요.</li>`;
   }
 }
