@@ -22,7 +22,8 @@
   // ☰ 메뉴 선 아이콘 (이모지는 컴퓨터마다 다르게 보여서 바꿈). 없는 메뉴는 원래 이모지를 써요.
   const sv = d => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
   const ICON = {
-    board: sv('<path d="M3 11v2a1 1 0 0 0 1 1h3l5 4V6L7 10H4a1 1 0 0 0-1 1z"/><path d="M16 9a4 4 0 0 1 0 6M19 6a8 8 0 0 1 0 12"/>'),
+    board: sv('<path d="M4 5h16v11H9l-5 4z"/><path d="M8 9h8M8 12h5"/>'),
+    notice: sv('<path d="M3 11v2a1 1 0 0 0 1 1h3l5 4V6L7 10H4a1 1 0 0 0-1 1z"/><path d="M16 9a4 4 0 0 1 0 6M19 6a8 8 0 0 1 0 12"/>'),
     mine: sv('<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>'),
     rank: sv('<path d="M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M7 6H4a3 3 0 0 0 3 4M17 6h3a3 3 0 0 1-3 4M12 14v4M8 21h8"/>'),
     weak: sv('<rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3h6v1M9 10h6M9 14h6M9 18h3"/>'),
@@ -146,15 +147,16 @@
 
     const auth = S.me ? '' : authForm();
     const comm = [
-      menu('board', '📢', '공지사항 · 이용자 게시판'),
+      menu('notice', '📢', '공지사항'),
+      menu('board', '💬', '이용자 게시판'),
       S.me ? menu('mine', '🙋', '내 정보') : '',
-      ...EXTRA.filter(p => !p.admin && extraOk(p)).map(p => menu(p.id, p.ic, p.label)),
+      ...EXTRA.filter(p => !p.admin && !p.hide && extraOk(p)).map(p => menu(p.id, p.ic, p.label)),
     ];
-    let groups = `<p class="acc-sec">커뮤니티</p><ul class="acc-menu">${comm.join('')}</ul>`;
+    let groups = `<ul class="acc-menu">${comm.join('')}</ul>`;
     if (isAdmin()) groups += `<p class="acc-sec">관리자</p><ul class="acc-menu">${[menu('stats', '📊', '이용자 현황'), menu('members', '👥', '사용자 등록 현황'),
-      ...EXTRA.filter(p => p.admin).map(p => menu(p.id, p.ic, p.label))].join('')}</ul>`;
+      ...EXTRA.filter(p => p.admin && !p.hide).map(p => menu(p.id, p.ic, p.label))].join('')}</ul>`;
     body.innerHTML = `${me}${auth}${groups}
-      <div class="acc-foot">${S.me ? `<button class="acc-out" type="button" id="accOut">${ICON.out} 로그아웃</button>` : ''}
+      <div class="acc-foot">${S.me ? `<button class="acc-out" type="button" id="accOut">${ICON.out} 로그아웃</button>` : (S.tab === 'admin' || S.tab === 'adminJoin' ? '' : '<button class="acc-admlink" type="button" data-tab="admin">🔑 관리자 로그인 ›</button>')}
         <small>${VERSION.replace(' (', ' · ').replace(')', '')}${S.loginRequired ? ' · 🔒 로그인 필수' : ''}</small></div>`;
 
     body.querySelectorAll('[data-page]').forEach(b => b.addEventListener('click', () => openPage(b.dataset.page)));
@@ -164,10 +166,12 @@
 
   function authForm() {
     const t = S.tab;
-    const tabs = `<div class="acc-tabs" role="tablist">
-      <button type="button" data-tab="login" class="${t === 'login' ? 'on' : ''}">학생 로그인</button>
-      <button type="button" data-tab="join" class="${t === 'join' ? 'on' : ''}">회원가입</button>
-      <button type="button" data-tab="admin" class="${t === 'admin' || t === 'adminJoin' ? 'on' : ''}">관리자</button></div>`;
+    const adm = t === 'admin' || t === 'adminJoin';
+    // 관리자 로그인은 탭에서 빼고 ☰ 맨 아래 작은 글씨로 (학생이 잘못 누르지 않게)
+    const tabs = adm ? `<div class="acc-admhd"><button type="button" data-tab="login" class="acc-back">← 로그인으로</button><b>${t === 'admin' ? '관리자 로그인' : '관리자 계정 만들기'}</b></div>`
+      : `<div class="acc-tabs" role="tablist">
+      <button type="button" data-tab="login" class="${t === 'login' ? 'on' : ''}">로그인</button>
+      <button type="button" data-tab="join" class="${t === 'join' ? 'on' : ''}">회원가입</button></div>`;
     let f = '';
     if (t === 'login') f = `
       <form class="acc-form" id="fLogin" autocomplete="on">
@@ -335,7 +339,9 @@
 
   const CAT = { notice: '공지사항', update: '업데이트 안내', request: '요구사항', question: '질문', bug: '오류 신고', free: '자유' };
   const STUDENT_CATS = ['request', 'question', 'bug', 'free'];
-  let boardFilter = 'all';
+  const NOTICE_CATS = ['notice', 'update'];
+  let boardFilter = 'all', lastList = 'board';   // lastList: 글 보기에서 '← 목록' 누르면 돌아갈 곳 (공지사항 / 이용자 게시판)
+  const listOf = (p) => NOTICE_CATS.includes(p.category) ? 'notice' : 'board';
 
   async function authorsOf(posts) {
     const ids = [...new Set(posts.map(p => p.author))];
@@ -356,31 +362,41 @@
     p.answer ? '<span class="chip update">💬 답변</span>' : '',
   ].join('');
 
+  /* 공지사항 · 이용자 게시판 목록 (같은 posts 표를 분류로 나눠 보여 줘요) */
+  async function listPage(kind) {
+    lastList = kind;
+    const isN = kind === 'notice';
+    const { data, error } = await sb.from('posts').select('*').order('pinned', { ascending: false }).order('created_at', { ascending: false }).limit(200);
+    if (error) throw error;
+    const mineKind = data.filter(p => listOf(p) === kind);
+    const A = await authorsOf(mineKind);
+    if (isN || !STUDENT_CATS.includes(boardFilter)) boardFilter = 'all';
+    const list = mineKind.filter(p => isN || boardFilter === 'all' || p.category === boardFilter);
+    const pinned = list.filter(p => p.pinned), rest = list.filter(p => !p.pinned);
+    const card = (p) => `<button type="button" class="post ${p.pinned ? 'pin' : ''} ${p.category === 'notice' ? 'notice' : ''}" data-post="${p.id}">
+        <span class="meta"><span class="chip">#${p.id}</span>${chips(p)}</span>
+        <span class="t">${esc(p.title)}</span><span class="by">${byLine(A[p.author], p)}</span>
+        <span class="ex">${esc(p.body.slice(0, 160))}</span></button>`;
+    const f = (k, l) => `<button type="button" data-f="${k}" class="${boardFilter === k ? 'on' : ''}">${l}</button>`;
+    const canWrite = isN ? isAdmin() : !!S.me;
+    return `<h2>${isN ? '📢 공지사항' : '💬 이용자 게시판'}</h2>
+      <p class="sub">${isN ? '관리자가 올리는 공지와 업데이트 안내예요.' : `요구사항 · 질문 · 오류 신고 · 자유 글을 올리는 곳이에요. ${S.me ? '' : '글을 쓰려면 로그인해 주세요.'}`}</p>
+      <div class="row">${isN ? '' : `<div class="filt">${f('all', '전체')}${f('request', '💡 요구사항')}${f('question', '❓ 질문')}${f('bug', '🐞 오류')}${f('free', '💬 자유')}</div>`}
+        <span class="spacer"></span>${canWrite ? `<button class="abtn pri" type="button" id="newPost">✏️ ${isN ? '공지 쓰기' : '글쓰기'}</button>` : ''}</div>
+      ${pinned.length ? `<h3>📌 고정된 글 ${pinned.length}</h3><div class="posts">${pinned.map(card).join('')}</div>` : ''}
+      <h3>📂 ${isN ? '전체 공지' : '전체 글'}</h3><div class="posts">${rest.map(card).join('') || `<p class="empty2">아직 ${isN ? '공지가' : '글이'} 없어요.</p>`}</div>`;
+  }
+
   const PAGES = {
     /* 게시판 목록 */
-    async board() {
-      const { data, error } = await sb.from('posts').select('*').order('pinned', { ascending: false }).order('created_at', { ascending: false }).limit(200);
-      if (error) throw error;
-      const A = await authorsOf(data);
-      const list = data.filter(p => boardFilter === 'all' || (boardFilter === 'notice' ? ['notice', 'update'].includes(p.category) : p.category === boardFilter));
-      const pinned = list.filter(p => p.pinned), rest = list.filter(p => !p.pinned);
-      const card = (p) => `<button type="button" class="post ${p.pinned ? 'pin' : ''} ${p.category === 'notice' ? 'notice' : ''}" data-post="${p.id}">
-          <span class="meta"><span class="chip">#${p.id}</span>${chips(p)}</span>
-          <span class="t">${esc(p.title)}</span><span class="by">${byLine(A[p.author], p)}</span>
-          <span class="ex">${esc(p.body.slice(0, 160))}</span></button>`;
-      const f = (k, l) => `<button type="button" data-f="${k}" class="${boardFilter === k ? 'on' : ''}">${l}</button>`;
-      return `<h2>💬 이용자 게시판</h2>
-        <p class="sub">공지사항과 학생 의견(요구사항·질문·오류 신고)을 모아 둔 곳이에요. ${S.me ? '' : '글을 쓰려면 로그인해 주세요.'}</p>
-        <div class="row"><div class="filt">${f('all', '전체')}${f('notice', '📢 공지')}${f('request', '💡 요구사항')}${f('question', '❓ 질문')}${f('bug', '🐞 오류')}${f('free', '💬 자유')}</div>
-          <span class="spacer"></span>${S.me ? '<button class="abtn pri" type="button" id="newPost">✏️ 글쓰기</button>' : ''}</div>
-        ${pinned.length ? `<h3>📌 고정된 글 ${pinned.length}</h3><div class="posts">${pinned.map(card).join('')}</div>` : ''}
-        <h3>📂 전체 글</h3><div class="posts">${rest.map(card).join('') || '<p class="empty2">아직 글이 없어요.</p>'}</div>`;
-    },
+    async board() { return listPage('board'); },
+    async notice() { return listPage('notice'); },
     /* 글 보기 */
     async post(id) {
       const { data: p, error } = await sb.from('posts').select('*').eq('id', id).maybeSingle();
       if (error) throw error;
       if (!p) return '<p class="empty2">글이 없거나 볼 수 없어요.</p><button class="abtn" type="button" data-back>← 목록</button>';
+      lastList = listOf(p);
       const A = await authorsOf([p]);
       const mine = S.me && p.author === S.me.id;
       const admin = isAdmin();
@@ -404,9 +420,10 @@
     },
     /* 글쓰기 / 수정 */
     async write(id) {
-      let p = { category: isAdmin() ? 'notice' : 'request', title: '', body: '', is_private: false, pinned: false };
+      let p = { category: lastList === 'notice' && isAdmin() ? 'notice' : 'request', title: '', body: '', is_private: false, pinned: false };
       if (id) { const { data } = await sb.from('posts').select('*').eq('id', id).maybeSingle(); if (data) p = data; }
-      const cats = isAdmin() ? Object.keys(CAT) : STUDENT_CATS;
+      const cats = (isAdmin() && lastList === 'notice' ? NOTICE_CATS : STUDENT_CATS).slice();
+      if (id && !cats.includes(p.category)) cats.unshift(p.category);
       return `<button class="abtn sm" type="button" data-back>← 목록</button>
         <h2 style="margin-top:14px">${id ? '✏️ 글 수정' : '✏️ 글쓰기'}</h2>
         <p class="sub">${isAdmin() ? '공지사항·업데이트 안내는 관리자만 쓸 수 있어요.' : '요구사항, 질문, 오류 신고 모두 환영해요. 관리자가 확인하고 답변해요.'}</p>
@@ -520,21 +537,24 @@
   }
   const maskName = (p) => p.length <= 1 ? p : p.length === 2 ? p[0] + '*' : p[0] + '*'.repeat(p.length - 2) + p[p.length - 1];
 
+  function bindList(kind) {
+    pg.querySelectorAll('[data-f]').forEach(b => b.addEventListener('click', () => { boardFilter = b.dataset.f; openPage(kind); }));
+    pg.querySelectorAll('[data-post]').forEach(b => b.addEventListener('click', () => openPage('post', b.dataset.post)));
+    const nb = $('#newPost', pg); if (nb) nb.addEventListener('click', () => openPage('write'));
+  }
+
   const BIND = {
-    board() {
-      pg.querySelectorAll('[data-f]').forEach(b => b.addEventListener('click', () => { boardFilter = b.dataset.f; openPage('board'); }));
-      pg.querySelectorAll('[data-post]').forEach(b => b.addEventListener('click', () => openPage('post', b.dataset.post)));
-      const nb = $('#newPost', pg); if (nb) nb.addEventListener('click', () => openPage('write'));
-    },
+    board() { bindList('board'); },
+    notice() { bindList('notice'); },
     post(id) {
-      pg.querySelectorAll('[data-back]').forEach(b => b.addEventListener('click', () => openPage('board')));
+      pg.querySelectorAll('[data-back]').forEach(b => b.addEventListener('click', () => openPage(lastList)));
       const ed = $('#editPost', pg); if (ed) ed.addEventListener('click', () => openPage('write', id));
       const del = $('#delPost', pg);
       if (del) del.addEventListener('click', async () => {
         if (!await ask('이 글을 지울까요? 되살릴 수 없어요.')) return;
         const { error } = await sb.from('posts').delete().eq('id', id);
         if (error) return say(KO_ERR(error));
-        openPage('board');
+        openPage(lastList);
       });
       const f = $('#fAdminPost', pg);
       if (f) f.addEventListener('submit', async (e) => {
@@ -547,7 +567,7 @@
       });
     },
     write(id) {
-      pg.querySelectorAll('[data-back]').forEach(b => b.addEventListener('click', () => openPage(id ? 'post' : 'board', id)));
+      pg.querySelectorAll('[data-back]').forEach(b => b.addEventListener('click', () => openPage(id ? 'post' : lastList, id)));
       const f = $('#fPost', pg);
       f.addEventListener('submit', async (e) => {
         e.preventDefault();

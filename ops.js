@@ -114,7 +114,7 @@
   }
 
   Account.addPage({
-    id: 'rank', ic: '🏆', label: '순위',
+    id: 'rank', ic: '🏆', label: '순위', hide: true,   // ☰ 메뉴에는 안 보임 (허브의 🏆 순위 창을 써요)
     async render() {
       const tabs = [{ id: 'overall', ko: '종합', ic: '👑' }, ...GAMES]
         .map(t => `<button type="button" data-rt="${t.id}" class="${R.tab === t.id ? 'on' : ''}">${t.ic} ${esc(t.ko)}</button>`).join('');

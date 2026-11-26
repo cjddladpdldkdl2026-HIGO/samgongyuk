@@ -63,6 +63,7 @@
 
 .acc-sec { padding: 16px 22px 6px; font-size: 12px; font-weight: 600; color: var(--sd-dim); }
 .acc-menu { list-style: none; margin: 0 12px; padding: 4px; display: grid; gap: 0; border-radius: 16px; border: 1px solid rgba(255,255,255,.06); background: rgba(255,255,255,.035); }
+.acc-me + .acc-menu, .acc-auth + .acc-menu { margin-top: 14px; }
 .acc-menu button {
   width: 100%; display: flex; align-items: center; gap: 12px; padding: 9px 10px; border-radius: 12px;
   border: 0; background: none; text-align: left; font-size: 15px; font-weight: 500; color: var(--sd-ink);
@@ -76,7 +77,8 @@
 .acc-menu .ar { margin-left: auto; color: var(--sd-dim); opacity: .6; font-size: 15px; }
 .acc-menu .badge + .ar { margin-left: 8px; }
 /* 메뉴마다 고정된 아이콘 색 */
-.acc-menu .t-board { background: rgba(255,120,90,.16); color: #ff8f6b; }
+.acc-menu .t-notice { background: rgba(255,120,90,.16); color: #ff8f6b; }
+.acc-menu .t-board { background: rgba(120,150,255,.16); color: #8fa8ff; }
 .acc-menu .t-mine { background: rgba(90,170,255,.16); color: #6fb2ff; }
 .acc-menu .t-rank { background: rgba(253,200,60,.16); color: #f3c443; }
 .acc-menu .t-weak { background: rgba(60,210,200,.16); color: #3fd0c8; }
@@ -93,8 +95,14 @@
 
 /* 로그인 · 가입 폼 */
 .acc-auth { padding: 14px 16px; }
-.acc-tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; padding: 4px; border-radius: 12px; background: rgba(7,1,15,.6); border: 1px solid var(--line); margin-bottom: 14px; }
+.acc-tabs { display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px; padding: 4px; border-radius: 12px; background: rgba(7,1,15,.6); border: 1px solid var(--line); margin-bottom: 14px; }
 .acc-tabs button { padding: 8px 4px; border-radius: 9px; border: 0; background: none; font-size: 14px; color: var(--ink-dim); }
+.acc-admhd { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+.acc-admhd b { font-size: 16px; }
+.acc-back { padding: 6px 10px; border-radius: 9px; border: 1px solid transparent; background: rgba(255,255,255,.06); color: var(--sd-dim, #a6a4c9); font-size: 13px; }
+.acc-back:hover { border-color: var(--cyan); color: #fff; }
+.acc-admlink { display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; border-radius: 10px; border: 1px solid rgba(255,255,255,.14); background: rgba(255,255,255,.06); color: var(--sd-ink, #f1efff); font-size: 13px; font-weight: 600; }
+.acc-admlink:hover { border-color: var(--cyan); color: var(--cyan-soft); }
 .acc-tabs button.on { background: var(--cyan); color: #0a0420; font-weight: 700; }
 .acc-form { display: grid; gap: 10px; }
 .acc-form label { display: grid; gap: 4px; font-size: 13px; color: var(--ink-dim); }
