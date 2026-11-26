@@ -481,6 +481,21 @@ button { font: inherit; color: inherit; cursor: pointer; }
   .logo { font-size: 68px; }
 }
 
+/* 휴대폰 · 좁은 화면 (2026-11-26): 문제 카드를 위에, 3D 화면을 아래에 세로로.
+   예전엔 가로 배치라 3D 화면이 화면 밖으로 밀려났어요. 손가락: 탭 = 발사, 끌기 = 뼈 돌리기 */
+@media (max-width: 760px) {
+  #screen-quiz { flex-direction: column; gap: 10px; padding: 58px 12px 14px; }   /* 위 58px = 일시정지 버튼 자리 */
+  .q-side { width: auto; gap: 8px; }
+  .q-card { padding: 12px 14px 12px; transform: none; }
+  .q-card::after { display: none; }
+  .q-name { font-size: 26px; margin: 2px 0 6px; }
+  .q-help { display: none; }
+  .q-stats div { padding: 6px 4px; }
+  .q-stats strong { font-size: 22px; }
+  .q-stage { flex: 1; min-height: 280px; box-shadow: 6px 6px 0 var(--yellow), 6px 6px 0 3px var(--black); }
+}
+.q-stage { touch-action: none; }   /* 3D 화면에서 손가락으로 끌 때 페이지가 같이 움직이지 않게 */
+
 /* 삼공육 홈으로 (2026-11-26) — 문제 푸는 중(quiz)에는 숨고, ⏸ 메뉴를 써요 */
 #samHome { position: fixed; left: 12px; bottom: 12px; z-index: 2147482000; display: inline-flex; align-items: center; gap: 6px;
   padding: 8px 14px; font: 400 15px var(--font-title); color: #fff8fb; background: #0d0d0f; text-decoration: none;
@@ -1964,6 +1979,21 @@ class Quiz {
     });
     window.addEventListener('mouseup', () => { drag = null; });
     stage.addEventListener('contextmenu', (e) => e.preventDefault());
+    // 손가락 (2026-11-26): 탭 = 발사 (브라우저가 마우스 클릭으로 바꿔 줘요), 10px 넘게 끌면 = 뼈 돌리기
+    let touch = null;
+    stage.addEventListener('touchstart', (e) => {
+      if (e.touches.length !== 1) { touch = null; return; }
+      const t = e.touches[0]; touch = { x: t.clientX, y: t.clientY, moved: false };
+    }, { passive: true });
+    stage.addEventListener('touchmove', (e) => {
+      if (!touch || e.touches.length !== 1) return;
+      const t = e.touches[0], dx = t.clientX - touch.x, dy = t.clientY - touch.y;
+      if (!touch.moved && Math.hypot(dx, dy) < 10) return;
+      touch.moved = true; e.preventDefault();
+      this.viewer.rotateBy(dx * 0.01, dy * 0.01);
+      touch.x = t.clientX; touch.y = t.clientY;
+    }, { passive: false });
+    stage.addEventListener('touchend', (e) => { if (touch && touch.moved) e.preventDefault(); touch = null; });   // 끌었으면 발사하지 않기
   }
 }
 
