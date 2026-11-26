@@ -92,10 +92,43 @@
 
   /* ---------- BATTLE ---------- */
   #battle{ position:absolute; inset:0; }
-  #bg{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; filter:brightness(.85) saturate(1.05); }
-  #battle.shake{ animation:shake .4s linear; }
-  @keyframes shake{ 0%,100%{ transform:translate(0,0); } 20%{ transform:translate(-8px,4px); }
-    40%{ transform:translate(7px,-5px); } 60%{ transform:translate(-5px,3px); } 80%{ transform:translate(4px,-2px); } }
+  #battle{ transition:opacity .9s ease; }
+  #battle.fadeout{ opacity:0; }
+  #bg{ position:absolute; left:-10px; top:-10px; width:calc(100% + 20px); height:calc(100% + 20px); object-fit:cover; filter:brightness(.85) saturate(1.05); }
+  /* 흔들림: 배경·몬스터·마법사만 (체력 칸·버튼은 그대로) — transform 대신 translate 를 써서 다른 움직임과 안 겹치게 */
+  .shk{ animation:shake .4s linear; }
+  .shk.big{ animation:shake .7s linear; }
+  @keyframes shake{ 0%,100%{ translate:0 0; } 20%{ translate:-8px 4px; }
+    40%{ translate:7px -5px; } 60%{ translate:-5px 3px; } 80%{ translate:4px -2px; } }
+
+  /* 보스방 (수정 동굴): 동굴 전체를 위쪽 800x446 에 → 드래곤 → 앞땅 → 마법사 → 천장 순서로 겹침 */
+  .bossl{ position:absolute; left:0; top:0; width:800px; height:446px; display:none; pointer-events:none; }
+  #battle.boss .bossl{ display:block; }
+  #battle.boss #bg{ left:0; top:0; width:800px; height:446px; object-fit:fill; filter:none; }
+  #boss-floor{ top:446px; transform:scaleY(-1); filter:brightness(.55); }   /* 아래 UI 빈칸 사이로 보이는 바닥 (동굴 아래쪽을 뒤집어 이어 붙임) */
+  #boss-front{ z-index:11; }
+  #boss-ceil{ z-index:13; }
+  #battle.boss #wiz{ left:200px; bottom:212px; }
+  #battle.boss #shout{ bottom:96px; }
+  #battle.boss #bub-wiz{ left:150px; bottom:330px; }
+
+  /* 새 몬스터 (여러 장 그림) */
+  .foe{ position:absolute; right:0; bottom:0; transition:translate 1.8s ease-in, opacity .8s ease; }
+  .foe img{ display:block; }
+  .foe.gone{ opacity:0; }
+  #mon .foe-earth_dragon img{ filter:none;   /* 불길이 그림 틀에서 잘려 보이지 않게 가장자리를 흐리게 */
+    -webkit-mask-image:linear-gradient(90deg,transparent 0,#000 24%),linear-gradient(0deg,transparent 0,#000 18%);
+    -webkit-mask-composite:source-in; mask-image:linear-gradient(90deg,transparent 0,#000 24%),linear-gradient(0deg,transparent 0,#000 18%); mask-composite:intersect; }
+  #mon .foe-earth_dragon img.hurt{ animation:bossHurt .55s ease; }   /* 보스는 빨갛게 덮지 않고 하얗게 번쩍 */
+  @keyframes bossHurt{ 0%,100%{ filter:none; transform:none; } 15%,45%{ filter:brightness(2.3) saturate(.6); transform:translateX(10px); } 30%{ transform:translateX(-6px); } }
+  .sonic{ position:absolute; width:46px; height:46px; margin:-23px 0 0 -23px; border:4px solid rgba(190,230,255,.95); border-radius:50%;
+    box-shadow:0 0 10px rgba(140,200,255,.9), inset 0 0 8px rgba(140,200,255,.8); opacity:0; }
+
+  /* VICTORY 글자 */
+  #victory{ position:absolute; left:0; right:0; top:200px; z-index:66; text-align:center; font-size:54px; color:var(--gold);
+    text-shadow:5px 5px 0 #000, 0 0 30px rgba(255,215,94,.7); opacity:0; pointer-events:none; }
+  #victory.show{ animation:victory 2.2s ease forwards; }
+  @keyframes victory{ 0%{ opacity:0; transform:scale(2.2); } 15%{ opacity:1; transform:scale(.95); } 25%,70%{ opacity:1; transform:scale(1); } 100%{ opacity:0; transform:scale(1.05); } }
 
   /* HP bars */
   .hpbox{ position:absolute; top:12px; width:250px; background:rgba(8,6,20,.88); border:3px solid var(--panel-light);
@@ -182,10 +215,13 @@
   @keyframes dmg{ 0%{ opacity:0; transform:translate(-50%,-20%) scale(.6); } 20%{ opacity:1; transform:translate(-50%,-60%) scale(1.15); } 100%{ opacity:0; transform:translate(-50%,-170%) scale(1); } }
 
   /* ---------- BOTTOM UI ---------- */
-  #ui{ position:absolute; left:0; right:0; bottom:0; height:160px; display:flex; z-index:28;
-    background:#0a0918; border-top:4px solid #000; box-shadow:0 -3px 0 var(--panel-light) inset; }
-  #log{ flex:0 0 34%; padding:10px 12px; font-size:12px; line-height:1.65; color:#d8d4ff; overflow-y:auto;
+  #ui{ position:absolute; left:0; right:0; bottom:0; height:160px; display:flex; z-index:28; }
+  #ui > *{ border-top:4px solid #000; box-shadow:0 -3px 0 var(--panel-light) inset; }
+  #log{ flex:0 0 34%; padding:10px 12px; font-size:12px; line-height:1.65; color:#d8d4ff; overflow-y:auto; background:#0a0918;
     border-right:3px solid var(--panel-light); }
+  /* ATTACK 이 있던 자리: 판을 비워서 맵이 보이게 (나중에 새 기술이 생기면 여기에) */
+  #ui-hole{ flex:0 0 100px; border-top:none; box-shadow:none; pointer-events:none;
+    border-right:3px solid var(--panel-light); border-left:0; }
   #log p{ margin:0 0 3px; }
   #log .sys{ color:var(--dim); } #log .dmg{ color:#ffb454; } #log .fail{ color:#ff7b7b; } #log .ok{ color:#7effa8; }
   #menu{ flex:1; display:flex; gap:6px; padding:10px 10px 12px; background:linear-gradient(180deg,#1a1838,#100f24); }
@@ -331,6 +367,9 @@
   <!-- BATTLE -->
   <div id="battle">
     <img id="bg" src="images/dungeon.jpg" alt="">
+    <img id="boss-floor" class="bossl" alt="">
+    <img id="boss-front" class="bossl" alt="">
+    <img id="boss-ceil" class="bossl" alt="">
 
     <div class="hpbox" id="hp-wiz"><div class="top"><span class="name px" id="wiz-name">WIZARD</span><span class="num px" id="hp-wiz-num"></span></div><div class="bar"><i id="hp-wiz-bar"></i></div>
       <div class="mprow px"><span>MP</span><span id="mp-num"></span></div><div class="bar mp"><i id="mp-bar"></i></div></div>
@@ -357,8 +396,10 @@
 
     <div id="ui">
       <div id="log"></div>
+      <div id="ui-hole"></div>
       <div id="menu"></div>
     </div>
+    <div id="victory" class="px"></div>
   </div>
 
   <!-- RESULT -->
@@ -367,7 +408,7 @@
       <h2 class="px" id="result-title"></h2>
       <div id="result-reward"></div>
       <div class="stats" id="result-stats"></div>
-      <div class="rbtns"><button class="btn gray" id="again-btn">다시 하기</button><button class="btn" id="tomap-btn">지도로</button></div>
+      <div class="rbtns"><button class="btn gray" id="again-btn">다시 하기</button><button class="btn gray" id="tomap-btn">지도로</button><button class="btn" id="next-btn">다음 스테이지 ▶</button></div>
     </div>
   </div>
 
@@ -420,6 +461,7 @@
 <script src="../../auth.js"></script>
 <script src="../../sheets.js"></script>
 <script src="../../game-menu.js"></script>
+<script src="monsters.js"></script>
 <script>
 (function(){
   "use strict";
@@ -433,14 +475,15 @@
   //   듣는 소리: 음성 모델 사전에 없는 전문 용어는 소리가 비슷한 쉬운 단어 조합으로 알아들음 (없으면 이름 그대로)
   // mp = 쓸 때 드는 MP
   const SKILLS = [
-    { key:'attack',  name:'ATTACK',    sub:'뼈',      icon:'images/icon-attack.png',  kind:'slash',   power:20, mp:0,
+    // 11-26: ATTACK 을 없애고 뼈 이름을 FIRE BALL 에 합쳤어요 → FIRE BALL 이 MP 0 기본 공격 (MP 가 바닥나도 멈추지 않게)
+    { key:'fire',    name:'FIRE BALL', sub:'뼈 · 랜드마크', icon:'images/icon-fire.png', kind:'fire',    power:30, mp:0,
       words:[['Femur','넙다리뼈',1],['Tibia','정강뼈',1],['Rib','갈비뼈',1],['Sternum','복장뼈',1],
              ['Humerus','위팔뼈',2],['Radius','노뼈',2],['Patella','무릎뼈',2],['Pelvis','골반',2],['Vertebra','척추뼈',2],
              ['Clavicle','빗장뼈',3],['Scapula','어깨뼈',3],['Sacrum','엉치뼈',3],['Fibula','종아리뼈',3],['Atlas','고리뼈',3],['Axis','중쇠뼈',3],
              ['Ulna','자뼈',4,'ulnar|all nah|ole nah'],['Coccyx','꼬리뼈',4,'cock six|cox six|cocks'],['Phalanx','손가락뼈 · 발가락뼈',4],['Metacarpal','손허리뼈',4],['Metatarsal','발허리뼈',4],['Talus','목말뼈',4],
-             ['Ilium','엉덩뼈',5,'ill e um'],['Ischium','궁둥뼈',5,'is key um'],['Pubis','두덩뼈',5,'pew biss'],['Calcaneus','발꿈치뼈',5,'cal kay knee us|cal cane e us'],['Navicular','발배뼈',5,'nah vick you lar'],['Cuneiform','쐐기뼈',5]] },
-    { key:'fire',    name:'FIRE BALL', sub:'랜드마크', icon:'images/icon-fire.png', kind:'fire',    power:35, mp:8,
-      words:[['Dens','치아돌기',1],['Promontory','엉치뼈곶',1],['Iliac crest','엉덩뼈능선',1,'ill e ack crest'],['Acromion','봉우리',1,'a crow me on'],
+             ['Ilium','엉덩뼈',5,'ill e um'],['Ischium','궁둥뼈',5,'is key um'],['Pubis','두덩뼈',5,'pew biss'],['Calcaneus','발꿈치뼈',5,'cal kay knee us|cal cane e us'],['Navicular','발배뼈',5,'nah vick you lar'],['Cuneiform','쐐기뼈',5],
+             // ↓ 랜드마크 (원래 FIRE BALL)
+             ['Dens','치아돌기',1],['Promontory','엉치뼈곶',1],['Iliac crest','엉덩뼈능선',1,'ill e ack crest'],['Acromion','봉우리',1,'a crow me on'],
              ['Olecranon','팔꿈치머리',2,'oh wreck ran on'],['Spinous process','가시돌기',2,'spy nus process'],['Transverse process','가로돌기',2],['Greater trochanter','큰돌기',2,'greater trow canter'],
              ['Glenoid cavity','접시오목',3,'glee annoyed cavity'],['Coracoid process','부리돌기',3,'core a void process'],['Xiphoid process','칼돌기',3,'sigh void process'],['Medial malleolus','안쪽복사',3,'medial mal lee oh less'],['Lateral malleolus','가쪽복사',3,'lateral mal lee oh less'],
              ['Acetabulum','절구',4,'ass e tab you lum'],['Manubrium','복장뼈자루',4,'ma new bree um'],['Styloid process','붓돌기',4,'sty loyd process'],['Medial epicondyle','안쪽위관절융기',4,'medial epic on dial'],['Tibial tuberosity','정강뼈거친면',4,'tibia al tube er ross it e'],
@@ -470,7 +513,7 @@
     const rows = window.Samgongyuk && Samgongyuk.terms('wizard');
     if (!rows) return;
     SKILLS.forEach(function(sk){
-      const ws = rows.filter(function(r){ return r.skill === sk.key && r.english && r.korean; }).map(function(r){
+      const ws = rows.filter(function(r){ return (r.skill === sk.key || (sk.key === 'fire' && r.skill === 'attack')) && r.english && r.korean; }).map(function(r){   // 시트의 attack(뼈) 줄도 FIRE BALL 로
         const t = Math.max(1, Math.min(5, parseInt(r.tier, 10) || 1));
         return r.hear ? [r.english, r.korean, t, r.hear] : [r.english, r.korean, t];
       });
@@ -490,12 +533,16 @@
   const STAGES = [
     { title:'TUTORIAL', name:'BABY DRAKE',  hp:40,  atkMin:3,  atkMax:5,  scale:.75, exp:30,  tutorial:true,
       tint:'hue-rotate(200deg) saturate(1.3) brightness(1.15)' },
-    { title:'1-1',      name:'DRAKE',       hp:100, atkMin:8,  atkMax:12, scale:1.05, exp:60,  tint:'' },
-    { title:'1-2',      name:'FIRE DRAKE',  hp:140, atkMin:10, atkMax:15, scale:1.1,  exp:90,  tint:'hue-rotate(75deg) saturate(1.5)' },
-    { title:'1-3',      name:'ICE DRAKE',   hp:180, atkMin:12, atkMax:18, scale:1.12, exp:120, tint:'hue-rotate(-75deg) saturate(.9) brightness(1.3)' },
-    { title:'1-4',      name:'DARK DRAKE',  hp:220, atkMin:14, atkMax:20, scale:1.15, exp:150, tint:'grayscale(.6) brightness(.75) contrast(1.35)' },
-    { title:'1-5 BOSS', name:'GOLD DRAKE',  hp:300, atkMin:16, atkMax:24, scale:1.3,  exp:250, boss:true,
-      tint:'sepia(1) saturate(3.5) hue-rotate(-12deg) brightness(1.15)' }
+    // 11-26 개편: 몬스터 그림은 monsters.js (VW_MONS), mons = 나오는 몬스터 (여러 마리면 각자 HP = hp ÷ 마리 수, 공격은 동시에 · 피해 합산)
+    //   atk = 몬스터 공격 이름 (여러 개면 번갈아/무작위), bg = 배경, room:'boss' = 보스방(층 나눈 수정 동굴)
+    { title:'1-1',      name:'SLIME',       hp:100, atkMin:8,  atkMax:12, exp:60,  mons:['slime'],     bg:'images/m/room1.jpg', atk:['몸통 박치기'] },
+    { title:'1-2',      name:'GOBLIN',      hp:140, atkMin:10, atkMax:15, exp:90,  mons:['goblin'],    bg:'images/m/room2.jpg', atk:['칼 휘두르기'] },
+    { title:'1-3',      name:'BAT x3',      hp:180, atkMin:4,  atkMax:6,  exp:120, mons:['bat_a','bat_b','bat_c'], bg:'images/m/room3.jpg', atk:['음파'] },   // 공격은 한 마리당
+    { title:'1-4',      name:'LIZARDMAN',   hp:220, atkMin:14, atkMax:20, exp:150, mons:['lizardman'], bg:'images/m/room4.jpg', atk:['창 찌르기'] },
+    { title:'1-5',      name:'DRAKE',       hp:300, atkMin:16, atkMax:24, scale:1.05, exp:200, tint:'', atk:['불꽃 브레스'] },
+    // 보스: 드레이크의 4배 HP. 대신 포효(피해 없음)가 섞이고 한 방은 약하게 → 오래 버티는 싸움
+    { title:'BOSS',     name:'EARTH DRAGON', hp:1200, atkMin:12, atkMax:18, exp:400, boss:true, mons:['earth_dragon'], room:'boss',
+      atk:[{ name:'불 뿜기', anim:'fire' }, { name:'돌가시', anim:'spike' }, { name:'포효', anim:'roar', noDmg:true }] }
   ];
   // 레벨: 레벨이 오를수록 HP·MP·공격력이 커짐
   function maxHP(lv){ return 100 + 15 * (lv - 1); }
@@ -547,7 +594,7 @@
   let save = readSave() || freshSave();
 
   const IMG = {
-    wizIdle:'images/wizard-idle.png', wizCast:'images/wizard-cast.png', wizAttack:'images/wizard-attack.png',
+    wizIdle:'images/m/wizard-idle.png', wizCast:'images/m/wizard-idle.png', wizAttack:'images/m/wizard-attack.png',   // 뒷모습 마법사 (11-26)
     monIdle:'images/monster-idle.png', monAttack:'images/monster-attack.png', monHurt:'images/monster-hurt.png',
     proj:'images/projectile.png', boom:'images/explosion.png'
   };
@@ -568,8 +615,88 @@
     if (n){ img.style.width = Math.round(n[0] * scale) + 'px'; img.style.height = Math.round(n[1] * scale) + 'px'; }
   }
   let MON = STAGES[1], stageIdx = 1;
-  function setWiz(src){ sized(wizImg, src, WIZ_SCALE); }
-  function setMon(src){ sized(monImg, src, MON.scale); }
+  // 뒷모습 마법사: 그림마다 모자~발이 185px 이 되게 (보스방은 넓어 보이게 WIZ_BOSS 배)
+  const WIZ_FIT = {}; WIZ_FIT[IMG.wizIdle] = .804; WIZ_FIT[IMG.wizAttack] = 1.057;
+  const WIZ_BOSS = .55;
+  function setWiz(src){ sized(wizImg, src, (WIZ_FIT[src] || WIZ_SCALE) * (MON.room === 'boss' ? WIZ_BOSS : 1)); }
+  function setMon(src){ sized(monImg, src, MON.scale || 1); }
+
+  /* ---------- 새 몬스터: 그림 여러 장을 이어 움직임 (monsters.js 의 VW_MONS) ---------- */
+  const MONS = window.VW_MONS || {};
+  let foes = [];      // 지금 판의 몬스터 { key, def, wrap, img, hp, max, alive, timer, speed, jitter }
+  function framePath(key, n){ return 'images/m/' + key + '/' + String(n).padStart(2, '0') + '.webp'; }
+  function preloadFoe(key){
+    const d = MONS[key]; if (!d || d.pre) return; d.pre = true;
+    Object.keys(d.seq).forEach(function(a){ d.seq[a].forEach(function(s){ const im = new Image(); im.src = framePath(key, s[0]); }); });
+  }
+  function seqTime(f, anim){ const s = f.def.seq[anim] || []; return s.reduce(function(t, x){ return t + x[1]; }, 0) * (f.speed || 1); }
+  function play(f, anim, loop, done){
+    clearTimeout(f.timer);
+    const seq = f.def.seq[anim] || f.def.seq.idle; let i = 0;
+    (function step(){
+      const s = seq[i];
+      f.img.src = framePath(f.key, s[0]);
+      f.img.style.translate = (s[2] || 0) + 'px ' + (s[3] || 0) + 'px';
+      // 박쥐처럼 여러 마리면 각자 속도가 다르고 한 장 한 장도 조금씩 불규칙하게 (같은 종이라도 다른 개체)
+      const ms = s[1] * (f.speed || 1) * (loop && f.jitter ? .75 + Math.random() * .5 : 1);
+      f.timer = setTimeout(function(){
+        i++;
+        if (i >= seq.length){ if (!loop){ if (done) done(); return; } i = 0; }
+        step();
+      }, ms);
+    })();
+  }
+  function clearFoes(){ foes.forEach(function(f){ clearTimeout(f.timer); f.wrap.remove(); }); foes = []; }
+  function makeFoes(hps){
+    clearFoes();
+    monImg.style.display = MON.mons ? 'none' : '';
+    if (!MON.mons) return;
+    const each = Math.round(MON.hp / MON.mons.length), many = MON.mons.length > 1;
+    MON.mons.forEach(function(key, i){
+      const d = MONS[key]; if (!d) return;
+      preloadFoe(key);
+      const wrap = document.createElement('div'); wrap.className = 'foe foe-' + key;
+      wrap.style.width = d.w + 'px'; wrap.style.height = d.h + 'px';
+      wrap.style.translate = d.dx + 'px ' + d.dy + 'px';
+      const img = document.createElement('img'); img.alt = ''; img.style.width = d.w + 'px'; img.style.height = d.h + 'px';
+      wrap.appendChild(img); monEl.appendChild(wrap);
+      const hp = hps && hps[i] != null ? hps[i] : each;
+      const f = { key:key, def:d, wrap:wrap, img:img, hp:hp, max:each, alive:hp > 0, timer:null,
+                  speed: many ? .8 + Math.random() * .45 : 1, jitter: many };
+      foes.push(f);
+      if (f.alive) play(f, 'idle', true); else wrap.classList.add('gone');
+    });
+  }
+  function aliveFoes(){ return foes.filter(function(f){ return f.alive; }); }
+  function sumFoeHP(){ return foes.reduce(function(n, f){ return n + Math.max(0, f.hp); }, 0); }
+  function targetImg(){ const a = aliveFoes(); return MON.mons && a.length ? a[0].img : monImg; }   // 주문은 맨 앞(첫 번째) 몬스터부터
+  function aimAt(img){ return MON.room === 'boss' ? center(img, .36, .4) : center(img, .45, .55); }
+  function bossRise(f){         // 보스 등장: 앞땅 뒤에서 솟아오름
+    f.wrap.style.transition = 'none'; f.wrap.style.translate = f.def.dx + 'px ' + (f.def.dy + 230) + 'px';
+    void f.wrap.offsetWidth;
+    f.wrap.style.transition = 'translate 1.6s cubic-bezier(.2,.8,.3,1)'; f.wrap.style.translate = f.def.dx + 'px ' + f.def.dy + 'px';
+    shake(true); setTimeout(function(){ shake(true); SFX.roar(); }, 700);
+  }
+  function foeDie(f){
+    f.alive = false;
+    if (f.def.seq.die) play(f, 'die', false, function(){ setTimeout(function(){ f.wrap.classList.add('gone'); }, 300); });
+    else {                      // 보스: 앞땅 뒤로 가라앉음
+      clearTimeout(f.timer);
+      f.wrap.style.transition = 'translate 1.8s ease-in, opacity 1.2s ease 1s';
+      f.wrap.style.translate = f.def.dx + 'px ' + (f.def.dy + 260) + 'px'; f.wrap.classList.add('gone');
+      shake(true); setTimeout(function(){ shake(true); }, 700);
+    }
+  }
+  function sonic(from){         // 박쥐 음파: 고리가 마법사 쪽으로 퍼져 나감
+    const a = center(from, .4, .45), b = center(wizImg, .5, .35);
+    for (let k = 0; k < 3; k++){
+      const r = document.createElement('div'); r.className = 'sonic'; fx.appendChild(r);
+      r.animate([{ left:a.x + 'px', top:a.y + 'px', opacity:0, transform:'scale(.4)' }, { opacity:1, offset:.2 },
+                 { left:b.x + 'px', top:b.y + 'px', opacity:0, transform:'scale(2.2)' }],
+                { duration:520, delay:k * 110, easing:'ease-out', fill:'forwards' });
+      setTimeout(function(){ r.remove(); }, 520 + k * 110 + 50);
+    }
+  }
 
   /* ---------- 화면 크기 맞추기 (800x600 을 통째로 확대/축소) ---------- */
   let fit = 1, rotateSkipped = false;
@@ -657,7 +784,11 @@
     setTimeout(function(){ d.remove(); }, 1000);
   }
   function flash(cls){ const f = document.createElement('div'); f.className = 'flash ' + (cls || ''); fx.appendChild(f); setTimeout(function(){ f.remove(); }, 220); }
-  function shake(){ battle.classList.remove('shake'); void battle.offsetWidth; battle.classList.add('shake'); }
+  function shake(big){        // 배경·몬스터·마법사만 흔들어요 (체력 칸·버튼은 그대로라 읽기 편해요)
+    [$('bg'), monEl, wizEl].concat([].slice.call(battle.querySelectorAll('.bossl'))).forEach(function(e){
+      e.classList.remove('shk', 'big'); void e.offsetWidth; e.classList.add('shk'); if (big) e.classList.add('big');
+    });
+  }
 
   /* ---------- 튜토리얼 안내 ---------- */
   let guideTimer = null;
@@ -1036,7 +1167,7 @@
     }, 380);
   }
   function shoot(sk, done){
-    const a = center(wizImg, .8, .15), b = center(monImg, .45, .55);
+    const a = center(wizImg, .8, .15), b = aimAt(targetImg());
     const p = document.createElement('img'); p.src = IMG.proj;
     p.className = 'proj ' + (sk.kind === 'fire' ? 'fire' : (sk.kind === 'slash' ? 'slash' : ''));
     fx.appendChild(p);
@@ -1054,28 +1185,54 @@
     })(t0);
   }
   function thunder(sk, done){
-    const b = center(monImg, .5, .5);
-    const s = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-    s.setAttribute('class', 'bolt'); s.setAttribute('viewBox', '0 0 120 600'); s.setAttribute('preserveAspectRatio', 'none');
-    s.style.left = (b.x - 60) + 'px'; s.style.height = b.y + 'px';
-    let d = 'M60 0';
-    for (let y = 60; y <= 600; y += 60){ d += ' L' + (30 + Math.random() * 60).toFixed(0) + ' ' + y; }
-    s.innerHTML = '<path d="' + d + '" stroke="#7fe8ff" stroke-width="18" fill="none" opacity=".6"/><path d="' + d + '" stroke="#fffbd0" stroke-width="7" fill="none"/>';
-    fx.appendChild(s); flash(); SFX.thunder();
-    setTimeout(function(){ s.remove(); }, 480);
-    setTimeout(function(){ impact(sk, b, done); }, 120);
+    // THUNDER 는 몬스터가 여러 마리면 모두에게 떨어져요
+    const tg = MON.mons ? aliveFoes().map(function(f){ return f.img; }) : [monImg];
+    tg.forEach(function(img){
+      const b = aimAt(img);
+      const s = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      s.setAttribute('class', 'bolt'); s.setAttribute('viewBox', '0 0 120 600'); s.setAttribute('preserveAspectRatio', 'none');
+      s.style.left = (b.x - 60) + 'px'; s.style.height = b.y + 'px';
+      let d = 'M60 0';
+      for (let y = 60; y <= 600; y += 60){ d += ' L' + (30 + Math.random() * 60).toFixed(0) + ' ' + y; }
+      s.innerHTML = '<path d="' + d + '" stroke="#7fe8ff" stroke-width="18" fill="none" opacity=".6"/><path d="' + d + '" stroke="#fffbd0" stroke-width="7" fill="none"/>';
+      fx.appendChild(s);
+      setTimeout(function(){ s.remove(); }, 480);
+    });
+    flash(); SFX.thunder();
+    setTimeout(function(){ impact(sk, aimAt(tg[0]), done); }, 120);
   }
   function impact(sk, at, done){
     if (sk.kind !== 'thunder') SFX.hit();
     flash(); shake();
-    const boom = document.createElement('img'); boom.src = IMG.boom; boom.className = 'boom';
-    boom.style.left = at.x + 'px'; boom.style.top = at.y + 'px'; fx.appendChild(boom);
-    setTimeout(function(){ boom.remove(); }, 600);
+    const dmg = Math.round(sk.power * powMul(save.lv));
+    function boomAt(p){
+      const boom = document.createElement('img'); boom.src = IMG.boom; boom.className = 'boom';
+      boom.style.left = p.x + 'px'; boom.style.top = p.y + 'px'; fx.appendChild(boom);
+      setTimeout(function(){ boom.remove(); }, 600);
+      popNumber(dmg, { x:p.x, y:p.y - (MON.room === 'boss' ? 10 : 60) }, dmg >= 40 ? 'crit' : '');   // 보스는 머리가 위쪽이라 숫자를 조금 아래에
+    }
+    if (MON.mons){
+      const tg = sk.kind === 'thunder' ? aliveFoes() : aliveFoes().slice(0, 1);
+      tg.forEach(function(f){
+        boomAt(tg.length > 1 ? aimAt(f.img) : at);
+        f.hp = Math.max(0, f.hp - dmg);
+        f.img.classList.remove('hurt'); void f.img.offsetWidth; f.img.classList.add('hurt');
+        if (f.hp <= 0) foeDie(f);
+        else if (f.def.seq.hurt) play(f, 'hurt', false, function(){ if (f.alive) play(f, 'idle', true); });
+      });
+      monHP = sumFoeHP(); setHP();
+      log('WIZARD의 ' + sk.name + '! ' + MON.name + '에게 ' + dmg + ' 데미지!' + (tg.length > 1 ? ' (' + tg.length + '마리 모두)' : ''), 'dmg');
+      if (monHP > 0 && tg.some(function(f){ return !f.alive; })) log('한 마리를 쓰러뜨렸다! 남은 ' + aliveFoes().length + '마리', 'ok');
+      setTimeout(function(){
+        setWiz(IMG.wizIdle); foes.forEach(function(f){ f.img.classList.remove('hurt'); });
+        done();
+      }, 1000);
+      return;
+    }
+    boomAt(at);
     setMon(IMG.monHurt);
     monImg.classList.remove('hurt'); void monImg.offsetWidth; monImg.classList.add('hurt');
-    const dmg = Math.round(sk.power * powMul(save.lv));
     monHP = Math.max(0, monHP - dmg); setHP();
-    popNumber(dmg, { x:at.x, y:at.y - 60 }, dmg >= 40 ? 'crit' : '');
     log('WIZARD의 ' + sk.name + '! ' + MON.name + '에게 ' + dmg + ' 데미지!', 'dmg');
     setTimeout(function(){
       setWiz(IMG.wizIdle); monImg.classList.remove('hurt');
@@ -1085,28 +1242,48 @@
   }
 
   /* ---------- 몬스터 차례 ---------- */
+  let lastMove = null;
+  function pickMove(){            // 보스는 공격을 섞어요 (포효는 두 번 연속 안 나오게)
+    const list = (MON.atk || ['공격']).map(function(m){ return typeof m === 'string' ? { name:m, anim:'attack' } : m; });
+    let m; do { m = pick(list); } while (list.length > 1 && m.noDmg && lastMove && lastMove.noDmg);
+    lastMove = m; return m;
+  }
   function monsterTurn(){
     if (state === 'end') return;
-    setMon(IMG.monAttack); SFX.roar();
-    log(MON.name + '의 불꽃 브레스!', 'sys');
+    const move = pickMove(), boss = MON.room === 'boss';
+    const act = MON.mons ? aliveFoes() : [];
+    let hitAt = 450, endAt = 1300;
+    if (MON.mons){
+      // 모두 동시에 공격 → 마법사는 한 번에 맞아요 (피해 합산)
+      act.forEach(function(f){ play(f, move.anim, false, function(){ if (f.alive) play(f, 'idle', true); }); });
+      const t = Math.max.apply(null, act.map(function(f){ return seqTime(f, move.anim); }));
+      hitAt = Math.round(t * (boss ? .5 : .55)); endAt = Math.max(1300, t + 350);
+      if (MON.mons[0].indexOf('bat') === 0) setTimeout(function(){ act.forEach(function(f){ sonic(f.img); }); }, hitAt - 320);
+    } else setMon(IMG.monAttack);
+    SFX.roar();
+    if (boss) shake(true);     // 보스는 공격할 때마다 동굴이 흔들려요
+    log(MON.name + '의 ' + move.name + '!' + (act.length > 1 ? ' (' + act.length + '마리 동시에)' : ''), 'sys');
     setTimeout(function(){
-      const raw = MON.atkMin + Math.floor(Math.random() * (MON.atkMax - MON.atkMin + 1));
+      if (move.noDmg){ shake(true); SFX.roar(); log('동굴이 흔들린다...!', 'sys'); return; }
+      let raw = 0;
+      for (let k = 0; k < Math.max(1, act.length); k++) raw += MON.atkMin + Math.floor(Math.random() * (MON.atkMax - MON.atkMin + 1));
       const dmg = Math.max(1, Math.round(raw * diff().atk));
       wizHP = Math.max(0, wizHP - dmg); setHP();
-      flash('red'); shake(); SFX.hit();
+      flash('red'); shake(boss); SFX.hit();
       wizEl.classList.remove('hit'); void wizEl.offsetWidth; wizEl.classList.add('hit');
       popNumber(dmg, center(wizImg, .5, .2), 'to-wiz');
       log('WIZARD는 ' + dmg + ' 데미지를 입었다!', 'fail');
-    }, 450);
+    }, hitAt);
     setTimeout(function(){
-      setMon(IMG.monIdle); wizEl.classList.remove('hit');
+      if (!MON.mons) setMon(IMG.monIdle);
+      wizEl.classList.remove('hit');
       if (wizHP <= 0){ lose(); return; }
       const before = wizMP; wizMP = Math.min(maxMP(save.lv), wizMP + MP_REGEN); setHP();
       if (!anyUsable()){ cool = {}; updateMenu(); log('쓸 수 있는 기술이 없어서 모든 기술이 다시 열렸다!', 'ok'); }
       state = 'player';
       log('무엇을 할까? 기술을 골라 주문을 외쳐라!' + (wizMP > before ? ' (MP +' + (wizMP - before) + ')' : ''), 'sys');
       if (MON.tutorial){ guide('드레이크의 차례가 끝났어요.<br>어두운 기술은 쿨타임! 밝은 기술을 골라요'); pulse(null); }
-    }, 1300);
+    }, endAt);
   }
 
   /* ---------- 끝 (보상 · 레벨업) ---------- */
@@ -1126,12 +1303,18 @@
     $('result-reward').innerHTML = rewardHTML || '';
     $('result-stats').innerHTML = statsHTML();
     $('again-btn').textContent = '다시 하기';
+    // 이기면: 다음 스테이지로 갈지 물어봐요 (마지막 보스면 다시 하기 · 지도로)
+    const nx = isWin && STAGES[stageIdx + 1] ? STAGES[stageIdx + 1] : null;
+    $('next-btn').style.display = nx ? '' : 'none';
+    if (nx) $('next-btn').textContent = '다음: ' + nx.title + ' ▶';
+    $('again-btn').style.display = nx ? 'none' : '';
+    $('tomap-btn').className = 'btn' + (nx ? ' gray' : '');
     $('result').className = 'show ' + (isWin ? 'win' : 'lose');
     const eb = $('result-reward').querySelector('.expbar i');
     if (eb){ const to = eb.dataset.to; setTimeout(function(){ eb.style.width = to; }, 80); }
   }
   function win(){
-    state = 'end'; monEl.classList.add('dead'); SFX.win();
+    state = 'end'; if (!MON.mons) monEl.classList.add('dead'); SFX.win();
     log(MON.name + '를 쓰러뜨렸다!', 'ok');
     const first = save.cleared.indexOf(stageIdx) === -1;
     const gain = Math.round(MON.exp * (first ? 1 : REPLAY_EXP));
@@ -1151,9 +1334,17 @@
       html += '<div class="unlock">HP ' + maxHP(save.lv) + ' · MP ' + maxMP(save.lv) +
         '</div>';
     }
-    if (MON.tutorial) html += '<div class="unlock">튜토리얼 완료! 이제 지도에서 스테이지를 골라요</div>';
+    if (MON.tutorial) html += '<div class="unlock">튜토리얼 완료!</div>';
     if (MON.boss && first) html += '<div class="lvup px">ALL CLEAR!</div>';
-    setTimeout(function(){ showResult(MON.boss ? 'BOSS CLEAR!' : 'VICTORY!', true, html); }, 1400);
+    const nx = STAGES[stageIdx + 1];
+    if (nx) html += '<div class="unlock" style="color:#fff">다음 스테이지 <b style="color:var(--gold)">' + nx.title + ' · ' + nx.name + '</b> 로 갈까요?</div>';
+    // VICTORY 글자 → 화면이 어두워지고(페이드아웃) → 다음 스테이지로 갈지 묻는 창
+    setTimeout(function(){
+      const v = $('victory'); v.textContent = MON.boss ? 'BOSS CLEAR!' : 'VICTORY!';
+      v.classList.remove('show'); void v.offsetWidth; v.classList.add('show');
+      setTimeout(function(){ battle.classList.add('fadeout'); }, 1500);
+      setTimeout(function(){ v.classList.remove('show'); showResult(MON.boss ? 'ALL CLEAR!' : 'STAGE CLEAR', true, html); }, 2500);
+    }, MON.room === 'boss' ? 2200 : 1300);
   }
   function lose(){
     state = 'end'; SFX.lose();
@@ -1170,7 +1361,17 @@
     $('mon-name').textContent = MON.name;
     $('wiz-name').textContent = 'WIZARD LV.' + save.lv;
     monEl.style.filter = MON.tint || '';
+    // 배경: 보스방은 층 나눈 수정 동굴, 나머지는 스테이지마다 던전 방
+    const boss = MON.room === 'boss';
+    battle.classList.toggle('boss', boss);
+    $('bg').src = boss ? 'images/m/boss/cave.jpg' : (MON.bg || 'images/dungeon.jpg');
+    if (boss){ $('boss-floor').src = 'images/m/boss/cave.jpg'; $('boss-front').src = 'images/m/boss/front.webp'; $('boss-ceil').src = 'images/m/boss/ceil.webp'; }
+    battle.classList.remove('fadeout');
+    lastMove = null;
+    monImg.style.translate = MON.mons ? '' : (MON.tutorial ? '-10px -78px' : '-10px -102px');   // 드레이크: 마법사와 사선이 되게 위로
     monEl.classList.remove('dead'); setMon(IMG.monIdle); setWiz(IMG.wizIdle);
+    makeFoes();
+    if (boss && foes[0]) bossRise(foes[0]);
     logEl.innerHTML = ''; selectBtn(null); card.className = '';
     hideBubble(bubWiz); hideBubble(bubMon); guide(null); pulse(null);
     $('result').className = '';
@@ -1181,15 +1382,17 @@
     const nw = newWords(i);
     if (nw.length) log('새 용어 ' + nw.length + '개 등장! ' + nw.join(', '), 'ok');
     state = 'player';
-    if (MON.tutorial){ guide('<b>튜토리얼</b><br>아래의 <u>ATTACK</u> 을 눌러 보세요!'); pulse('attack'); }
+    if (MON.tutorial){ guide('<b>튜토리얼</b><br>아래의 <u>FIRE BALL</u> 을 눌러 보세요!'); pulse('fire'); }   // 안내 문구 개편은 나중에 속성 넣을 때
   }
 
   /* ---------- 스테이지 지도 ---------- */
-  const NODE_POS = [[100, 300], [225, 215], [345, 315], [465, 215], [585, 315], [705, 205]];
+  const NODE_POS = [[78, 300], [185, 215], [292, 315], [399, 215], [506, 315], [613, 215], [722, 300]];
+  function nodeIcon(s){ return s.mons && MONS[s.mons[0]] ? framePath(s.mons[0], MONS[s.mons[0]].seq.idle[0][0]) : IMG.monIdle; }
   let mapSel = 0;
   function unlocked(i){ return i === 0 || save.cleared.indexOf(i - 1) !== -1; }
   function showMap(keepSel){
     state = 'map';
+    battle.classList.remove('fadeout');
     $('result').className = ''; guide(null);
     $('map-lv').textContent = 'WIZARD LV.' + save.lv;
     $('map-exp').textContent = 'EXP ' + save.exp + '/' + expNeed(save.lv);
@@ -1208,7 +1411,7 @@
       const lock = !unlocked(i);
       b.className = 'node' + (s.boss ? ' boss' : '') + (lock ? ' lock' : '') + (save.cleared.indexOf(i) !== -1 ? ' clear' : '') + (i === next ? ' next' : '') + (i === mapSel ? ' sel' : '');
       b.style.left = NODE_POS[i][0] + 'px'; b.style.top = (NODE_POS[i][1] - (s.boss ? 14 : 0)) + 'px';
-      b.innerHTML = '<div class="nt"><img src="' + IMG.monIdle + '" style="filter:' + (s.tint || 'none') + '" alt=""></div>' +
+      b.innerHTML = '<div class="nt"><img src="' + nodeIcon(s) + '" style="filter:' + (s.tint || 'none') + (s.mons ? ';width:auto;height:84px;max-width:none' : '') + '" alt=""></div>' +
         '<div class="nl px">' + s.title + '</div><div class="nn px">' + (lock ? '???' : s.name) + '</div>';
       bindTap(b, function(){
         if (lock){ SFX.miss(); return; }
@@ -1227,6 +1430,7 @@
   }
   bindTap($('go-btn'), function(){ if (state === 'map' && !optEl.classList.contains('show')){ SFX.select(); startStage(mapSel); } });
   bindTap($('again-btn'), function(){ startStage(stageIdx); });
+  bindTap($('next-btn'), function(){ if (STAGES[stageIdx + 1]){ SFX.select(); startStage(stageIdx + 1); } });
   bindTap($('tomap-btn'), function(){ showMap(); });
 
   /* ---------- 시작 (NEW GAME / LOAD GAME) ---------- */
@@ -1346,6 +1550,7 @@
     if (d.save && d.save.lv){ save = d.save; writeSave(); }
     startStage(d.stage);
     wizHP = d.wizHP; wizMP = d.wizMP; monHP = d.monHP;
+    if (MON.mons){ makeFoes(d.foes || null); if (!d.foes) foes.forEach(function(f){ f.hp = Math.round(d.monHP / foes.length); }); monHP = sumFoeHP(); }
     cool = d.cool || {}; stats = d.stats || stats;
     setHP(); updateMenu();
     log('저장한 곳부터 이어서 싸운다!', 'ok');
@@ -1368,6 +1573,7 @@
     quit: function(){ showMap(); },
     snapshot: function(){
       return { stage: stageIdx, wizHP: wizHP, wizMP: wizMP, monHP: monHP, cool: cool, stats: stats,
+               foes: foes.length ? foes.map(function(f){ return f.hp; }) : null,
                save: JSON.parse(JSON.stringify(save)) };
     },
     label: function(d){
@@ -1391,7 +1597,9 @@
       skill: function(key){ return onSkill(SKILLS.filter(function(s){ return s.key === key; })[0]); },
       feed: function(samples){ if (rec) rec.acceptWaveformFloat(samples, 16000); },
       stop: stopListening,
-      killMon: function(){ monHP = 1; },
+      killMon: function(){ foes.forEach(function(f){ if (f.alive) f.hp = 1; }); monHP = MON.mons ? sumFoeHP() : 1; },
+      foes: function(){ return foes.map(function(f){ return { key:f.key, hp:f.hp, alive:f.alive }; }); },
+      monsterTurn: function(){ state = 'busy'; monsterTurn(); },
       terms: function(){ return { all:ALL_WORDS, say:NAME2SAY }; },
       modelReady: function(){ return !!model; }
     };
