@@ -98,7 +98,7 @@
   root.innerHTML = `
     <div class="acc-shade" id="accShade"></div>
     <aside class="acc-side" id="accSide" aria-label="계정 메뉴" aria-hidden="true">
-      <div class="acc-head"><img src="thumbs/logo.jpg" alt=""><b>삼공육</b>
+      <div class="acc-head"><img src="thumbs/logo.jpg" alt=""><b title="우리 교실 306호">306</b>
         <button class="acc-x" id="accX" type="button" aria-label="닫기">✕</button></div>
       <div id="accBody"></div>
     </aside>
