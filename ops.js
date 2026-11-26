@@ -135,6 +135,84 @@
     },
   });
 
+  /* 날짜별 게임 실행 그래프 — 쌓은 막대 (게임마다 고정 색) + 허브 방문 선. dataviz 규칙:
+   * 색은 게임에 고정(순위 X), 8색 안에서만, 나머지는 기타(회색). 축 하나. 범례 + 마우스 올리면 툴팁. 90일 넘으면 주 단위로 묶어요. */
+  const SERIES = [   // 다크 배경용 범주 색 (validate_palette.js 통과: 이 화면 배경 #160632 기준)
+    ['딴딴/딴', '#338ced'], ['너에게 닿기를', '#e76624'], ['LandMark', '#00a888'], ['뭐라구요!? 안들려요', '#d28e05'],
+    ['사랑하는 그대에게 기대세요', '#e24d8b'], ['말해 YES OR NO', '#0aac23'], ['시그널 슬래시', '#9887ef'],
+  ];
+  const ALIAS = { '롱드라이브': '사랑하는 그대에게 기대세요', '뭐라구요!?': '뭐라구요!? 안들려요' };   // 이름이 바뀐 게임은 하나로
+  const OTHER = ['기타', '#8a86a3'];
+  function usageChart(s, games, cell) {
+    let days = s.daily.map(d => d.day);
+    if (!days.length) return '<p class="empty2">아직 기록이 없어요.</p>';
+    const keyOf = (g) => { const t = ALIAS[g] || g; return SERIES.some(x => x[0] === t) ? t : '기타'; };
+    const keys = [...SERIES.map(x => x[0]).filter(k => games.some(g => keyOf(g) === k)), ...(games.some(g => keyOf(g) === '기타') ? ['기타'] : [])];
+    const color = (k) => (SERIES.find(x => x[0] === k) || OTHER)[1];
+    // 90일 넘으면 주 단위로
+    const weekly = days.length > 90;
+    const buckets = [];
+    days.forEach((day, i) => {
+      const b = weekly ? Math.floor(i / 7) : i;
+      if (!buckets[b]) buckets[b] = { from: day, to: day, v: {}, hub: 0 };
+      const B = buckets[b]; B.to = day;
+      games.forEach(g => { const k = keyOf(g); B.v[k] = (B.v[k] || 0) + (cell[day + '|' + g] || 0); });
+      B.hub += cell[day + '|hub'] || 0;
+    });
+    buckets.forEach(B => { B.total = keys.reduce((a, k) => a + (B.v[k] || 0), 0); });
+    const maxV = Math.max(1, ...buckets.map(B => Math.max(B.total, B.hub)));
+    const step = [1, 2, 5, 10, 20, 25, 50, 100, 200, 250, 500, 1000].find(x => maxV / x <= 5) || 2000;
+    const top = Math.ceil(maxV / step) * step;
+    const W = 1000, H = 260, L = 34, R = 8, T = 10, B = 26, iw = W - L - R, ih = H - T - B;
+    const band = iw / buckets.length, bw = Math.max(2, Math.min(30, band * 0.68));
+    const y = (v) => T + ih - (v / top) * ih;
+    let svg = '';
+    for (let v = 0; v <= top; v += step) svg += `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" class="g${v ? '' : ' base'}"/><text x="${L - 6}" y="${y(v) + 4}" class="yt">${v}</text>`;
+    const lab = (B) => { const d = B.from.slice(5).replace('-', '/'); return weekly ? `${d}~` : d; };
+    const every = Math.ceil(buckets.length / 12);
+    buckets.forEach((Bk, i) => {
+      const cx = L + band * i + band / 2, x = cx - bw / 2;
+      let acc = 0; const segs = keys.filter(k => Bk.v[k]);
+      segs.forEach((k, j) => {
+        const v = Bk.v[k], y0 = y(acc), y1 = y(acc + v), h = Math.max(0, y0 - y1);
+        if (j === segs.length - 1 && h > 4) {   // 맨 위 칸만 위쪽 모서리 둥글게
+          svg += `<path d="M${x},${y0} V${y1 + 4} Q${x},${y1} ${x + 4},${y1} H${x + bw - 4} Q${x + bw},${y1} ${x + bw},${y1 + 4} V${y0} Z" fill="${color(k)}" class="seg"/>`;
+        } else svg += `<rect x="${x}" y="${y1}" width="${bw}" height="${h}" fill="${color(k)}" class="seg"/>`;
+        acc += v;
+      });
+      if (i % every === 0 || i === buckets.length - 1) svg += `<text x="${cx}" y="${H - 8}" class="xt">${esc(lab(Bk))}</text>`;
+      svg += `<rect x="${L + band * i}" y="${T}" width="${band}" height="${ih}" class="hit" data-i="${i}"/>`;
+    });
+    const pts = buckets.map((Bk, i) => `${(L + band * i + band / 2).toFixed(1)},${y(Bk.hub).toFixed(1)}`).join(' ');
+    svg += `<polyline points="${pts}" class="hub"/>`;
+    D.chart = { buckets, keys, color, weekly };
+    return `<div class="ops-chart" id="opsChart">
+      <div class="lg">${keys.map(k => `<span><i style="background:${color(k)}"></i>${esc(k)}</span>`).join('')}<span><i class="hubk"></i>허브 방문 (선)</span></div>
+      <div class="plot"><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="날짜별 게임 실행 쌓은 막대 그래프">${svg}</svg><div class="tip" hidden></div></div>
+      ${weekly ? '<p class="note">기간이 길어서 7일씩 묶어 보여 줘요.</p>' : ''}</div>`;
+  }
+  function bindUsageChart() {
+    const box = K.pg.querySelector('#opsChart'); if (!box || !D.chart) return;
+    const tip = box.querySelector('.tip'), plot = box.querySelector('.plot'), { buckets, keys, color, weekly } = D.chart;
+    const hide = () => { tip.hidden = true; box.querySelectorAll('.hit.on').forEach(h => h.classList.remove('on')); };
+    box.querySelectorAll('.hit').forEach(h => {
+      const show = () => {
+        const Bk = buckets[+h.dataset.i]; box.querySelectorAll('.hit.on').forEach(x => x.classList.remove('on')); h.classList.add('on');
+        const rows = keys.filter(k => Bk.v[k]).sort((a, b) => Bk.v[b] - Bk.v[a]);
+        tip.innerHTML = `<b>${weekly ? `${esc(Bk.from)} ~ ${esc(Bk.to)}` : `${esc(dayLab(Bk.from))}`}</b>
+          <div class="r tot"><span>게임 실행 합계</span><b>${n(Bk.total)}회</b></div>
+          ${rows.map(k => `<div class="r"><span><i style="background:${color(k)}"></i>${esc(k)}</span><b>${n(Bk.v[k])}</b></div>`).join('') || '<div class="r"><span>게임 실행 없음</span></div>'}
+          <div class="r hubr"><span><i class="hubk"></i>허브 방문</span><b>${n(Bk.hub)}</b></div>`;
+        tip.hidden = false;
+        const pr = plot.getBoundingClientRect(), hr = h.getBoundingClientRect();
+        const left = hr.left - pr.left + hr.width / 2;
+        tip.style.left = Math.min(Math.max(0, left - tip.offsetWidth / 2), pr.width - tip.offsetWidth) + 'px';
+      };
+      h.addEventListener('mouseenter', show); h.addEventListener('click', show);
+    });
+    plot.addEventListener('mouseleave', hide);
+  }
+
   /* ═════════ 🗂 관리자 전력 분석 자료 (관리자, 예전 이름: 데이터 관리) ═════════ */
   const D = { days: 30, csv: null };
 
@@ -159,7 +237,7 @@
       D.csv = { name: `samgongyuk_usage_${s.from}_${s.to}.csv`, rows: [head, ...daily.map(rowOf), sumRow] };
 
       const tr = (d) => `<tr><td class="${dow(d.day) % 6 === 0 ? 'we' : ''}">${dayLab(d.day)}</td>${rowOf(d).slice(1).map((v, i) =>
-        `<td class="num">${i === games.length + 1 ? `<b>${n(v)}</b>` : n(v)}</td>`).join('')}</tr>`;
+        `<td class="num">${!v ? '<span class="z">·</span>' : i === games.length + 1 ? `<b>${n(v)}</b>` : n(v)}</td>`).join('')}</tr>`;
       const per = [7, 14, 30, 90, 365].map(d => `<button type="button" data-dd="${d}" class="${D.days === d ? 'on' : ''}">${d === 365 ? '1년' : `${d}일`}</button>`).join('');
       const maxC = Math.max(1, ...games.map(g => tot[g].plays));
       const maxG = Math.max(1, ...s.grades.map(g => g.users));
@@ -177,6 +255,9 @@
           <div class="kpi c4"><small>기간 새 회원 · 게임 기록</small><b>${n(sum('joins'))}</b><span>끝까지 한 판 ${n(sum('runs'))}개</span></div>
         </div>
         ${L.pages.length ? `<p class="note">지금 보고 있는 화면: ${L.pages.map(p => `<span class="chip">${esc(p.page || '?')} ${n(p.n)}</span>`).join(' ')}</p>` : ''}
+
+        <h3>📊 날짜별 게임 실행 <small class="st-hint">게임마다 색이 달라요 · 막대에 마우스를 올리면 자세히</small></h3>
+        ${usageChart(s, games, cell)}
 
         <h3>📅 날짜 × 콘텐츠 (게임을 연 횟수)</h3>
         <div class="tbl-wrap ops-tall"><table class="tbl"><thead><tr>${head.map((h, i) => `<th${i ? ' class="num"' : ''}>${esc(h)}</th>`).join('')}</tr></thead>
@@ -213,6 +294,7 @@
       if (window.StudyAdmin) window.StudyAdmin.bind();   // 회원 활동 · 문항 분석 부분 (study.js)
       pg.querySelectorAll('[data-dd]').forEach(b => b.addEventListener('click', () => { D.days = +b.dataset.dd; Account.page('data'); }));
       pg.querySelector('#opsReload').addEventListener('click', () => Account.page('data'));
+      bindUsageChart();
       pg.querySelector('#opsCsv').addEventListener('click', () => { if (D.csv) download(D.csv.name, toCSV(D.csv.rows), 'text/csv;charset=utf-8'); });
     },
   });

@@ -203,3 +203,32 @@
 .chart .bar2 .fill { background: #b9c6ea; box-shadow: none; }
 .chart .st-pill { white-space: nowrap; }
 .dx .t b { min-width: 0; }
+
+/* ── 관리자 전력 분석 자료: 날짜별 게임 실행 그래프 (ops.js usageChart) ── */
+.ops-chart { padding: 12px 14px 8px; border: 1px solid var(--line); border-radius: 14px; background: rgba(255,255,255,.03); }
+.ops-chart .lg { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-bottom: 8px; font-size: 13px; color: var(--ink); }
+.ops-chart .lg span { display: inline-flex; align-items: center; gap: 6px; }
+.ops-chart i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0; }
+.ops-chart i.hubk { height: 2px; border-radius: 1px; background: #d9d3ec; }
+.ops-chart .plot { position: relative; }
+.ops-chart svg { display: block; width: 100%; height: 260px; overflow: visible; }
+.ops-chart .g { stroke: rgba(255,255,255,.08); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.ops-chart .g.base { stroke: rgba(255,255,255,.28); }
+.ops-chart .yt { fill: var(--ink-dim); font-size: 12px; text-anchor: end; }
+.ops-chart .xt { fill: var(--ink-dim); font-size: 12px; text-anchor: middle; }
+.ops-chart .seg { stroke: #160632; stroke-width: 2px; vector-effect: non-scaling-stroke; }   /* 칸 사이 2px 틈 */
+.ops-chart .hub { fill: none; stroke: #d9d3ec; stroke-width: 2px; stroke-linejoin: round; vector-effect: non-scaling-stroke; opacity: .85; }
+.ops-chart .hit { fill: transparent; cursor: pointer; }
+.ops-chart .hit.on { fill: rgba(255,255,255,.06); }
+.ops-chart .tip { position: absolute; top: 6px; z-index: 2; min-width: 190px; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line);
+  background: rgba(12,4,32,.96); box-shadow: 0 10px 30px rgba(0,0,0,.5); font-size: 13px; color: var(--ink); pointer-events: none; }
+.ops-chart .tip .r { display: flex; justify-content: space-between; gap: 14px; margin-top: 3px; }
+.ops-chart .tip .r span { display: inline-flex; align-items: center; gap: 6px; color: var(--ink-dim); }
+.ops-chart .tip .tot { padding-bottom: 4px; border-bottom: 1px solid var(--line); }
+.ops-chart .tip .tot span { color: var(--ink); }
+.ops-chart .tip .hubr { padding-top: 4px; border-top: 1px solid var(--line); }
+@media (max-width: 600px) { .ops-chart svg { height: 200px; } }
+
+/* 표 숫자 읽기 쉽게: 0 에 빗금이 있는 Orbitron 대신 보통 글꼴 · 자리 맞춤, 0 은 흐린 점 */
+.tbl td.num { font-family: inherit; font-variant-numeric: tabular-nums; font-weight: 600; }
+.tbl td .z { color: rgba(185,167,216,.35); }
