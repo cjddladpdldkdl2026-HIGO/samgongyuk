@@ -363,6 +363,22 @@ function fromKey(key) {
   } catch (e) { console.warn(e); }
   return null;
 }
+/* 문항 기록용 이름 (📚 내 약점 분석 · 관리자 문항 분석, supabase/answers.sql)
+ * 한글/영어 보기 언어와 상관없이 같은 문제는 같은 이름으로 모여야 해서 key 에서 만들어요. */
+const KIND_KO = { ko2en: "영어 이름", en2ko: "한글 이름", img: "그림", origin: "이는곳", insert: "닿는곳", nerve: "신경지배", action: "작용", r_origin: "이는곳 → 근육", r_insert: "닿는곳 → 근육" };
+function meta(key) {
+  const p = key.split(":");
+  if (p[0] === "m") { const m = M[+p[1]]; return { item: `${m.ko} (${m.en}) · ${KIND_KO[p[2]] || p[2]}`, cat: m.part, mode: "근육" }; }
+  const ch = B[+p[1]], it = ch.items[+p[2]];
+  return { item: `${ch.ch} ${it.n}번 ${it.ko} (${it.en})${p[3] === "num" ? " · 번호 찾기" : ""}`, cat: ch.ch, mode: "뼈대계" };
+}
+function logAnswer(q, ok, pickedText) {
+  try {
+    const a = window.SamAuth; if (!a || !a.answer) return;
+    const m = meta(q.key);
+    a.answer({ game: "yesno", item: m.item, cat: m.cat, mode: m.mode, ok, picked: ok ? "" : pickedText, ms: performance.now() - (L.qt0 || performance.now()) });
+  } catch (e) { console.warn(e); }
+}
 function makeOne(mode) {
   if (mode === "mix") mode = Math.random() < .5 ? "bone" : "muscle";
   if (mode === "muscle") { const i = Math.random() * M.length | 0; return muscleQ(i, pick(muscleTypes(i))); }
@@ -450,7 +466,7 @@ async function start(fromWrong) {
 }
 function next() {
   if (!L.queue.length) return finish(true);
-  L.cur = L.queue.shift(); L.sel = -1; L.checked = false;
+  L.cur = L.queue.shift(); L.sel = -1; L.checked = false; L.qt0 = performance.now();
   const q = L.cur.q;
   L.opts = q.opts;
   $("labelText").textContent = L.cur.retry ? "다시 한번 맞혀 보게" : "알맞은 답을 고르게";
@@ -495,6 +511,7 @@ function check() {
   [...box.children].forEach((b, k) => { b.classList.remove("sel"); if (L.opts[k].ok) b.classList.add("right"); });
   if (!ok) box.children[L.sel].classList.add("wrong");
   S.solved++;
+  if (!L.cur.retry) logAnswer(q, ok, L.opts[L.sel].t);   // 첫 시도만 기록 (다시 풀기는 정답률에 안 넣어요)
   if (ok) {
     L.done++; L.combo++; S.correct++;
     let gain = 0;

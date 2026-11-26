@@ -22,7 +22,7 @@
 (function () {
   const URL_ = 'https://ptlhjxtvwcoyrhemimjw.supabase.co';
   const KEY_ = 'sb_publishable_cuv4DoFYqHSJFiL2FF28aQ_B03qGNkl';
-  const GAMES = ['landmark', 'ddan', 'wizard', 'neoege', 'golf'];
+  const GAMES = ['landmark', 'ddan', 'wizard', 'neoege', 'golf', 'yesno'];   // yesno = 문제풀기 (문항 기록만, 랭킹 없음)
 
   const listeners = [];
   const mask = (p) => p.length <= 1 ? p : p.length === 2 ? p[0] + '*' : p[0] + '*'.repeat(p.length - 2) + p[p.length - 1];
