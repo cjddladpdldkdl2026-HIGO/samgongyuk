@@ -62,8 +62,8 @@
     return DIFF[m] || m;
   };
   const verdict = (acc, rank, total) => {
-    if (acc != null) return acc >= 80 ? '<span class="st-pill good">💪 강점</span>' : acc < 60 ? '<span class="st-pill low">⚠ 치료 필요</span>' : '<span class="st-pill mid">보통</span>';
-    if (rank && total >= 3) return rank <= Math.ceil(total / 3) ? '<span class="st-pill good">💪 강점</span>' : rank > total - Math.ceil(total / 3) ? '<span class="st-pill low">⚠ 치료 필요</span>' : '<span class="st-pill mid">보통</span>';
+    if (acc != null) return acc >= 80 ? '<span class="st-pill good">💪 건강</span>' : acc < 60 ? '<span class="st-pill low">⚠ 치료 필요</span>' : '<span class="st-pill mid">👀 관찰</span>';
+    if (rank && total >= 3) return rank <= Math.ceil(total / 3) ? '<span class="st-pill good">💪 건강</span>' : rank > total - Math.ceil(total / 3) ? '<span class="st-pill low">⚠ 치료 필요</span>' : '<span class="st-pill mid">👀 관찰</span>';
     return '-';
   };
   const avg = (xs) => (xs.length ? Math.round(xs.reduce((a, b) => a + b, 0) / xs.length) : null);
@@ -130,7 +130,7 @@
       <div class="kpis">
         <div class="kpi c1"><small>끝까지 한 판</small><b>${n(runs.length)}</b><span>${gamesIn.length}개 게임 · 마지막 ${K.fmtDate(runs[runs.length - 1].created_at)}</span></div>
         <div class="kpi c3"><small>평균 정확도</small><b>${allAcc == null ? '-' : `${allAcc}%`}</b><span>정확도를 남기는 게임만</span></div>
-        <div class="kpi c4"><small>💪 가장 잘하는 것</small><b style="font-size:18px">${strong ? label(strong) : '-'}</b><span>${strong ? `정확도 ${strong.acc}%` : ''}</span></div>
+        <div class="kpi c4"><small>💪 가장 건강한 부위 <i class="st-orig">잘하는 것</i></small><b style="font-size:18px">${strong ? label(strong) : '-'}</b><span>${strong ? `정확도 ${strong.acc}%` : ''}</span></div>
         <div class="kpi c2"><small>⚠ 치료가 가장 필요한 부위 <i class="st-orig">약한 것</i></small><b style="font-size:18px">${weakest && weakest !== strong ? label(weakest) : '-'}</b><span>${weakest && weakest !== strong ? `정확도 ${weakest.acc}%` : ''}</span></div>
       </div>
 
@@ -142,7 +142,7 @@
           <td class="num">${r.acc == null ? '-' : `<span class="st-pill ${tone(r.acc)}">${r.acc}%</span>`}</td><td class="num">${r.recent == null ? '-' : `${r.recent}%`}</td>
           <td class="num">${r.diff == null ? '-' : r.diff > 0 ? `<b style="color:#6ff0a8">▲ ${r.diff}</b>` : r.diff < 0 ? `<b style="color:#ff8ab8">▼ ${-r.diff}</b>` : '='}</td>
           <td class="num">${r.rank ? `${r.rank}위 / ${r.total}명` : '-'}</td><td>${verdict(r.acc, r.rank, r.total)}</td><td>${K.fmtDate(r.last)}</td></tr>`).join('')}</tbody></table></div>
-      <p class="note">판정: 정확도 80% 이상 💪 강점 · 60~79% 보통 · 60% 미만 ⚠ 치료 필요. 정확도가 없는 게임(롱드라이브 등)은 회원 중 내 순위로 정해요. 처음→최근 = 첫 판과 마지막 판 정확도 차이.</p>
+      <p class="note">판정: 정확도 80% 이상 💪 건강(강점) · 60~79% 👀 관찰 · 60% 미만 ⚠ 치료 필요(약점). 정확도가 없는 게임(롱드라이브 등)은 회원 중 내 순위로 정해요. 처음→최근 = 첫 판과 마지막 판 정확도 차이.</p>
 
       <h3>📅 날짜별 기록 <button class="abtn sm pri" type="button" id="stMyCsv" style="margin-left:8px">⬇ 엑셀(CSV)</button></h3>
       <div class="tbl-wrap ops-tall"><table class="tbl"><thead><tr><th>날짜</th>${gamesIn.map(g => `<th class="num">${g.ic} ${esc(g.ko)}</th>`).join('')}<th class="num">합계</th><th class="num">평균 정확도</th></tr></thead>
