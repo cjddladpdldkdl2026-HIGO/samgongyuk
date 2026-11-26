@@ -1,5 +1,5 @@
 /* 삼공육 — 문항 분석 (2026-11-24)
- *   📚 my 전력분석 노트        로그인한 회원   게임 · 묶음별 정답률, 자주 틀리는 문제, 최근 14일 정답률
+ *   📋 진료 차트        로그인한 회원   게임 · 묶음별 정답률, 자주 틀리는 문제, 최근 14일 정답률
  *   (관리자) 회원 활동 · 문항 분석 — 메뉴는 없고 🗂 관리자 전력 분석 자료(ops.js) 아래쪽에 붙어요          요일×시간 표, 회원별 활동(게임별 · 주 시간대 · 정답률), 모두가 자주 틀리는 문제
  *
  *  게임이 문제를 판정할 때마다 SamAuth.answer(...) 로 남긴 기록(answers 표)을 읽어요.
@@ -43,7 +43,7 @@
   }
   const csvCell = (v) => { const s = String(v ?? ''); return /[",\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
 
-  /* ═════════ 📚 my 전력분석 노트 (로그인한 회원) — 예전 이름: 내 약점 분석 ═════════ */
+  /* ═════════ 📋 진료 차트 (로그인한 회원) — 예전 이름: 내 약점 분석 ═════════ */
   const M = { game: null, days: null };
   const dataNote = `<details class="st-data"><summary>ℹ️ 어떤 기록을 모으나요?</summary>
     <p>로그인한 채로 게임을 하면 문제마다 <b>문제 이름 · 맞았는지 · 대신 고른 것 · 걸린 시간</b>을 남겨요. 목소리 녹음은 남기지 않고, 마이크가 알아들은 글자만 남겨요.</p>
@@ -158,12 +158,12 @@
   }
 
   Account.addPage({
-    id: 'weak', ic: '📚', label: 'my 전력분석 노트', login: true,
+    id: 'weak', ic: '📋', label: '진료 차트', login: true,
     async render() {
       const [recHtml, d] = await Promise.all([gameRecordsHtml(), rpc('my_weak', { p_game: M.game, p_days: M.days }).catch(e => ({ _err: e }))]);
       const tabs = filt('wg', M.game, [[null, '전체'], ...GAMES.map(g => [g.id, `${g.ic} ${g.ko}`])]);
       const per = filt('wd', M.days, [[null, '전체 기간'], [30, '최근 30일'], [7, '최근 7일']]).replace('class="filt"', 'class="filt sm"');
-      const head = `<h2>📚 my 전력분석 노트</h2>
+      const head = `<h2>📋 진료 차트</h2>
         <p class="sub">내가 한 게임 기록으로 잘하는 것 · 약한 것을 표로 보여 줘요. 로그인한 채로 게임을 끝까지 하면 쌓여요.</p>${tabs}${per}`;
       const qHead = `<h2 class="st-h2">📝 문제별 분석 <small class="st-hint">문제 하나하나 맞았는지 · 헷갈린 것 · 걸린 시간</small></h2>`;
       if (d._err) {
