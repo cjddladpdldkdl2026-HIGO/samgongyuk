@@ -103,3 +103,4 @@
 .ops-period small { color: var(--ink-faint); }
 /* ☰ 순위 페이지의 시상대 (모양은 highgo.html .podium) — 넓은 창이라 가운데에 알맞은 폭으로 */
 .ops-podium { max-width: 360px; margin: 10px auto 12px; }
+.kpi small i.st-orig { font-style: normal; font-size: 11px; color: var(--ink-faint); margin-left: 4px; }

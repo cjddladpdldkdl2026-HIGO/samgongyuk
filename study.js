@@ -62,8 +62,8 @@
     return DIFF[m] || m;
   };
   const verdict = (acc, rank, total) => {
-    if (acc != null) return acc >= 80 ? '<span class="st-pill good">💪 강점</span>' : acc < 60 ? '<span class="st-pill low">⚠ 약점</span>' : '<span class="st-pill mid">보통</span>';
-    if (rank && total >= 3) return rank <= Math.ceil(total / 3) ? '<span class="st-pill good">💪 강점</span>' : rank > total - Math.ceil(total / 3) ? '<span class="st-pill low">⚠ 약점</span>' : '<span class="st-pill mid">보통</span>';
+    if (acc != null) return acc >= 80 ? '<span class="st-pill good">💪 건강</span>' : acc < 60 ? '<span class="st-pill low">⚠ 치료 필요</span>' : '<span class="st-pill mid">👀 관찰</span>';
+    if (rank && total >= 3) return rank <= Math.ceil(total / 3) ? '<span class="st-pill good">💪 건강</span>' : rank > total - Math.ceil(total / 3) ? '<span class="st-pill low">⚠ 치료 필요</span>' : '<span class="st-pill mid">👀 관찰</span>';
     return '-';
   };
   const avg = (xs) => (xs.length ? Math.round(xs.reduce((a, b) => a + b, 0) / xs.length) : null);
@@ -75,8 +75,8 @@
     if (M.game) q = q.eq('game', M.game);
     if (M.days) q = q.gte('created_at', new Date(Date.now() - M.days * 864e5).toISOString());
     const { data: runs, error } = await q;
-    if (error) return `<h2 class="st-h2">🎮 내 게임 성적표</h2><p class="empty2">${esc(K.KO_ERR(error))}</p>`;
-    if (!runs.length) return `<h2 class="st-h2">🎮 내 게임 성적표</h2><p class="empty2">${M.game || M.days ? '이 조건에는' : '아직'} 끝까지 한 게임이 없어요. 로그인한 채로 한 판 끝까지 해 보세요! 🎮</p>`;
+    if (error) return `<h2 class="st-h2">🩺 진찰 결과</h2><p class="empty2">${esc(K.KO_ERR(error))}</p>`;
+    if (!runs.length) return `<h2 class="st-h2">🩺 진찰 결과</h2><p class="empty2">${M.game || M.days ? '이 조건에는' : '아직'} 끝까지 한 게임이 없어요. 로그인한 채로 한 판 끝까지 해 보세요! 🎮</p>`;
 
     // ① 게임 · 모드별
     const groups = new Map();
@@ -126,15 +126,15 @@
       rec: `성공 ${o.hits} · 틀림 ${o.wrong} · 못 들음 ${o.silent} (이김 ${o.win}/${o.n})`, rate: pct(o.hits, Math.max(1, o.tries - o.silent)) }));
     parts.sort((a, b) => a.rate - b.rate);
 
-    return `<h2 class="st-h2">🎮 내 게임 성적표 <small class="st-hint">끝까지 한 판 기준</small></h2>
+    return `<h2 class="st-h2">🩺 진찰 결과 <small class="st-hint">내 게임 성적 · 끝까지 한 판 기준</small></h2>
       <div class="kpis">
         <div class="kpi c1"><small>끝까지 한 판</small><b>${n(runs.length)}</b><span>${gamesIn.length}개 게임 · 마지막 ${K.fmtDate(runs[runs.length - 1].created_at)}</span></div>
         <div class="kpi c3"><small>평균 정확도</small><b>${allAcc == null ? '-' : `${allAcc}%`}</b><span>정확도를 남기는 게임만</span></div>
-        <div class="kpi c4"><small>💪 가장 잘하는 것</small><b style="font-size:18px">${strong ? label(strong) : '-'}</b><span>${strong ? `정확도 ${strong.acc}%` : ''}</span></div>
-        <div class="kpi c2"><small>⚠ 가장 약한 것</small><b style="font-size:18px">${weakest && weakest !== strong ? label(weakest) : '-'}</b><span>${weakest && weakest !== strong ? `정확도 ${weakest.acc}%` : ''}</span></div>
+        <div class="kpi c4"><small>💪 가장 건강한 부위 <i class="st-orig">잘하는 것</i></small><b style="font-size:18px">${strong ? label(strong) : '-'}</b><span>${strong ? `정확도 ${strong.acc}%` : ''}</span></div>
+        <div class="kpi c2"><small>⚠ 치료가 가장 필요한 부위 <i class="st-orig">약한 것</i></small><b style="font-size:18px">${weakest && weakest !== strong ? label(weakest) : '-'}</b><span>${weakest && weakest !== strong ? `정확도 ${weakest.acc}%` : ''}</span></div>
       </div>
 
-      <h3>📋 게임 · 모드별 성적표</h3>
+      <h3>📋 검사 결과표 <small class="st-hint">게임 · 모드별 성적</small></h3>
       <div class="tbl-wrap ops-tall"><table class="tbl"><thead><tr><th>게임</th><th>난이도 · 맵</th><th class="num">판 수</th><th class="num">최고 기록</th>
         <th class="num">평균 정확도</th><th class="num">최근 3판</th><th class="num">처음→최근</th><th class="num">내 순위</th><th>판정</th><th>마지막</th></tr></thead>
         <tbody>${rows.map(r => `<tr><td>${esc(gname(r.game))}</td><td>${esc(modeKo(r.game, r.mode))}</td><td class="num">${n(r.plays)}</td>
@@ -142,15 +142,15 @@
           <td class="num">${r.acc == null ? '-' : `<span class="st-pill ${tone(r.acc)}">${r.acc}%</span>`}</td><td class="num">${r.recent == null ? '-' : `${r.recent}%`}</td>
           <td class="num">${r.diff == null ? '-' : r.diff > 0 ? `<b style="color:#6ff0a8">▲ ${r.diff}</b>` : r.diff < 0 ? `<b style="color:#ff8ab8">▼ ${-r.diff}</b>` : '='}</td>
           <td class="num">${r.rank ? `${r.rank}위 / ${r.total}명` : '-'}</td><td>${verdict(r.acc, r.rank, r.total)}</td><td>${K.fmtDate(r.last)}</td></tr>`).join('')}</tbody></table></div>
-      <p class="note">판정: 정확도 80% 이상 💪 강점 · 60% 미만 ⚠ 약점. 정확도가 없는 게임(롱드라이브 등)은 회원 중 내 순위로 정해요. 처음→최근 = 첫 판과 마지막 판 정확도 차이.</p>
+      <p class="note">판정: 정확도 80% 이상 💪 건강(강점) · 60~79% 👀 관찰 · 60% 미만 ⚠ 치료 필요(약점). 정확도가 없는 게임(롱드라이브 등)은 회원 중 내 순위로 정해요. 처음→최근 = 첫 판과 마지막 판 정확도 차이.</p>
 
-      <h3>📅 날짜별 기록 <button class="abtn sm pri" type="button" id="stMyCsv" style="margin-left:8px">⬇ 엑셀(CSV)</button></h3>
+      <h3>📅 내원 기록 <small class="st-hint">날짜별 기록</small> <button class="abtn sm pri" type="button" id="stMyCsv" style="margin-left:8px">⬇ 엑셀(CSV)</button></h3>
       <div class="tbl-wrap ops-tall"><table class="tbl"><thead><tr><th>날짜</th>${gamesIn.map(g => `<th class="num">${g.ic} ${esc(g.ko)}</th>`).join('')}<th class="num">합계</th><th class="num">평균 정확도</th></tr></thead>
         <tbody>${M.csv.slice(1).map(row => `<tr><td class="${[0, 6].includes(new Date(row[0] + 'T00:00:00').getDay()) ? 'we' : ''}">${esc(row[0].slice(5).replace('-', '/'))} ${W[new Date(row[0] + 'T00:00:00').getDay()]}</td>
           ${row.slice(1, -2).map(v => `<td class="num">${v ? n(v) : '<span style="color:var(--ink-faint)">·</span>'}</td>`).join('')}<td class="num"><b>${n(row[row.length - 2])}</b></td>
           <td class="num">${row[row.length - 1] === '' ? '-' : `<span class="st-pill ${tone(row[row.length - 1])}">${row[row.length - 1]}%</span>`}</td></tr>`).join('')}</tbody></table></div>
 
-      ${parts.length ? `<h3>🔍 게임 기록에서 찾은 약한 부분 <small class="st-hint">낮은 순</small></h3>
+      ${parts.length ? `<h3>⚠ 치료가 필요한 부위 <small class="st-hint">게임 기록에서 찾은 약한 부분 · 낮은 순</small></h3>
         <div class="tbl-wrap ops-tall"><table class="tbl"><thead><tr><th>게임</th><th>부분</th><th>종류</th><th>기록</th><th class="num">정답률</th><th>판정</th></tr></thead>
           <tbody>${parts.slice(0, 40).map(x => `<tr><td>${esc(gname(x.game))}</td><td class="st-item">${esc(x.part)}</td><td>${esc(x.kind)}</td><td>${esc(x.rec)}</td>
             <td class="num"><span class="st-pill ${tone(x.rate)}">${x.rate}%</span></td><td>${verdict(x.rate)}</td></tr>`).join('')}</tbody></table></div>
@@ -164,8 +164,8 @@
       const tabs = filt('wg', M.game, [[null, '전체'], ...GAMES.map(g => [g.id, `${g.ic} ${g.ko}`])]);
       const per = filt('wd', M.days, [[null, '전체 기간'], [30, '최근 30일'], [7, '최근 7일']]).replace('class="filt"', 'class="filt sm"');
       const head = `<h2>📋 진료 차트</h2>
-        <p class="sub">내가 한 게임 기록으로 잘하는 것 · 약한 것을 표로 보여 줘요. 로그인한 채로 게임을 끝까지 하면 쌓여요.</p>${tabs}${per}`;
-      const qHead = `<h2 class="st-h2">📝 문제별 분석 <small class="st-hint">문제 하나하나 맞았는지 · 헷갈린 것 · 걸린 시간</small></h2>`;
+        <p class="sub">내가 한 게임 기록으로 진찰해서, 건강한 부위(잘하는 것)와 치료가 필요한 부위(약한 것)를 차트로 보여 줘요. 로그인한 채로 게임을 끝까지 하면 쌓여요.</p>${tabs}${per}`;
+      const qHead = `<h2 class="st-h2">📝 세부 검사 기록 <small class="st-hint">문제별 분석 · 맞았는지 · 헷갈린 것 · 걸린 시간</small></h2>`;
       if (d._err) {
         return head + recHtml + qHead + (MISSING(d._err)
           ? '<p class="empty2">문제별 기록은 곧 시작돼요. (관리자가 Supabase 에서 <b>answers.sql</b> 을 실행하면 그다음 게임부터 쌓여요)</p>'
@@ -183,21 +183,21 @@
       return head + recHtml + qHead + `
         <div class="kpis">
           <div class="kpi c1"><small>문제 정답률</small><b>${rate}%</b><span>${n(d.total)}문제 중 ${n(d.right)}개 맞힘</span></div>
-          <div class="kpi c2"><small>가장 약한 부분</small><b style="font-size:20px">${weakestCat ? esc(weakestCat.cat) : '-'}</b>
+          <div class="kpi c2"><small>주 진단 <i class="st-orig">가장 약한 부분</i></small><b style="font-size:20px">${weakestCat ? esc(weakestCat.cat) : '-'}</b>
             <span>${weakestCat ? `${M.game ? '' : esc(G[weakestCat.game] ? G[weakestCat.game].ko : weakestCat.game) + ' · '}정답률 ${weakestCat.rate}% (${weakestCat.tries}문제)` : '묶음 기록이 아직 없어요'}</span></div>
-          <div class="kpi c3"><small>다시 볼 문제</small><b>${n(d.weak.length)}</b><span>한 번 이상 틀린 문제${d.weak.length >= 20 ? ' (많은 순 20개)' : ''}</span></div>
+          <div class="kpi c3"><small>재진 필요 <i class="st-orig">다시 볼 문제</i></small><b>${n(d.weak.length)}</b><span>한 번 이상 틀린 문제${d.weak.length >= 20 ? ' (많은 순 20개)' : ''}</span></div>
         </div>
         ${game ? `<div class="row" style="margin-top:12px"><a class="abtn pri" href="${esc(game.url)}">▶ ${esc(game.ko)} 다시 연습하러 가기</a></div>` : ''}
 
-        ${!M.game && d.games.length > 1 ? `<h3>🎮 게임별 정답률</h3><div class="bars2">${d.games.map(g =>
+        ${!M.game && d.games.length > 1 ? `<h3>🎮 게임별 검사 수치 <small class="st-hint">게임별 정답률</small></h3><div class="bars2">${d.games.map(g =>
           rateBar(esc(gname(g.game)), pct(g.right, g.tries), `${n(g.tries)}문제`)).join('')}</div>` : ''}
 
-        <h3>🧩 부분별 정답률 <small class="st-hint">낮은 순 · 빨간 막대부터 공부해 보세요</small></h3>
+        <h3>🧩 부위별 검사 수치 <small class="st-hint">부분별 정답률 · 빨간 막대부터 치료(공부)해 보세요</small></h3>
         <div class="bars2">${d.cats.slice(0, 15).map(c =>
           rateBar(`${esc(c.cat)}${M.game ? '' : ` <small class="st-g">${esc(G[c.game] ? G[c.game].ko : c.game)}</small>`}`, c.rate, `${n(c.tries)}문제`)).join('')
           || '<p class="empty2">묶음 기록이 아직 없어요.</p>'}</div>
 
-        <h3>❗ 자주 틀리는 문제 <small class="st-hint">틀린 횟수 많은 순</small></h3>
+        <h3>❗ 반복되는 증상 <small class="st-hint">자주 틀리는 문제 · 틀린 횟수 많은 순</small></h3>
         ${d.weak.length ? `<div class="tbl-wrap ops-tall"><table class="tbl"><thead><tr><th>문제</th>${M.game ? '' : '<th>게임</th>'}<th>부분</th>
             <th class="num">틀림</th><th class="num">정답률</th><th>대신 고른 것</th><th>마지막</th></tr></thead><tbody>${d.weak.map(w => `<tr>
             <td class="st-item">${esc(w.item)}</td>${M.game ? '' : `<td>${esc(G[w.game] ? G[w.game].ko : w.game)}</td>`}<td>${esc(w.cat || '-')}</td>
@@ -207,21 +207,21 @@
           <p class="note">✅ 최근엔 맞힌 문제는 거의 다 익힌 거예요. ❌ 인 문제부터 다시 보세요.</p>`
           : '<p class="empty2">틀린 문제가 없어요! 👏</p>'}
 
-        ${d.confuse.length ? `<h3>🔀 자주 헷갈리는 짝 <small class="st-hint">이 문제에서 대신 고른 것</small></h3>
+        ${d.confuse.length ? `<h3>🔀 감별 진단이 필요한 짝 <small class="st-hint">자주 헷갈리는 짝 · 대신 고른 것</small></h3>
           <div class="st-pairs">${d.confuse.map(c => `<div class="st-pair"><b>${esc(c.item)}</b><span class="vs">↔</span><span>${esc(c.picked)}</span>
             <small>${n(c.n)}번${M.game ? '' : ` · ${esc(G[c.game] ? G[c.game].ko : c.game)}`}</small></div>`).join('')}</div>
           <p class="note">두 개를 나란히 놓고 위치 · 모양 · 이름의 차이를 비교해 보세요.</p>` : ''}
 
-        ${d.slow.length ? `<h3>🐢 맞혔지만 오래 걸린 문제 <small class="st-hint">내 보통 속도보다 1.5배 넘게 걸림</small></h3>
+        ${d.slow.length ? `<h3>🐢 회복이 더딘 문제 <small class="st-hint">맞혔지만 오래 걸림 · 내 보통 속도의 1.5배 넘게</small></h3>
           <div class="st-chips">${d.slow.map(s => `<span class="chip" title="${n(s.n)}번 맞힘">${esc(s.item)} · ${(s.avg_ms / 1000).toFixed(1)}초 (×${s.ratio})</span>`).join(' ')}</div>
           <p class="note">맞히긴 했지만 아직 확실하지 않은 문제예요. 바로 떠오를 때까지 한 번 더!</p>` : ''}
 
         ${d.no_voice ? `<p class="note">🎤 마이크가 소리를 못 들은 ${n(d.no_voice)}번은 정답률에서 뺐어요. 조용한 곳에서 크게 말해 보세요.</p>` : ''}
 
-        ${d.strong.length ? `<h3>💪 잘하는 문제</h3><div class="st-chips">${d.strong.map(s =>
+        ${d.strong.length ? `<h3>💪 완치된 문제 <small class="st-hint">잘하는 문제</small></h3><div class="st-chips">${d.strong.map(s =>
           `<span class="chip update" title="${n(s.tries)}번 중 ${s.rate}%">${esc(s.item)}</span>`).join(' ')}</div>` : ''}
 
-        ${days.length ? `<h3>📈 최근 14일 정답률</h3>
+        ${days.length ? `<h3>📈 최근 14일 경과 <small class="st-hint">날짜별 정답률</small></h3>
           <div class="ops-cols">${days.map(x => `<div class="c" title="${esc(x.day)}: ${x.rate}% (${x.tries}문제)">
             <i class="${tone(x.rate)}" style="height:${Math.max(4, x.rate)}%;opacity:${(0.45 + 0.55 * x.tries / maxT).toFixed(2)}"></i>
             <span>${esc(x.day.slice(5).replace('-', '/'))}</span></div>`).join('')}</div>
