@@ -173,6 +173,41 @@
 .chart details.more { margin-top: 14px; padding: 10px 14px; border: 1px solid var(--p-line); border-radius: 10px; background: #fff; }
 .chart details.more summary { cursor: pointer; font-weight: 800; color: var(--p-ink); }
 .chart details.more summary small { font-weight: 500; color: var(--p-dim); margin-left: 6px; }
+/* ── 진료 차트 한눈에 보기 (11-27): 바이탈 · 오늘의 처방 · 칸 8개 → 칸을 누르면 팝업 (✕ · 바깥 · Esc 로 닫기) ── */
+.vitals.st-v5 { grid-template-columns: repeat(5, 1fr); gap: 8px; margin-top: 12px; }
+.vitals.st-v5 .vital { padding: 8px 12px; } .vitals.st-v5 .vital b { font-size: 23px; } .vitals.st-v5 .vital b.sm { font-size: 14px; }
+.st-rx1 { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-top: 10px; padding: 9px 14px; border: 2px dashed #8a96ad; border-radius: 12px; background: #fff; font-size: 14px; }
+.st-rx1 .ic { font-size: 22px; } .st-rx1 .sp { flex: 1; min-width: 200px; } .st-rx1 small { display: inline; margin-left: 6px; font-size: 12px; color: var(--p-dim); }
+.st-rx1 .more { border: 0; background: none; color: #1f6feb; font-size: 12.5px; font-weight: 700; cursor: pointer; }
+.st-rx1 .go { flex-shrink: 0; padding: 7px 14px; border-radius: 8px; background: #1f6feb; color: #fff; font-size: 13px; font-weight: 700; text-decoration: none; }
+.st-tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 14px; }
+.st-tile { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; text-align: left; padding: 10px 12px; border: 1px solid var(--p-line); border-radius: 12px; background: #fff;
+  color: var(--p-ink); font: inherit; cursor: pointer; transition: transform .12s, box-shadow .12s, border-color .12s; }
+.st-tile:hover { transform: translateY(-2px); box-shadow: 0 6px 14px rgba(0,0,0,.12); border-color: #9fb3d9; }
+.st-tile .ti { width: 100%; display: flex; justify-content: space-between; font-size: 14px; font-weight: 800; }
+.st-tile .ti i { font-style: normal; font-size: 12px; color: var(--p-dim); }
+.st-tile .big { font-size: 20px; font-weight: 900; line-height: 1.25; }
+.st-tile .big.good { color: var(--p-good); } .st-tile .big.mid { color: var(--p-mid); } .st-tile .big.low { color: var(--p-low); }
+.st-tile small { font-size: 11.5px; color: var(--p-dim); line-height: 1.4; }
+.st-tile .spark { display: flex; align-items: flex-end; gap: 2px; width: 100%; height: 22px; margin: 2px 0; }
+.st-tile .spark i { flex: 1; border-radius: 2px; background: #cfd6e4; } .st-tile .spark i.good { background: #1aa06d; } .st-tile .spark i.mid { background: #d69e2e; } .st-tile .spark i.low { background: #e53e3e; }
+.st-foot { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px; margin-top: 12px; font-size: 12px; color: var(--p-dim); }
+.st-foot button { border: 0; background: none; padding: 0; color: var(--p-dim); font: inherit; cursor: pointer; text-decoration: underline; }
+.st-pop-wrap { position: fixed; inset: 0; z-index: 400; display: flex; align-items: center; justify-content: center; padding: 20px;
+  background: rgba(7,1,15,.62); backdrop-filter: blur(3px); opacity: 0; visibility: hidden; transition: opacity .2s, visibility .2s; }
+.st-pop-wrap.open { opacity: 1; visibility: visible; }
+.chart.st-pop { width: min(880px, 100%); max-height: calc(100vh - 40px); overflow: auto; margin: 0; padding: 22px 24px 20px; animation: none;
+  transform: translateY(14px) scale(.98); transition: transform .22s; }
+.st-pop-wrap.open .chart.st-pop { transform: none; }
+.chart.st-pop::before { display: none; }
+.chart.st-pop h4 { margin: 0 0 10px; padding-right: 48px; } .chart.st-pop h4 ~ h4 { margin-top: 18px; }
+.st-x { position: absolute; right: 12px; top: 12px; width: 38px; height: 38px; border-radius: 10px; border: 1px solid var(--p-line); background: #fff;
+  font-size: 20px; font-weight: 700; line-height: 1; color: var(--p-dim); cursor: pointer; }
+.st-x:hover { background: #fde3e3; color: var(--p-low); border-color: #f3b4b4; }
+.st-pager { display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: 10px; }
+.st-pager button { padding: 7px 16px; border-radius: 8px; border: 1px solid var(--p-line); background: #fff; color: var(--p-ink); font: 700 13px inherit; cursor: pointer; }
+.st-pager button:disabled { opacity: .4; cursor: default; } .st-pager span { font-size: 12px; color: var(--p-dim); }
+@media (max-width: 760px) { .vitals.st-v5 { grid-template-columns: repeat(2, 1fr); } .vitals.st-v5 .vital:last-child { grid-column: span 2; } .st-tiles { grid-template-columns: repeat(2, 1fr); } }
 .chart details.more[open] summary { margin-bottom: 8px; }
 
 /* 종이 위의 기존 요소 (표 · 숫자 카드 · 막대 · 짝 · 칩) 를 밝은 색으로 */

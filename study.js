@@ -90,14 +90,14 @@
       </div>`;
   }
 
-  async function gameRecordsHtml() {
+  async function gameRecords() {   // 진료 차트 계산 (보여 주기는 아래 칸 · 팝업)
     const me = K.me();
     let q = sb.from('runs').select('game,mode,score,accuracy,detail,created_at').eq('user_id', me.id).order('created_at', { ascending: true }).limit(2000);
     if (M.game) q = q.eq('game', M.game);
     if (M.days) q = q.gte('created_at', new Date(Date.now() - M.days * 864e5).toISOString());
     const { data: runs, error } = await q;
-    if (error) return chartHead(null, 0, null) + `<p class="empty2">${esc(K.KO_ERR(error))}</p>`;
-    if (!runs.length) return chartHead(null, 0, null) + `<p class="empty2">${M.game || M.days ? '이 조건에는' : '아직'} 진료 기록이 없어요.<br>로그인한 채로 게임을 한 판 끝까지 하면 첫 진찰 결과가 나와요 🎮</p>`;
+    if (error) return { head: chartHead(null, 0, null) + `<p class="empty2">${esc(K.KO_ERR(error))}</p>` };
+    if (!runs.length) return { head: chartHead(null, 0, null) };
 
     // ① 게임 · 모드별
     const groups = new Map();
@@ -147,7 +147,7 @@
       rec: `성공 ${o.hits} · 틀림 ${o.wrong} · 못 들음 ${o.silent} (이김 ${o.win}/${o.n})`, rate: pct(o.hits, Math.max(1, o.tries - o.silent)) }));
     parts.sort((a, b) => a.rate - b.rate);
 
-    // ④ 진료 차트 용지 — 환자 정보 · 종합 소견 도장 · 바이탈 · 게임별 진찰 카드 · 처방전 · 치료가 필요한 부위 · 날짜별 기록(접기)
+    // ④ 진료 차트 — 한눈에 보기 (환자 정보 · 바이탈 · 오늘의 처방 · 칸 8개) + 칸을 누르면 팝업 (11-27: 휠 없이 한 화면에)
     const week = runs.filter(r => Date.now() - new Date(r.created_at) < 7 * 864e5).length;
     const visitDays = byDay.size;
     const rxRows = withAcc.filter(r => r.acc < 80).sort((a, b) => a.acc - b.acc).slice(0, 2);
@@ -160,128 +160,177 @@
     if (!rx.length) rx.push(untried
       ? { txt: `지금처럼 꾸준히! <b>${esc(untried.ko)}</b>에도 도전해 보세요 <small>아직 안 해 본 게임</small>`, url: untried.url }
       : { txt: '<b>건강 양호!</b> 지금처럼 꾸준히 해 주세요 <small>모든 게임 정확도 80% 이상</small>', url: '' });
-    const accTone = (a) => (a == null ? '' : tone(a));
-    const dxCard = (r) => {
-      const st = r.acc != null ? tone(r.acc) : (r.rank && r.total >= 3 ? (r.rank <= Math.ceil(r.total / 3) ? 'good' : r.rank > r.total - Math.ceil(r.total / 3) ? 'low' : 'mid') : '');
-      return `<div class="dx ${st}"><div class="t"><b>${esc(gname(r.game))}</b>${verdict(r.acc, r.rank, r.total)}</div>
-        <div class="md">${esc(modeKo(r.game, r.mode))}</div>
-        ${r.acc != null ? `<div class="acc ${st}">${r.acc}<small>%</small></div><div class="bar"><i class="${st}" style="width:${Math.max(3, r.acc)}%"></i></div>`
-          : `<div class="acc">${r.game === 'wizard' ? `이김 ${r.best}` : scoreText(r.game, r.best)}</div><div class="bar"></div>`}
-        <dl><dt>최고 기록</dt><dd>${r.game === 'wizard' ? `이김 ${r.best}` : scoreText(r.game, r.best)}</dd><dt>진료 횟수</dt><dd>${n(r.plays)}판</dd>
-          <dt>처음 → 최근</dt><dd>${r.diff == null ? '-' : r.diff > 0 ? `<span class="up">▲ ${r.diff}%p</span>` : r.diff < 0 ? `<span class="down">▼ ${-r.diff}%p</span>` : '그대로'}</dd>
-          <dt>내 순위</dt><dd>${r.rank ? `${r.rank}위 / ${r.total}명` : '-'}</dd></dl></div>`;
-    };
-    const needRow = (x) => `<li><span class="nm"><b>${esc(x.part)}</b><small>${esc(gname(x.game))} · ${esc(x.kind)}</small></span>
-      <span class="bar"><i class="${tone(x.rate)}" style="width:${Math.max(3, x.rate)}%"></i></span><span class="pc ${tone(x.rate)}">${x.rate}%</span><small class="rec">${esc(x.rec)}</small></li>`;
+    return { head: chartHead(allAcc, runs.length, runs[runs.length - 1].created_at), runs, allAcc, week, visitDays, gamesIn, strong, weakest, label, rx, rows, parts, days };
+  }
+  const accTone = (a) => (a == null ? '' : tone(a));
+  const dxTone = (r) => (r.acc != null ? tone(r.acc) : (r.rank && r.total >= 3 ? (r.rank <= Math.ceil(r.total / 3) ? 'good' : r.rank > r.total - Math.ceil(r.total / 3) ? 'low' : 'mid') : ''));
+  const dxCard = (r) => {
+    const st = dxTone(r);
+    return `<div class="dx ${st}"><div class="t"><b>${esc(gname(r.game))}</b>${verdict(r.acc, r.rank, r.total)}</div>
+      <div class="md">${esc(modeKo(r.game, r.mode))}</div>
+      ${r.acc != null ? `<div class="acc ${st}">${r.acc}<small>%</small></div><div class="bar"><i class="${st}" style="width:${Math.max(3, r.acc)}%"></i></div>`
+        : `<div class="acc">${r.game === 'wizard' ? `이김 ${r.best}` : scoreText(r.game, r.best)}</div><div class="bar"></div>`}
+      <dl><dt>최고 기록</dt><dd>${r.game === 'wizard' ? `이김 ${r.best}` : scoreText(r.game, r.best)}</dd><dt>진료 횟수</dt><dd>${n(r.plays)}판</dd>
+        <dt>처음 → 최근</dt><dd>${r.diff == null ? '-' : r.diff > 0 ? `<span class="up">▲ ${r.diff}%p</span>` : r.diff < 0 ? `<span class="down">▼ ${-r.diff}%p</span>` : '그대로'}</dd>
+        <dt>내 순위</dt><dd>${r.rank ? `${r.rank}위 / ${r.total}명` : '-'}</dd></dl></div>`;
+  };
+  const needRow = (x) => `<li><span class="nm"><b>${esc(x.part)}</b><small>${esc(gname(x.game))} · ${esc(x.kind)}</small></span>
+    <span class="bar"><i class="${tone(x.rate)}" style="width:${Math.max(3, x.rate)}%"></i></span><span class="pc ${tone(x.rate)}">${x.rate}%</span><small class="rec">${esc(x.rec)}</small></li>`;
+  const catRow = (c) => `<li><span class="nm"><b>${esc(c.cat)}</b><small>${M.game ? '' : esc(gname(c.game)) + ' · '}${n(c.tries)}문제</small></span>
+    <span class="bar"><i class="${tone(c.rate)}" style="width:${Math.max(3, c.rate)}%"></i></span><span class="pc ${tone(c.rate)}">${c.rate}%</span></li>`;
 
-    return `${chartHead(allAcc, runs.length, runs[runs.length - 1].created_at)}
-      <h4>🩺 바이탈 <small>기본 수치</small></h4>
-      <div class="vitals">
-        <div class="vital ${accTone(allAcc)}"><small>평균 정확도</small><b>${allAcc == null ? '-' : `${allAcc}%`}</b><span>정확도를 남기는 게임만</span></div>
-        <div class="vital"><small>진료 횟수</small><b>${n(runs.length)}판</b><span>끝까지 한 판 · ${gamesIn.length}개 게임</span></div>
-        <div class="vital"><small>최근 7일</small><b>${n(week)}판</b><span>내원 ${n(visitDays)}일째</span></div>
-        <div class="vital ${strong ? 'good' : ''}"><small>💪 가장 건강한 부위</small><b class="sm">${strong ? label(strong) : '-'}</b><span>${strong ? `정확도 ${strong.acc}%` : ''}</span></div>
-        <div class="vital ${weakest && weakest !== strong ? 'low' : ''}"><small>⚠ 치료가 가장 필요한 부위</small><b class="sm">${weakest && weakest !== strong ? label(weakest) : '-'}</b><span>${weakest && weakest !== strong ? `정확도 ${weakest.acc}%` : ''}</span></div>
-      </div>
+  /* ── 팝업 (칸을 누르면 · 오른쪽 위 ✕ · 바깥 누르기 · Esc 로 닫기) ── */
+  const PER = 5;
+  function pager(id, len, per) {
+    const p = (M.pg && M.pg[id]) || 0, max = Math.ceil(len / per);
+    return max > 1 ? `<div class="st-pager"><button type="button" data-stpg="${id}" data-d="-1" ${p ? '' : 'disabled'}>◀ 이전</button><span>${p + 1} / ${max}</span>
+      <button type="button" data-stpg="${id}" data-d="1" ${p < max - 1 ? '' : 'disabled'}>다음 ${per}개 ▶</button></div>` : '';
+  }
+  const slice = (id, list, per) => { const p = (M.pg && M.pg[id]) || 0; return list.slice(p * per, p * per + per); };
+  function popHtml(id) {
+    const R = M.R || {}, d = M.d || {}, qOk = !d._err && d.total;
+    const qMsg = d._err ? (MISSING(d._err) ? '<p class="empty2">문제별 기록은 곧 시작돼요. (관리자가 Supabase 에서 <b>answers.sql</b> 을 실행하면 그다음 게임부터 쌓여요)</p>'
+      : `<p class="empty2">${esc(K.KO_ERR(d._err))}</p>`) : '<p class="empty2">아직 문제별 기록이 없어요.<br>로그인한 채로 게임을 하면 문제마다 맞았는지가 쌓여요 🎮</p>';
+    const noRuns = '<p class="empty2">아직 끝까지 한 게임 기록이 없어요. 로그인한 채로 한 판 끝까지 해 보세요 🎮</p>';
+    const h = (t, s) => `<h4>${t}${s ? ` <small>${s}</small>` : ''}</h4>`;
+    if (id === 'rx') return h('💊 처방전', '지금 하면 좋은 것') + `<ul class="rx">${(R.rx || []).map(x => `<li><span>${x.txt}</span>${x.url ? `<a class="go" href="${esc(x.url)}">▶ 처방대로 연습하기</a>` : ''}</li>`).join('')}</ul>`;
+    if (id === 'dx') return h('📋 검사 결과표', '게임 · 모드별 진찰 · 💪 건강 80%↑ · 👀 관찰 60~79% · ⚠ 치료 필요 60%↓') + (R.rows ? `<div class="dx-grid">${R.rows.map(dxCard).join('')}</div>` : noRuns);
+    if (id === 'need') return h('⚠ 치료가 필요한 부위', '게임 기록에서 찾은 약한 부분 · 낮은 순') + (R.parts && R.parts.length
+      ? `<ul class="need">${slice('need', R.parts, PER).map(needRow).join('')}</ul>${pager('need', R.parts.length, PER)}
+        <p class="note">너에게 닿기를은 근육별 맞힌 수, 딴딴/딴은 놓친 용어, 뭐라구요!? 는 스테이지별 주문 성공이에요 (못 들음은 빼요).</p>` : '<p class="empty2">아직 찾은 약한 부분이 없어요 👏</p>');
+    if (id === 'cat') {
+      if (!qOk) return h('🧩 부분별 정답률') + qMsg;
+      const games = !M.game && d.games.length > 1 ? `<div class="bars2" style="margin-bottom:12px">${d.games.map(g => rateBar(esc(gname(g.game)), pct(g.right, g.tries), `${n(g.tries)}문제`)).join('')}</div>` : '';
+      return h('🧩 부분별 정답률', '낮은 순 · 빨간 막대부터 공부해 보세요') + games + (d.cats.length ? `<ul class="need">${slice('cat', d.cats, PER).map(catRow).join('')}</ul>${pager('cat', d.cats.length, PER)}` : '<p class="empty2">묶음 기록이 아직 없어요.</p>');
+    }
+    if (id === 'wrong') {
+      if (!qOk) return h('❗ 자주 틀린 문제') + qMsg;
+      return h('❗ 반복되는 증상', '자주 틀리는 문제 · 틀린 횟수 많은 순') + (d.weak.length
+        ? `<div class="tbl-wrap"><table class="tbl"><thead><tr><th>문제</th>${M.game ? '' : '<th>게임</th>'}<th>부분</th><th class="num">틀림</th><th class="num">정답률</th><th>대신 고른 것</th><th>마지막</th></tr></thead><tbody>${slice('wrong', d.weak, PER).map(w => `<tr>
+            <td class="st-item">${esc(w.item)}</td>${M.game ? '' : `<td>${esc(G[w.game] ? G[w.game].ko : w.game)}</td>`}<td>${esc(w.cat || '-')}</td>
+            <td class="num">${n(w.wrong)} / ${n(w.tries)}</td><td class="num"><span class="st-pill ${tone(w.rate)}">${w.rate}%</span></td>
+            <td class="st-item"><small>${w.last_picked ? esc(w.last_picked) : '-'}</small></td>
+            <td>${w.last_ok ? '✅ 맞힘' : '❌ 틀림'} <small style="color:var(--p-dim)">${K.fmtDate(w.last_at)}</small></td></tr>`).join('')}</tbody></table></div>${pager('wrong', d.weak.length, PER)}
+          <p class="note">✅ 최근엔 맞힌 문제는 거의 다 익힌 거예요. ❌ 인 문제부터 다시 보세요.</p>` : '<p class="empty2">틀린 문제가 없어요! 👏</p>');
+    }
+    if (id === 'pair') {
+      if (!qOk) return h('🔀 자주 헷갈리는 짝') + qMsg;
+      return h('🔀 자주 헷갈리는 짝', '이 문제에서 대신 고른 것') + (d.confuse.length ? `<div class="st-pairs">${d.confuse.map(c => `<div class="st-pair"><b>${esc(c.item)}</b><span class="vs">↔</span><span>${esc(c.picked)}</span>
+        <small>${n(c.n)}번${M.game ? '' : ` · ${esc(G[c.game] ? G[c.game].ko : c.game)}`}</small></div>`).join('')}</div>
+        <p class="note">두 개를 나란히 놓고 위치 · 모양 · 이름의 차이를 비교해 보세요.</p>` : '<p class="empty2">헷갈린 짝이 없어요 👏</p>');
+    }
+    if (id === 'trend') {
+      if (!qOk || !(d.days || []).length) return h('📈 최근 14일 정답률') + (qOk ? '<p class="empty2">최근 14일 기록이 없어요.</p>' : qMsg);
+      const maxT = Math.max(1, ...d.days.map(x => x.tries));
+      return h('📈 최근 14일 정답률', '막대 높이 = 정답률 · 진할수록 그날 많이 풀었어요') + `<div class="ops-cols">${d.days.map(x => `<div class="c" title="${esc(x.day)}: ${x.rate}% (${x.tries}문제)">
+        <i class="${tone(x.rate)}" style="height:${Math.max(4, x.rate)}%;opacity:${(0.45 + 0.55 * x.tries / maxT).toFixed(2)}"></i><span>${esc(x.day.slice(5).replace('-', '/'))}</span></div>`).join('')}</div>`;
+    }
+    if (id === 'ss') {
+      if (!qOk) return h('💪 잘하는 문제 · 🐢 느린 문제') + qMsg;
+      return h('💪 잘하는 문제') + (d.strong.length ? `<div class="st-chips">${d.strong.map(s => `<span class="chip update" title="${n(s.tries)}번 중 ${s.rate}%">${esc(s.item)}</span>`).join(' ')}</div>` : '<p class="note">아직 없어요.</p>')
+        + h('🐢 맞혔지만 오래 걸린 문제', '내 보통 속도보다 1.5배 넘게 걸림') + (d.slow.length ? `<div class="st-chips">${d.slow.map(s => `<span class="chip" title="${n(s.n)}번 맞힘">${esc(s.item)} · ${(s.avg_ms / 1000).toFixed(1)}초 (×${s.ratio})</span>`).join(' ')}</div>
+          <p class="note">맞히긴 했지만 아직 확실하지 않은 문제예요. 바로 떠오를 때까지 한 번 더!</p>` : '<p class="note">느린 문제가 없어요 👏</p>')
+        + (d.no_voice ? `<p class="note">🎤 마이크가 소리를 못 들은 ${n(d.no_voice)}번은 정답률에서 뺐어요. 조용한 곳에서 크게 말해 보세요.</p>` : '');
+    }
+    if (id === 'days') {
+      if (!R.days) return h('📅 날짜별 기록') + noRuns;
+      const gi = R.gamesIn, rowsD = M.csv.slice(1);
+      return h('📅 날짜별 기록', `${n(R.days.length)}일`) + `<div class="row" style="margin:0 0 8px"><button class="abtn sm pri" type="button" id="stMyCsv">⬇ 엑셀(CSV)로 내려받기</button></div>
+        <div class="tbl-wrap"><table class="tbl"><thead><tr><th>날짜</th>${gi.map(g => `<th class="num">${g.ic} ${esc(g.ko)}</th>`).join('')}<th class="num">합계</th><th class="num">평균 정확도</th></tr></thead>
+        <tbody>${slice('days', rowsD, 7).map(row => `<tr><td class="${[0, 6].includes(new Date(row[0] + 'T00:00:00').getDay()) ? 'we' : ''}">${esc(row[0].slice(5).replace('-', '/'))} ${W[new Date(row[0] + 'T00:00:00').getDay()]}</td>
+          ${row.slice(1, -2).map(v => `<td class="num">${v ? n(v) : '<span class="dim">·</span>'}</td>`).join('')}<td class="num"><b>${n(row[row.length - 2])}</b></td>
+          <td class="num">${row[row.length - 1] === '' ? '-' : `<span class="st-pill ${tone(row[row.length - 1])}">${row[row.length - 1]}%</span>`}</td></tr>`).join('')}</tbody></table></div>${pager('days', rowsD.length, 7)}`;
+    }
+    if (id === 'info') return h('ℹ️ 어떤 기록을 모으나요?') + dataNote.replace(/<\/?details[^>]*>|<summary>.*?<\/summary>/g, '');
+    return '';
+  }
+  function popEl() {
+    let m = document.getElementById('stPop');
+    if (m) return m;
+    m = document.createElement('div'); m.id = 'stPop'; m.className = 'st-pop-wrap';
+    m.innerHTML = '<div class="chart st-pop" role="dialog" aria-modal="true"><button class="st-x" type="button" aria-label="닫기">✕</button><div class="st-pop-body"></div></div>';
+    document.body.appendChild(m);
+    m.addEventListener('click', (e) => {
+      if (e.target === m || e.target.closest('.st-x')) return closePop();
+      const pg = e.target.closest('[data-stpg]');
+      if (pg) { M.pg[pg.dataset.stpg] = ((M.pg[pg.dataset.stpg]) || 0) + +pg.dataset.d; drawPop(); return; }
+      if (e.target.closest('#stMyCsv') && M.csv) download(`samgongyuk_my_records_${K.fmtDate(new Date())}.csv`, '﻿' + M.csv.map(r => r.map(csvCell).join(',')).join('\r\n'), 'text/csv;charset=utf-8');
+    });
+    // Esc: 팝업만 닫고 진료 차트 창은 그대로 (account.js 의 Esc 보다 먼저 받아요)
+    window.addEventListener('keydown', (e) => { if (e.key === 'Escape' && m.classList.contains('open')) { e.stopPropagation(); closePop(); } }, true);
+    return m;
+  }
+  function drawPop() { const m = popEl(); m.querySelector('.st-pop-body').innerHTML = popHtml(M.pop); }
+  function openPop(id) { M.pop = id; M.pg = {}; drawPop(); const m = popEl(); m.classList.add('open'); m.querySelector('.st-x').focus(); }
+  function closePop() { const m = document.getElementById('stPop'); if (m) m.classList.remove('open'); M.pop = null; }
 
-      <h4>💊 처방전 <small>지금 하면 좋은 것</small></h4>
-      <ul class="rx">${rx.map(x => `<li><span>${x.txt}</span>${x.url ? `<a class="go" href="${esc(x.url)}">▶ 처방대로 연습하기</a>` : ''}</li>`).join('')}</ul>
-
-      <h4>📋 검사 결과표 <small>게임 · 모드별 진찰 · 💪 건강 80%↑ · 👀 관찰 60~79% · ⚠ 치료 필요 60%↓</small></h4>
-      <div class="dx-grid">${rows.map(dxCard).join('')}</div>
-
-      ${parts.length ? `<h4>⚠ 치료가 필요한 부위 <small>게임 기록에서 찾은 약한 부분 · 낮은 순</small></h4>
-        <ul class="need">${parts.slice(0, 6).map(needRow).join('')}</ul>
-        ${parts.length > 6 ? `<details class="more"><summary>나머지 ${parts.length - 6}개 더 보기</summary><ul class="need">${parts.slice(6, 40).map(needRow).join('')}</ul></details>` : ''}
-        <p class="note">너에게 닿기를은 근육별 맞힌 수, 딴딴/딴은 놓친 용어, 뭐라구요!? 는 스테이지별 주문 성공이에요 (못 들음은 빼요).</p>` : ''}
-
-      <details class="more"><summary>📅 날짜별 기록 펼쳐 보기 <small>${n(days.length)}일</small></summary>
-        <div class="row" style="margin:8px 0"><button class="abtn sm pri" type="button" id="stMyCsv">⬇ 엑셀(CSV)로 내려받기</button></div>
-        <div class="tbl-wrap ops-tall"><table class="tbl"><thead><tr><th>날짜</th>${gamesIn.map(g => `<th class="num">${g.ic} ${esc(g.ko)}</th>`).join('')}<th class="num">합계</th><th class="num">평균 정확도</th></tr></thead>
-          <tbody>${M.csv.slice(1).map(row => `<tr><td class="${[0, 6].includes(new Date(row[0] + 'T00:00:00').getDay()) ? 'we' : ''}">${esc(row[0].slice(5).replace('-', '/'))} ${W[new Date(row[0] + 'T00:00:00').getDay()]}</td>
-            ${row.slice(1, -2).map(v => `<td class="num">${v ? n(v) : '<span class="dim">·</span>'}</td>`).join('')}<td class="num"><b>${n(row[row.length - 2])}</b></td>
-            <td class="num">${row[row.length - 1] === '' ? '-' : `<span class="st-pill ${tone(row[row.length - 1])}">${row[row.length - 1]}%</span>`}</td></tr>`).join('')}</tbody></table></div>
-      </details>`;
+  // 칸 8개: 눌러 보기 전에 핵심 숫자가 보이게
+  function tilesHtml() {
+    const R = M.R || {}, d = M.d || {}, qOk = !d._err && d.total;
+    const t = (id, ic, title, big, sm, cls, extra) => `<button class="st-tile" type="button" data-sttile="${id}"><span class="ti">${ic} ${title}<i>↗</i></span>
+      <span class="big ${cls || ''}">${big}</span>${extra || ''}<small>${sm}</small></button>`;
+    const none = (msg) => ['-', msg || '기록이 쌓이면 보여요', ''];
+    const out = [];
+    // 검사 결과표
+    if (R.rows) { const c = { good: 0, mid: 0, low: 0 }; R.rows.forEach(r => { const s = dxTone(r); if (c[s] != null) c[s]++; });
+      out.push(t('dx', '📋', '검사 결과표', `${R.rows.length}개 기록`, `💪 ${c.good} · 👀 ${c.mid} · ⚠ ${c.low}`, c.low ? 'mid' : 'good')); }
+    else out.push(t('dx', '📋', '검사 결과표', ...none('게임을 끝까지 하면 생겨요')));
+    // 치료가 필요한 부위
+    if (R.parts && R.parts.length) out.push(t('need', '⚠', '치료가 필요한 부위', `${R.parts.length}곳`, `가장 낮음 · ${esc(R.parts[0].part)} ${R.parts[0].rate}%`, tone(R.parts[0].rate)));
+    else out.push(t('need', '⚠', '치료가 필요한 부위', R.rows ? '없음 👏' : '-', R.rows ? '약한 부분을 못 찾았어요' : '기록이 쌓이면 보여요', R.rows ? 'good' : ''));
+    // 부분별 정답률
+    const lowCat = qOk && (d.cats.filter(c => c.tries >= 3)[0] || d.cats[0]);
+    out.push(lowCat ? t('cat', '🧩', '부분별 정답률', `최저 ${lowCat.rate}%`, `${esc(lowCat.cat)}${M.game ? '' : ' · ' + esc(G[lowCat.game] ? G[lowCat.game].ko : lowCat.game)}`, tone(lowCat.rate))
+      : t('cat', '🧩', '부분별 정답률', ...none()));
+    // 자주 틀린 문제
+    out.push(qOk ? t('wrong', '❗', '자주 틀린 문제', `${n(d.weak.length)}문제`, `❌ 아직 틀림 ${d.weak.filter(w => !w.last_ok).length}개 · 문제 정답률 ${pct(d.right, d.total)}%`, d.weak.length ? 'mid' : 'good')
+      : t('wrong', '❗', '자주 틀린 문제', ...none()));
+    // 헷갈리는 짝
+    out.push(qOk ? t('pair', '🔀', '헷갈리는 짝', d.confuse.length ? `${d.confuse.length}쌍` : '없음 👏', d.confuse.length ? `${esc(d.confuse[0].item)} ↔ ${esc(d.confuse[0].picked)}` : '헷갈린 짝이 없어요')
+      : t('pair', '🔀', '헷갈리는 짝', ...none()));
+    // 최근 14일
+    const dd = qOk ? (d.days || []) : [];
+    if (dd.length) {
+      const half = Math.ceil(dd.length / 2), a = Math.round(dd.slice(0, half).reduce((s, x) => s + x.rate, 0) / half),
+        b = dd.length > half ? Math.round(dd.slice(half).reduce((s, x) => s + x.rate, 0) / (dd.length - half)) : a;
+      const spark = `<span class="spark">${dd.map(x => `<i class="${tone(x.rate)}" style="height:${Math.max(10, x.rate)}%"></i>`).join('')}</span>`;
+      out.push(t('trend', '📈', '최근 14일', b > a + 2 ? '▲ 오르는 중' : b < a - 2 ? '▼ 내려가는 중' : '— 그대로', `앞 ${a}% → 최근 ${b}%`, b > a + 2 ? 'good' : b < a - 2 ? 'low' : '', spark));
+    } else out.push(t('trend', '📈', '최근 14일', ...none()));
+    // 잘하는 · 느린
+    out.push(qOk ? t('ss', '💪', '잘하는 · 느린 문제', `💪 ${d.strong.length} · 🐢 ${d.slow.length}`, '확실한 것과 아직 느린 것') : t('ss', '💪', '잘하는 · 느린 문제', ...none()));
+    // 날짜별 기록
+    out.push(R.days ? t('days', '📅', '날짜별 기록', `${n(R.days.length)}일`, '엑셀(CSV)로 내려받기') : t('days', '📅', '날짜별 기록', ...none()));
+    return `<div class="st-tiles">${out.join('')}</div>`;
   }
 
   Account.addPage({
     id: 'weak', ic: '📋', label: '진료 차트', login: true,
     async render() {
-      const [recHtml, d] = await Promise.all([gameRecordsHtml(), rpc('my_weak', { p_game: M.game, p_days: M.days }).catch(e => ({ _err: e }))]);
+      const [R, d] = await Promise.all([gameRecords(), rpc('my_weak', { p_game: M.game, p_days: M.days }).catch(e => ({ _err: e }))]);
+      M.R = R; M.d = d; M.pg = {};
       const tabs = filt('wg', M.game, [[null, '전체'], ...GAMES.map(g => [g.id, `${g.ic} ${g.ko}`])]);
       const per = filt('wd', M.days, [[null, '전체 기간'], [30, '최근 30일'], [7, '최근 7일']]).replace('class="filt"', 'class="filt sm"');
-      const head = `<h2>📋 진료 차트</h2>
-        <p class="sub">내 게임 기록으로 진찰한 결과예요. 건강한 부위(잘하는 것) · 치료가 필요한 부위(약한 것) · 처방을 확인해 보세요.</p>${tabs}${per}`;
-      const qHead = `</div><div class="chart chart2"><div class="chart-head"><div><h3>📝 문제별 분석</h3><span class="no">세부 검사 기록지 · 문제 하나하나 맞았는지 · 헷갈린 것 · 걸린 시간</span></div></div>`;
-      const sheet = `<div class="chart">${recHtml}`;
-      if (d._err) {
-        return head + sheet + qHead + (MISSING(d._err)
-          ? '<p class="empty2">문제별 기록은 곧 시작돼요. (관리자가 Supabase 에서 <b>answers.sql</b> 을 실행하면 그다음 게임부터 쌓여요)</p>'
-          : `<p class="empty2">${esc(K.KO_ERR(d._err))}</p>`) + dataNote + '</div>';
-      }
-      if (!d.total) {
-        return head + sheet + qHead + `<p class="empty2">${M.game || M.days ? '이 조건에는' : '아직'} 문제별 기록이 없어요.<br>로그인한 채로 게임을 하면 문제마다 맞았는지 틀렸는지가 쌓여요 🎮</p>` + dataNote + '</div>';
-      }
-      const rate = pct(d.right, d.total);
-      const weakestCat = d.cats.filter(c => c.tries >= 3)[0] || d.cats[0];
-      const game = M.game && G[M.game];
-      const days = d.days || [];
-      const maxT = Math.max(1, ...days.map(x => x.tries));
-
-      return head + sheet + qHead + `
-        <div class="kpis">
-          <div class="kpi c1"><small>문제 정답률</small><b>${rate}%</b><span>${n(d.total)}문제 중 ${n(d.right)}개 맞힘</span></div>
-          <div class="kpi c2"><small>가장 약한 부분</small><b style="font-size:20px">${weakestCat ? esc(weakestCat.cat) : '-'}</b>
-            <span>${weakestCat ? `${M.game ? '' : esc(G[weakestCat.game] ? G[weakestCat.game].ko : weakestCat.game) + ' · '}정답률 ${weakestCat.rate}% (${weakestCat.tries}문제)` : '묶음 기록이 아직 없어요'}</span></div>
-          <div class="kpi c3"><small>다시 볼 문제</small><b>${n(d.weak.length)}</b><span>한 번 이상 틀린 문제${d.weak.length >= 20 ? ' (많은 순 20개)' : ''}</span></div>
-        </div>
-        ${game ? `<div class="row" style="margin-top:12px"><a class="abtn pri" href="${esc(game.url)}">▶ ${esc(game.ko)} 다시 연습하러 가기</a></div>` : ''}
-
-        ${!M.game && d.games.length > 1 ? `<h3>🎮 게임별 정답률</h3><div class="bars2">${d.games.map(g =>
-          rateBar(esc(gname(g.game)), pct(g.right, g.tries), `${n(g.tries)}문제`)).join('')}</div>` : ''}
-
-        <h3>🧩 부분별 정답률 <small class="st-hint">낮은 순 · 빨간 막대부터 공부해 보세요</small></h3>
-        <div class="bars2">${d.cats.slice(0, 15).map(c =>
-          rateBar(`${esc(c.cat)}${M.game ? '' : ` <small class="st-g">${esc(G[c.game] ? G[c.game].ko : c.game)}</small>`}`, c.rate, `${n(c.tries)}문제`)).join('')
-          || '<p class="empty2">묶음 기록이 아직 없어요.</p>'}</div>
-
-        <h3>❗ 반복되는 증상 <small class="st-hint">자주 틀리는 문제 · 틀린 횟수 많은 순</small></h3>
-        ${d.weak.length ? `<div class="tbl-wrap ops-tall"><table class="tbl"><thead><tr><th>문제</th>${M.game ? '' : '<th>게임</th>'}<th>부분</th>
-            <th class="num">틀림</th><th class="num">정답률</th><th>대신 고른 것</th><th>마지막</th></tr></thead><tbody>${d.weak.map(w => `<tr>
-            <td class="st-item">${esc(w.item)}</td>${M.game ? '' : `<td>${esc(G[w.game] ? G[w.game].ko : w.game)}</td>`}<td>${esc(w.cat || '-')}</td>
-            <td class="num">${n(w.wrong)} / ${n(w.tries)}</td><td class="num"><span class="st-pill ${tone(w.rate)}">${w.rate}%</span></td>
-            <td class="st-item"><small>${w.last_picked ? esc(w.last_picked) : '-'}</small></td>
-            <td>${w.last_ok ? '✅ 맞힘' : '❌ 틀림'} <small style="color:var(--ink-faint)">${K.fmtDate(w.last_at)}</small></td></tr>`).join('')}</tbody></table></div>
-          <p class="note">✅ 최근엔 맞힌 문제는 거의 다 익힌 거예요. ❌ 인 문제부터 다시 보세요.</p>`
-          : '<p class="empty2">틀린 문제가 없어요! 👏</p>'}
-
-        ${d.confuse.length ? `<h3>🔀 자주 헷갈리는 짝 <small class="st-hint">이 문제에서 대신 고른 것</small></h3>
-          <div class="st-pairs">${d.confuse.map(c => `<div class="st-pair"><b>${esc(c.item)}</b><span class="vs">↔</span><span>${esc(c.picked)}</span>
-            <small>${n(c.n)}번${M.game ? '' : ` · ${esc(G[c.game] ? G[c.game].ko : c.game)}`}</small></div>`).join('')}</div>
-          <p class="note">두 개를 나란히 놓고 위치 · 모양 · 이름의 차이를 비교해 보세요.</p>` : ''}
-
-        ${d.slow.length ? `<h3>🐢 맞혔지만 오래 걸린 문제 <small class="st-hint">내 보통 속도보다 1.5배 넘게 걸림</small></h3>
-          <div class="st-chips">${d.slow.map(s => `<span class="chip" title="${n(s.n)}번 맞힘">${esc(s.item)} · ${(s.avg_ms / 1000).toFixed(1)}초 (×${s.ratio})</span>`).join(' ')}</div>
-          <p class="note">맞히긴 했지만 아직 확실하지 않은 문제예요. 바로 떠오를 때까지 한 번 더!</p>` : ''}
-
-        ${d.no_voice ? `<p class="note">🎤 마이크가 소리를 못 들은 ${n(d.no_voice)}번은 정답률에서 뺐어요. 조용한 곳에서 크게 말해 보세요.</p>` : ''}
-
-        ${d.strong.length ? `<h3>💪 잘하는 문제</h3><div class="st-chips">${d.strong.map(s =>
-          `<span class="chip update" title="${n(s.tries)}번 중 ${s.rate}%">${esc(s.item)}</span>`).join(' ')}</div>` : ''}
-
-        ${days.length ? `<h3>📈 최근 14일 정답률</h3>
-          <div class="ops-cols">${days.map(x => `<div class="c" title="${esc(x.day)}: ${x.rate}% (${x.tries}문제)">
-            <i class="${tone(x.rate)}" style="height:${Math.max(4, x.rate)}%;opacity:${(0.45 + 0.55 * x.tries / maxT).toFixed(2)}"></i>
-            <span>${esc(x.day.slice(5).replace('-', '/'))}</span></div>`).join('')}</div>
-          <p class="note">막대 높이 = 정답률, 진할수록 그날 많이 풀었어요.</p>` : ''}
-        ${dataNote}</div>`;
+      const qOk = !d._err && d.total;
+      const vitals = R.rows ? `<div class="vitals st-v5">
+          <div class="vital ${accTone(R.allAcc)}"><small>평균 정확도</small><b>${R.allAcc == null ? '-' : `${R.allAcc}%`}</b><span>${qOk ? `문제 정답률 ${pct(d.right, d.total)}%` : '정확도를 남기는 게임만'}</span></div>
+          <div class="vital"><small>진료 횟수</small><b>${n(R.runs.length)}판</b><span>끝까지 한 판 · ${R.gamesIn.length}개 게임</span></div>
+          <div class="vital"><small>최근 7일</small><b>${n(R.week)}판</b><span>내원 ${n(R.visitDays)}일째</span></div>
+          <div class="vital ${R.strong ? 'good' : ''}"><small>💪 가장 건강한 부위</small><b class="sm">${R.strong ? R.label(R.strong) : '-'}</b><span>${R.strong ? `정확도 ${R.strong.acc}%` : ''}</span></div>
+          <div class="vital ${R.weakest && R.weakest !== R.strong ? 'low' : ''}"><small>⚠ 치료가 가장 필요한</small><b class="sm">${R.weakest && R.weakest !== R.strong ? R.label(R.weakest) : '-'}</b><span>${R.weakest && R.weakest !== R.strong ? `정확도 ${R.weakest.acc}%` : ''}</span></div>
+        </div>` : `<p class="empty2">${M.game || M.days ? '이 조건에는' : '아직'} 진료 기록이 없어요. 로그인한 채로 게임을 한 판 끝까지 하면 첫 진찰 결과가 나와요 🎮</p>`;
+      const rx1 = R.rx ? `<div class="st-rx1"><span class="ic">💊</span><span class="sp"><b>오늘의 처방</b> ${R.rx[0].txt}</span>
+          ${R.rx.length > 1 ? `<button class="more" type="button" data-sttile="rx">처방 ${R.rx.length - 1}개 더 ↗</button>` : ''}${R.rx[0].url ? `<a class="go" href="${esc(R.rx[0].url)}">▶ 처방대로 연습하기</a>` : ''}</div>` : '';
+      return `<h2>📋 진료 차트</h2>
+        <p class="sub">내 게임 기록으로 진찰한 결과예요. 아래 칸을 누르면 자세한 내용이 창으로 떠요.</p>${tabs}${per}
+        <div class="chart">${R.head}${vitals}${rx1}${tilesHtml()}
+          <div class="st-foot"><button type="button" data-sttile="info">ℹ️ 어떤 기록을 모으나요?</button><span>칸을 누르면 창이 떠요 · 오른쪽 위 ✕ 로 닫기</span></div></div>`;
     },
     bind() {
       const pg = K.pg;
+      closePop();
       pg.querySelectorAll('[data-wg]').forEach(b => b.addEventListener('click', () => { M.game = b.dataset.wg || null; Account.page('weak'); }));
       pg.querySelectorAll('[data-wd]').forEach(b => b.addEventListener('click', () => { M.days = b.dataset.wd ? +b.dataset.wd : null; Account.page('weak'); }));
-      const cb = pg.querySelector('#stMyCsv');
-      if (cb) cb.addEventListener('click', () => { if (M.csv) download(`samgongyuk_my_records_${K.fmtDate(new Date())}.csv`, '\uFEFF' + M.csv.map(r => r.map(csvCell).join(',')).join('\r\n'), 'text/csv;charset=utf-8'); });
+      pg.querySelectorAll('[data-sttile]').forEach(b => b.addEventListener('click', () => openPop(b.dataset.sttile)));
     },
   });
 
