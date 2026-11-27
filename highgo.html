@@ -625,7 +625,6 @@
     <a href="#" class="active">홈</a>
     <a href="#row-game">게임</a>
     <a href="#row-quiz">문제풀기</a>
-    <a href="#row-tool">학습 도구</a>
     <a href="#row-soon">공개 예정</a>
   </nav>
   <button class="rank-btn" id="rankBtn" aria-controls="rankPanel" aria-expanded="false">🏆 랭킹</button>
@@ -661,7 +660,7 @@
 <main id="rows"></main>
 
 <footer>
-  청암대학교 물리치료과 PTX+AI 동아리 · 팀 삼공육 · 우리가 만든 게임과 학습 도구 모음 · <a href="privacy.html" style="text-decoration:underline">개인정보 처리방침</a>
+  청암대학교 물리치료과 PTX+AI 동아리 · 팀 삼공육 · 우리가 만든 해부학 게임 모음 · <a href="privacy.html" style="text-decoration:underline">개인정보 처리방침</a>
   <div class="credit">3D 뼈·근육 모델: BodyParts3D © 2008 DBCLS (CC BY-SA 2.1 JP) · 3D 엔진: three.js (MIT) · LandMark 코드 원본: LUCASDREYER/aim-trainer-game (MIT) · 음성 인식: Vosk (Apache 2.0) · 폰트: Pretendard, Galmuri (OFL)</div>
 </footer>
 
@@ -732,24 +731,22 @@
    ============================================================ */
 const APPS = [
   {
-    title: "딴딴/딴",
-    emoji: "🎤",
+    title: "사랑하는 그대에게 기대세요",
+    emoji: "⛳",
     category: "game",
     tag: "NEW",
     year: "2026",
     who: "PTX+AI · 삼공육",
-    desc: "비트에 맞춰 해부학 용어를 따라 외치는 리듬 게임! 나레이터가 먼저 외치면 박자에 맞춰 똑같이 따라 해요. 뇌·뇌신경, 신경로, 바닥핵, 뼈·랜드마크, 근육, 머리·얼굴까지 405개 용어.",
-    url: "games/DdanDdan/index.html",
-    glow: "#7c9bff",
-    thumb: "thumbs/ddan-card.jpg",      // 카드 썸네일 (무대 전체 그림)
-    hero: "thumbs/ddan-title.jpg",      // 배너 속 화면: 메인 타이틀
-    bg: "thumbs/bg-ddan.jpg",           // 배너 전체 배경 (무대 + 하늘)
-    bgPos: "center top",                // 배경이 잘릴 때 하늘이 많이 보이게 위쪽 기준
-    detail: "thumbs/ddan-detail.jpg",   // 상세 창 그림
-    detailFull: true,                   // 상세 창 그림을 자르지 않고 통째로
-    heroBig: true,                      // 배너 속 화면을 크게, 뒤의 노란 해 없이
-    facts: [["405", "용어"], ["7", "맵"], ["🎤", "따라 외치기"]],
-    needsServer: true,   // 마이크·음성 모델을 써요
+    desc: "누가 더 멀리 치나! 물리치료기초 기출문제(2019~2025, 420문제)를 맞혀 캐쉬를 벌고, 골프채 · 골프공 · 파워를 사서 비거리를 늘려요. 내 최고 기록은 회원 랭킹에 자동으로 올라가요.",
+    url: "games/LongDrive/index.html",
+    glow: "#b6ff3b",
+    // 🎄 크리스마스 사진 (2026-11-25). 시즌이 끝나면 아래 세 줄을 longdrive-day.jpg · bg-longdrive.jpg 로 되돌려요
+    thumb: "thumbs/longdrive-xmas.jpg",   // 게임 화면 캡처 (눈 덮인 연습장 · 크리스마스 트리 · 척추 채 · 파이어볼)
+    hero: "thumbs/longdrive-xmas.jpg",
+    bg: "thumbs/bg-longdrive-xmas.jpg",   // 배너 전체 배경 (크리스마스 연습장을 넓게 캡처)
+    bgPos: "center 40%",                 // 하늘 · 산 · 열기구 · 대포가 보이게
+    heroBig: true,                        // 배너 속 화면을 크게, 뒤의 노란 해 없이
+    facts: [["420", "기출문제"], ["⛳", "비거리 대결"], ["🏆", "회원 랭킹"]],
     featured: true
   },
   {
@@ -778,23 +775,6 @@ const APPS = [
     featured: true
   },
   {
-    title: "LandMark",
-    emoji: "🎯",
-    category: "game",
-    tag: "에임",
-    year: "2026",
-    who: "PTX+AI · 삼공육",
-    desc: "3D 뼈 위의 랜드마크를 조준해서 맞히는 해부학 에임 게임 (5단계, 2인 대결).",
-    url: "HIGO_뼈게임_사이트판.html",
-    glow: "#2de2e6",
-    thumb: "thumbs/landmark-thumb.jpg",   // 카드 썸네일: 우주 그림 + 네온 타이틀
-    hero: "thumbs/landmark-card.jpg",    // 배너 속 작은 화면: 네온 타이틀만
-    bg: "thumbs/bg-landmark.jpg",        // 배너 전체 배경(우주 그림)
-    detail: "thumbs/landmark-detail.jpg",   // 상세 창 그림
-    facts: [["5", "스테이지"], ["2P", "대결"], ["3D", "뼈 모델"]],
-    featured: true
-  },
-  {
     title: "뭐라구요!? 안들려요",
     emoji: "🧙",
     category: "game",
@@ -815,22 +795,41 @@ const APPS = [
     featured: true
   },
   {
-    title: "사랑하는 그대에게 기대세요",
-    emoji: "⛳",
+    title: "딴딴/딴",
+    emoji: "🎤",
     category: "game",
     tag: "NEW",
     year: "2026",
     who: "PTX+AI · 삼공육",
-    desc: "누가 더 멀리 치나! 물리치료기초 기출문제(2019~2025, 420문제)를 맞혀 캐쉬를 벌고, 골프채 · 골프공 · 파워를 사서 비거리를 늘려요. 내 최고 기록은 회원 랭킹에 자동으로 올라가요.",
-    url: "games/LongDrive/index.html",
-    glow: "#b6ff3b",
-    // 🎄 크리스마스 사진 (2026-11-25). 시즌이 끝나면 아래 세 줄을 longdrive-day.jpg · bg-longdrive.jpg 로 되돌려요
-    thumb: "thumbs/longdrive-xmas.jpg",   // 게임 화면 캡처 (눈 덮인 연습장 · 크리스마스 트리 · 척추 채 · 파이어볼)
-    hero: "thumbs/longdrive-xmas.jpg",
-    bg: "thumbs/bg-longdrive-xmas.jpg",   // 배너 전체 배경 (크리스마스 연습장을 넓게 캡처)
-    bgPos: "center 40%",                 // 하늘 · 산 · 열기구 · 대포가 보이게
-    heroBig: true,                        // 배너 속 화면을 크게, 뒤의 노란 해 없이
-    facts: [["420", "기출문제"], ["⛳", "비거리 대결"], ["🏆", "회원 랭킹"]],
+    desc: "비트에 맞춰 해부학 용어를 따라 외치는 리듬 게임! 나레이터가 먼저 외치면 박자에 맞춰 똑같이 따라 해요. 뇌·뇌신경, 신경로, 바닥핵, 뼈·랜드마크, 근육, 머리·얼굴까지 405개 용어.",
+    url: "games/DdanDdan/index.html",
+    glow: "#7c9bff",
+    thumb: "thumbs/ddan-card.jpg",      // 카드 썸네일 (무대 전체 그림)
+    hero: "thumbs/ddan-title.jpg",      // 배너 속 화면: 메인 타이틀
+    bg: "thumbs/bg-ddan.jpg",           // 배너 전체 배경 (무대 + 하늘)
+    bgPos: "center top",                // 배경이 잘릴 때 하늘이 많이 보이게 위쪽 기준
+    detail: "thumbs/ddan-detail.jpg",   // 상세 창 그림
+    detailFull: true,                   // 상세 창 그림을 자르지 않고 통째로
+    heroBig: true,                      // 배너 속 화면을 크게, 뒤의 노란 해 없이
+    facts: [["405", "용어"], ["7", "맵"], ["🎤", "따라 외치기"]],
+    needsServer: true,   // 마이크·음성 모델을 써요
+    featured: true
+  },
+  {
+    title: "LandMark",
+    emoji: "🎯",
+    category: "game",
+    tag: "에임",
+    year: "2026",
+    who: "PTX+AI · 삼공육",
+    desc: "3D 뼈 위의 랜드마크를 조준해서 맞히는 해부학 에임 게임 (5단계, 2인 대결).",
+    url: "HIGO_뼈게임_사이트판.html",
+    glow: "#2de2e6",
+    thumb: "thumbs/landmark-thumb.jpg",   // 카드 썸네일: 우주 그림 + 네온 타이틀
+    hero: "thumbs/landmark-card.jpg",    // 배너 속 작은 화면: 네온 타이틀만
+    bg: "thumbs/bg-landmark.jpg",        // 배너 전체 배경(우주 그림)
+    detail: "thumbs/landmark-detail.jpg",   // 상세 창 그림
+    facts: [["5", "스테이지"], ["2P", "대결"], ["3D", "뼈 모델"]],
     featured: true
   },
   {
@@ -849,47 +848,18 @@ const APPS = [
     facts: [["🦴", "뼈 221칸"], ["💪", "근육 100개"], ["💰", "캐쉬 공용"]]
   },
   {
-    title: "HIGO 공식 사이트",
-    emoji: "🌐",
-    category: "tool",
-    desc: "HIGO 홈·뼈 도감·소개 페이지가 있는 공개 웹사이트 (인터넷 필요)",
-    url: "https://higo-rho.vercel.app",
-    glow: "#9b5cff",
-    thumb: "thumbs/higo-title.jpg"
-  },
-  {
-    title: "너에게 닿기를 — 아래팔·다리",
-    emoji: "",
+    title: "말해 YES OR NO — 2 · 3학년",
+    emoji: "🧙",
     category: "soon",
-    thumb: "thumbs/soon-neoege.jpg",   // 어둡게 톤다운한 그림
-    imageOnly: true,                   // 카드에 그림만 (아래 글씨 없이)
-    desc: "아래팔, 엉덩이·넙다리, 종아리·발 부위 근육 추가 예정"
-  },
-  {
-    title: "ROM 측정 연습",
-    emoji: "📐",
-    category: "soon",
-    desc: "관절가동범위 정상 각도를 외우는 연습 도구 (아이디어 예시)"
-  },
-  {
-    title: "AI 해부학 질문봇",
-    emoji: "🤖",
-    category: "soon",
-    desc: "해부학·운동학 질문에 답해주는 AI 도우미 (아이디어 예시)"
-  },
-  {
-    title: "시험 플래시카드",
-    emoji: "🗂️",
-    category: "soon",
-    desc: "시험 범위 핵심 개념 암기 카드 (아이디어 예시)"
+    thumb: "thumbs/yesno.jpg",   // 1학년 게임 첫 화면 (공개 예정 카드라 회색으로 보여요)
+    desc: "2학년 · 3학년 문제 추가 예정"
   }
 ];
 
 const ROWS = [
   { id: "row-game", key: "game", eyebrow: "01 · Games", title: "우리가 만든 게임" },
   { id: "row-quiz", key: "quiz", eyebrow: "02 · Quiz", title: "뼈/근육 문제 풀어보기", sub: "문제를 풀어 캐쉬를 얻고 게임에서 아이템 사용에 이용하세요!" },
-  { id: "row-tool", key: "tool", eyebrow: "03 · Tools", title: "학습 도구" },
-  { id: "row-soon", key: "soon", eyebrow: "04 · Coming soon", title: "공개 예정" }
+  { id: "row-soon", key: "soon", eyebrow: "03 · Coming soon", title: "공개 예정" }
 ];
 const SITE_URL = "https://samgongyuk.vercel.app/";   // 공개 사이트 주소 (Vercel, 동아리 계정)
 const CAT_KO = { game: "게임", quiz: "문제풀기", tool: "학습 도구", soon: "공개 예정" };

@@ -1340,47 +1340,60 @@ const zoneMat = (hex) => new THREE.MeshBasicMaterial({ color: hex, transparent: 
 const ringMatOf = (hex) => new THREE.MeshBasicMaterial({ color: glow(hex, 1.6), toneMapped: false, transparent: true, opacity: .9, depthWrite: false });
 const BOOST_LOOK = { bomb: { zone: zoneMat(0xff3b3b), ring: ringMatOf(0xff3b3b) }, cannon: { zone: zoneMat(0x2de2e6), ring: ringMatOf(0x2de2e6) } };
 let boosterSrc = null; const boosterObjs = [];
+// 부스터 모양(구 · 고리 · 원통…)은 같은 크기끼리 하나를 같이 써요.
+// 예전엔 새 샷마다 130개쯤의 폭탄 · 대포 모양을 전부 새로 만들어 그래픽 카드에 다시 올려서 멈칫했어요.
+const SG_CACHE = new Map();
+function SG(kind, ...args) {
+  const k = kind + ':' + args.join(',');
+  let g = SG_CACHE.get(k);
+  if (!g) { g = new THREE[kind + 'Geometry'](...args); g.userData.shared = true; SG_CACHE.set(k, g); }
+  return g;
+}
 function makeBoosterObj(b) {
   const g = new THREE.Group(); g.position.set(b.x, 0, -b.z); scene.add(g);
   const L = BOOST_LOOK[b.type];
-  const zone = new THREE.Mesh(new THREE.CircleGeometry(b.r, 40), L.zone); zone.rotation.x = -Math.PI / 2; zone.position.y = .05; g.add(zone);
-  const ring = new THREE.Mesh(new THREE.RingGeometry(b.r - .5, b.r, 48), L.ring); ring.rotation.x = -Math.PI / 2; ring.position.y = .06; g.add(ring);
+  const zone = new THREE.Mesh(SG('Circle', b.r, 40), L.zone); zone.rotation.x = -Math.PI / 2; zone.position.y = .05; g.add(zone);
+  const ring = new THREE.Mesh(SG('Ring', b.r - .5, b.r, 48), L.ring); ring.rotation.x = -Math.PI / 2; ring.position.y = .06; g.add(ring);
   const o = { b, g, zone, ring, fx: [] };
   if (b.type === 'bomb') {
     const body = new THREE.Group(); g.add(body); o.body = body;
-    const ball = new THREE.Mesh(new THREE.SphereGeometry(1.8, 24, 18), BOOST_MAT.bomb); ball.position.y = 1.8; ball.castShadow = true; body.add(ball);
-    const cap = new THREE.Mesh(new THREE.CylinderGeometry(.5, .6, .5, 12), BOOST_MAT.cap); cap.position.y = 3.65; body.add(cap);
-    const fuse = new THREE.Mesh(new THREE.CylinderGeometry(.09, .09, 1.1, 6), BOOST_MAT.fuse); fuse.position.set(.25, 4.3, 0); fuse.rotation.z = -.45; body.add(fuse);
+    const ball = new THREE.Mesh(SG('Sphere', 1.8, 24, 18), BOOST_MAT.bomb); ball.position.y = 1.8; ball.castShadow = true; body.add(ball);
+    const cap = new THREE.Mesh(SG('Cylinder', .5, .6, .5, 12), BOOST_MAT.cap); cap.position.y = 3.65; body.add(cap);
+    const fuse = new THREE.Mesh(SG('Cylinder', .09, .09, 1.1, 6), BOOST_MAT.fuse); fuse.position.set(.25, 4.3, 0); fuse.rotation.z = -.45; body.add(fuse);
     const spark = new THREE.Sprite(new THREE.SpriteMaterial({ map: fireTex, color: glow(0xffc040, 2.5), blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false }));
     spark.position.set(.5, 4.85, 0); spark.scale.setScalar(1.2); body.add(spark); o.spark = spark;
-    const fb = new THREE.Mesh(new THREE.SphereGeometry(1, 20, 14), BOOST_MAT.fire.clone()); fb.visible = false; fb.position.y = 2; g.add(fb); o.fireball = fb;
-    const wave = new THREE.Mesh(new THREE.RingGeometry(.85, 1, 48), BOOST_MAT.fire.clone()); wave.rotation.x = -Math.PI / 2; wave.position.y = .1; wave.visible = false; g.add(wave); o.wave = wave;
-    const scorch = new THREE.Mesh(new THREE.CircleGeometry(4, 24), BOOST_MAT.scorch); scorch.rotation.x = -Math.PI / 2; scorch.position.y = .07; scorch.visible = false; g.add(scorch); o.scorch = scorch;
+    const fb = new THREE.Mesh(SG('Sphere', 1, 20, 14), BOOST_MAT.fire.clone()); fb.visible = false; fb.position.y = 2; g.add(fb); o.fireball = fb;
+    const wave = new THREE.Mesh(SG('Ring', .85, 1, 48), BOOST_MAT.fire.clone()); wave.rotation.x = -Math.PI / 2; wave.position.y = .1; wave.visible = false; g.add(wave); o.wave = wave;
+    const scorch = new THREE.Mesh(SG('Circle', 4, 24), BOOST_MAT.scorch); scorch.rotation.x = -Math.PI / 2; scorch.position.y = .07; scorch.visible = false; g.add(scorch); o.scorch = scorch;
   } else {
-    const base = new THREE.Mesh(new THREE.BoxGeometry(3.2, 1.2, 4), BOOST_MAT.wood); base.position.y = 1.2; base.castShadow = true; g.add(base);
+    const base = new THREE.Mesh(SG('Box', 3.2, 1.2, 4), BOOST_MAT.wood); base.position.y = 1.2; base.castShadow = true; g.add(base);
     for (const sx of [-1, 1]) {
-      const wheel = new THREE.Mesh(new THREE.CylinderGeometry(1.25, 1.25, .45, 18), BOOST_MAT.wood); wheel.rotation.z = Math.PI / 2; wheel.position.set(sx * 1.85, 1.25, .4); wheel.castShadow = true; g.add(wheel);
-      const hub = new THREE.Mesh(new THREE.CylinderGeometry(.35, .35, .5, 10), BOOST_MAT.iron); hub.rotation.z = Math.PI / 2; hub.position.set(sx * 1.9, 1.25, .4); g.add(hub);
+      const wheel = new THREE.Mesh(SG('Cylinder', 1.25, 1.25, .45, 18), BOOST_MAT.wood); wheel.rotation.z = Math.PI / 2; wheel.position.set(sx * 1.85, 1.25, .4); wheel.castShadow = true; g.add(wheel);
+      const hub = new THREE.Mesh(SG('Cylinder', .35, .35, .5, 10), BOOST_MAT.iron); hub.rotation.z = Math.PI / 2; hub.position.set(sx * 1.9, 1.25, .4); g.add(hub);
     }
     const barrel = new THREE.Group(); barrel.position.set(0, 2.3, .6); barrel.rotation.x = -(Math.PI / 2 - 33 * Math.PI / 180); g.add(barrel); o.barrel = barrel;
-    const tube = new THREE.Mesh(new THREE.CylinderGeometry(.75, 1, 5.5, 20), BOOST_MAT.iron); tube.position.y = 2.2; tube.castShadow = true; barrel.add(tube);
-    const muzzle = new THREE.Mesh(new THREE.TorusGeometry(.8, .16, 8, 24), BOOST_MAT.neonC); muzzle.position.y = 4.95; muzzle.rotation.x = Math.PI / 2; barrel.add(muzzle);
-    const stripe = new THREE.Mesh(new THREE.TorusGeometry(.92, .1, 8, 24), BOOST_MAT.neonC); stripe.position.y = .6; stripe.rotation.x = Math.PI / 2; barrel.add(stripe);
-    const back = new THREE.Mesh(new THREE.SphereGeometry(1, 16, 12), BOOST_MAT.iron); back.position.y = -.4; barrel.add(back);
+    const tube = new THREE.Mesh(SG('Cylinder', .75, 1, 5.5, 20), BOOST_MAT.iron); tube.position.y = 2.2; tube.castShadow = true; barrel.add(tube);
+    const muzzle = new THREE.Mesh(SG('Torus', .8, .16, 8, 24), BOOST_MAT.neonC); muzzle.position.y = 4.95; muzzle.rotation.x = Math.PI / 2; barrel.add(muzzle);
+    const stripe = new THREE.Mesh(SG('Torus', .92, .1, 8, 24), BOOST_MAT.neonC); stripe.position.y = .6; stripe.rotation.x = Math.PI / 2; barrel.add(stripe);
+    const back = new THREE.Mesh(SG('Sphere', 1, 16, 12), BOOST_MAT.iron); back.position.y = -.4; barrel.add(back);
     const flash = new THREE.Sprite(new THREE.SpriteMaterial({ map: fireTex, color: glow(0xffb040, 3), blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false }));
     flash.position.y = 5.6; flash.visible = false; barrel.add(flash); o.flash = flash;
     o.smoke = [];
-    for (let k = 0; k < 6; k++) { const s = new THREE.Mesh(new THREE.SphereGeometry(1, 12, 10), BOOST_MAT.smoke.clone()); s.visible = false; g.add(s); o.smoke.push(s); }
+    for (let k = 0; k < 6; k++) { const s = new THREE.Mesh(SG('Sphere', 1, 12, 10), BOOST_MAT.smoke.clone()); s.visible = false; g.add(s); o.smoke.push(s); }
   }
   return o;
 }
 function updateBoosters(now) {
   if (boosterSrc !== boosters) {   // 새 샷 → 새로 깔기
-    boosterObjs.forEach(o => { scene.remove(o.g); o.g.traverse(m => { if (m.geometry) m.geometry.dispose(); }); });
+    boosterObjs.forEach(o => { scene.remove(o.g); o.g.traverse(m => { if (m.geometry && !m.geometry.userData.shared) m.geometry.dispose(); }); });
     boosterObjs.length = 0; boosterSrc = boosters;
     for (const b of boosters) boosterObjs.push(makeBoosterObj(b));
   }
+  const cz = camera.position.z;
   for (const o of boosterObjs) {
+    // 카메라에서 900m 넘게 먼 부스터는 그리지 않아요 (안개 속이라 거의 안 보이는데 그리는 양만 많았어요)
+    const near = Math.abs(o.g.position.z - cz) < 900; if (o.g.visible !== near) o.g.visible = near;
+    if (!near) continue;
     const b = o.b, t = b.hitAt ? (now - b.hitAt) / 1000 : -1;
     o.ring.material.opacity = b.used ? .15 : .7 + .25 * Math.sin(now / 250 + b.id);
     if (b.type === 'bomb') {
@@ -1414,19 +1427,21 @@ trailGeo.setAttribute('color', new THREE.BufferAttribute(tCol, 3));
 const trailMesh = new THREE.Mesh(trailGeo, new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, toneMapped: false, fog: false }));
 trailMesh.frustumCulled = false; scene.add(trailMesh);
 const W3 = (p) => V(p[0], Math.max(0, p[1]) + BALL_R, -p[2]);
+// 매 프레임 새 물건을 만들지 않게 (예전엔 꼬리 점 260개 × 벡터 여러 개를 새로 만들어서, 가끔 메모리 정리로 멈칫했어요)
+const _tp = V(), _ta = V(), _tb = V(), _td = V(), _tc = V();
 function updateTrail() {
-  const tr = trail || [], b = ball, pts = tr.map(W3);
-  if (b && (phase === 'fly' || phase === 'roll')) pts.push(V(b.x, Math.max(0, b.y) + BALL_R, -b.z));
-  const n = Math.min(pts.length, MAXP);
-  const start = pts.length - n;
+  const tr = trail || [], b = ball, extra = !!(b && (phase === 'fly' || phase === 'roll'));
+  const L = tr.length + (extra ? 1 : 0), n = Math.min(L, MAXP), start = L - n;
+  const get = (j, out) => j < tr.length ? out.set(tr[j][0], Math.max(0, tr[j][1]) + BALL_R, -tr[j][2]) : out.set(b.x, Math.max(0, b.y) + BALL_R, -b.z);
   for (let i = 0; i < n; i++) {
-    const p = pts[start + i], prev = pts[start + Math.max(0, i - 1)], next = pts[start + Math.min(n - 1, i + 1)];
-    const dir = V().subVectors(next, prev); if (dir.lengthSq() < 1e-6) dir.set(0, 0, -1);
-    const toCam = V().subVectors(camera.position, p), dist = toCam.length();
-    const side = V().crossVectors(dir, toCam).normalize().multiplyScalar(.03 + Math.max(0, dist - 18) * .0045);
-    tPos.set([p.x + side.x, p.y + side.y, p.z + side.z, p.x - side.x, p.y - side.y, p.z - side.z], i * 6);
-    const k = Math.pow((i + 1) / n, 1.6) * 1.8;
-    tCol.set([trailCol.r * k, trailCol.g * k, trailCol.b * k, trailCol.r * k, trailCol.g * k, trailCol.b * k], i * 6);
+    get(start + i, _tp); get(start + Math.max(0, i - 1), _ta); get(start + Math.min(n - 1, i + 1), _tb);
+    _td.subVectors(_tb, _ta); if (_td.lengthSq() < 1e-6) _td.set(0, 0, -1);
+    _tc.subVectors(camera.position, _tp); const dist = _tc.length();
+    _td.cross(_tc).normalize().multiplyScalar(.03 + Math.max(0, dist - 18) * .0045);
+    const o = i * 6, k = Math.pow((i + 1) / n, 1.6) * 1.8;
+    tPos[o] = _tp.x + _td.x; tPos[o + 1] = _tp.y + _td.y; tPos[o + 2] = _tp.z + _td.z;
+    tPos[o + 3] = _tp.x - _td.x; tPos[o + 4] = _tp.y - _td.y; tPos[o + 5] = _tp.z - _td.z;
+    tCol[o] = tCol[o + 3] = trailCol.r * k; tCol[o + 1] = tCol[o + 4] = trailCol.g * k; tCol[o + 2] = tCol[o + 5] = trailCol.b * k;
   }
   trailGeo.attributes.position.needsUpdate = true; trailGeo.attributes.color.needsUpdate = true;
   trailGeo.setDrawRange(0, Math.max(0, n - 1) * 6);

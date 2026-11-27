@@ -494,6 +494,7 @@ function boost(b) {
     snd("cannon"); toast("💥 대포 발사!");
   }
   ball.y = .05; ball.spin = 0; ball.lx = ball.x; ball.lz = ball.z;
+  ball.steer = 0;   // 부스트로 다시 날면 공 조종도 새로 (예전엔 한 샷 내내 한도가 쌓여서 4000m쯤부터 조종이 안 됐어요)
   (lastShot.boosts = lastShot.boosts || []).push(b.type);
   phase = "fly";
 }

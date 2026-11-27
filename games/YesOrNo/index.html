@@ -320,6 +320,12 @@ const D = window.YESNO_G1 || { muscles: [], bones: [] };
   };
   tag("ko", ["손", "발"]); tag("en", ["hand", "foot"]);
 })();
+// 지문 안에 같은 말이 두 번 들어간 것 빼기 (예: 등세모근 이는곳 "바깥뒤통수뼈융기, 목덜미인대"가 두 번)
+(D.muscles || []).forEach(m => ["origin", "insert", "nerve", "action"].forEach(f => {
+  if (typeof m[f] !== "string") return;
+  const seg = m[f].split(/\s*,\s*/), u = seg.filter((t, i) => seg.indexOf(t) === i);
+  if (u.length < seg.length) m[f] = u.join(", ");
+}));
 const back = BACK[new URLSearchParams(location.search).get("back")];
 
 /* ===== 저장 (연속 학습일 · 오답 노트 — 이 기기) ===== */
@@ -573,8 +579,13 @@ async function start(fromWrong) {
   else {
     list = []; const keys = new Set();
     for (let t = 0; list.length < LEN && t < LEN * 20; t++) {
-      const q = makeOne(MODE); if (!q || q.opts.length < 2 || keys.has(q.key)) continue;
-      keys.add(q.key); list.push(q);
+      // 같은 근육 · 같은 질문이 한글/영어로만 바뀌어 한 판에 두 번 나오지 않게 (언어 표시는 빼고 비교)
+      const q = makeOne(MODE); if (!q || q.opts.length < 2) continue;
+      const pk = q.key.split(":");
+      const k = /^[mb]:/.test(q.key) ? q.key.replace(/:(ko|en)$/, "")
+        : pk[0] === "t" ? `t:${pk[1]}:${pk[2].split(".")[+pk[3]]}` : q.key;   // 3D 뼈: 같은 뼈는 한 판에 한 번
+      if (keys.has(k)) continue;
+      keys.add(k); list.push(q);
     }
   }
   if (!list.length) return;
