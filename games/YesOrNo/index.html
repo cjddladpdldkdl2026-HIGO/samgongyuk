@@ -179,8 +179,34 @@ button { font: inherit; color: inherit; cursor: pointer; }
 #zoom { position: fixed; inset: 0; z-index: 20; background: rgba(5, 6, 20, .92); display: grid; place-items: center; padding: 16px; cursor: zoom-out; }
 #zoom img { max-width: 100%; max-height: 100%; border-radius: 12px; background: #fff; }
 
+/* ---------- 3D 해부학 문제 · 공룡 캐릭터 (2026-11-27) ---------- */
+.wiz.dino { image-rendering: auto; }
+.stage .wiz.dino { height: 180px; }
+.ask .wiz.dino { height: 104px; }
+.center .wiz.dino { height: 190px; }
+.modes { grid-template-columns: repeat(2, 1fr); }
+.mode.new { position: relative; border-color: var(--cyan); box-shadow: 0 4px 0 #1b8f92; }
+.mode.new::after { content: "NEW"; position: absolute; top: -9px; right: 10px; font-size: 10px; font-weight: 900; color: #06251a; background: var(--cyan); padding: 2px 7px; border-radius: 99px; }
+.mode.new.on { border-color: var(--gold); box-shadow: 0 4px 0 var(--gold-d); }
+.v3 { position: relative; height: min(44vh, 380px); min-height: 230px; margin: 12px 0 0; border-radius: 22px; overflow: hidden; cursor: grab; touch-action: none;
+  background: radial-gradient(90% 80% at 50% 45%, #2c2468, #141034 80%); border: 2px solid var(--line); }
+.v3 canvas { width: 100%; height: 100%; display: block; }
+.v3 .hint { position: absolute; left: 12px; bottom: 10px; font-size: 11.5px; color: var(--dim); background: rgba(10, 8, 32, .6); padding: 4px 9px; border-radius: 10px; pointer-events: none; }
+.v3 .cr { position: absolute; right: 10px; bottom: 10px; font-size: 9px; color: #6f68a8; pointer-events: none; }
+.v3 .load { position: absolute; inset: 0; display: grid; place-items: center; color: var(--dim); font-weight: 700; }
+.mark { position: absolute; left: 0; top: 0; width: 0; height: 0; pointer-events: none; }
+.mark .ring { position: absolute; left: -14px; top: -14px; width: 28px; height: 28px; border-radius: 50%; border: 3px solid rgba(255, 255, 255, .9); box-shadow: 0 0 8px rgba(0, 0, 0, .6); }
+.mark .r2 { left: -4px; top: -4px; width: 8px; height: 8px; background: #fff; border: 0; }
+.mark b { position: absolute; left: 12px; top: -32px; min-width: 24px; height: 24px; border-radius: 12px; background: #fff; color: #1d1846; font-size: 14px; font-weight: 900; display: grid; place-items: center; padding: 0 5px; box-shadow: 0 2px 6px rgba(0, 0, 0, .5); }
+.mark.ask .ring { border-color: var(--gold); animation: aim 1.1s ease-in-out infinite; }
+.mark.ask .r2 { background: var(--gold); }
+.mark.ask b { background: var(--gold); color: #3a2a00; transform: scale(1.15); }
+@keyframes aim { 50% { transform: scale(1.45); opacity: .55; } }
+
 @media (max-width: 560px) {
   .ask .wiz { height: 84px; }
+  .ask .wiz.dino { height: 90px; }
+  .v3 { height: 38vh; }
   .ask .bubble { font-size: 16px; margin-bottom: 18px; }
   .choice { font-size: 15px; padding: 12px 14px; }
   .foot .in { flex-direction: column; align-items: stretch; gap: 14px; }
@@ -204,7 +230,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
   <div class="logo">말해<i><span class="y">YES</span> <b>OR</b> <span class="n">NO</span></i></div>
   <p class="sub">문제를 풀어 <b>💰 캐쉬</b>를 얻고, 게임에서 아이템을 사세요!</p>
   <div class="stage">
-    <img class="wiz" src="img/wizard-idle.png" alt="마법사">
+    <img class="wiz dino" src="img/dino/c6.webp" alt="공룡">
     <div class="bubble" id="hello">어서 오게, 젊은 치료사여!</div>
   </div>
   <div class="menu">
@@ -226,8 +252,9 @@ button { font: inherit; color: inherit; cursor: pointer; }
   <div class="combo" id="combo"></div>
   <div class="label"><h2 id="labelText">알맞은 답을 고르게</h2><span class="tag" id="srcTag"></span></div>
   <div class="fig hide" id="fig"><img id="figImg" alt="문제 그림"></div>
+  <div class="v3 hide" id="v3"><div class="load" id="v3load">3D 불러오는 중…</div><div class="hint">👆 끌어서 돌려 보기</div><div class="cr">3D: BodyParts3D © DBCLS · CC BY 4.0</div></div>
   <div class="ask">
-    <img class="wiz" id="lessonWiz" src="img/wizard-idle.png" alt="마법사">
+    <img class="wiz dino" id="lessonWiz" src="img/dino/a2.webp" alt="공룡">
     <div class="bubble" id="qText"></div>
   </div>
   <div class="choices" id="choices"></div>
@@ -241,7 +268,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 
 <!-- 끝 화면 (레슨 완료 / 하트 소진 같이 씀) -->
 <section class="screen center hide" id="end">
-  <img class="wiz happy" id="endWiz" src="img/wizard-cast.png" alt="마법사">
+  <img class="wiz dino happy" id="endWiz" src="img/dino/b5.webp" alt="공룡">
   <h1 id="endTitle">레슨 완료!</h1>
   <p class="say" id="endSay"></p>
   <div class="cards" id="endCards"></div>
@@ -260,6 +287,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 <script src="../../auth.js"></script>
 <script src="../../wallet.js"></script>
 <script src="data1.js"></script>
+<script type="module" src="anat3d.js"></script>   <!-- 3D 해부학 문제 (window.YN3D) -->
 <script>
 /* ===== 설정 — 숫자를 바꾸면 밸런스가 바뀌어요 ===== */
 const HEARTS = 5;          // 하트 수 (틀리면 하나씩 줄어요)
@@ -371,6 +399,7 @@ function fromKey(key) {
   try {
     if (p[0] === "m" && M[+p[1]]) return muscleQ(+p[1], p[2], p[3]);
     if (p[0] === "b" && B[+p[1]] && B[+p[1]].items[+p[2]]) return boneQ(+p[1], +p[2], p[3], p[4]);
+    if (p[0] === "t" && REGIONS[+p[1]]) return bone3Q(+p[1], p[2].split(".").map(Number), +p[3], p[4]);
   } catch (e) { console.warn(e); }
   return null;
 }
@@ -380,6 +409,7 @@ const KIND_KO = { ko2en: "영어 이름", en2ko: "한글 이름", img: "그림",
 function meta(key) {
   const p = key.split(":");
   if (p[0] === "m") { const m = M[+p[1]]; return { item: `${m.ko} (${m.en}) · ${KIND_KO[p[2]] || p[2]}`, cat: m.part, mode: "근육" }; }
+  if (p[0] === "t") { const rg = REGIONS[+p[1]], b = rg.bones[p[2].split(".").map(Number)[+p[3]]]; return { item: `${b[1]} (${b[2]}) · 3D ${p[4] === "num" ? "번호 찾기" : "과녁 → 이름"}`, cat: rg.name, mode: "뼈대계 3D" }; }
   const ch = B[+p[1]], it = ch.items[+p[2]];
   return { item: `${ch.ch} ${it.n}번 ${it.ko} (${it.en})${p[3] === "num" ? " · 번호 찾기" : ""}`, cat: ch.ch, mode: "뼈대계" };
 }
@@ -391,7 +421,9 @@ function logAnswer(q, ok, pickedText) {
   } catch (e) { console.warn(e); }
 }
 function makeOne(mode) {
+  if (mode === "3d") { if (!use3D) mode = "mix"; else return Math.random() < .5 ? bone3Q() : muscle3Q(); }
   if (mode === "mix") mode = Math.random() < .5 ? "bone" : "muscle";
+  if (mode === "bone" && use3D && Math.random() < .4) return bone3Q();   // 뼈 문제 10개 중 4개쯤은 3D 번호 과녁
   if (mode === "muscle") { const i = Math.random() * M.length | 0; return muscleQ(i, pick(muscleTypes(i))); }
   const c = Math.random() * B.length | 0, k = Math.random() * B[c].items.length | 0;
   return boneQ(c, k, Math.random() < .75 ? "name" : "num");
@@ -400,7 +432,83 @@ const MODES = [
   { id: "bone", ic: "🦴", name: "뼈대계", small: `그림 ${B.length}장 · ${B.reduce((s, b) => s + b.items.length, 0)}칸` },
   { id: "muscle", ic: "💪", name: "근육", small: `${M.length}개 · 이는곳 · 닿는곳` },
   { id: "mix", ic: "🎲", name: "섞어서", small: "뼈 + 근육" },
+  { id: "3d", ic: "🧊", name: "3D 해부학", small: "번호 과녁 · 빛나는 근육", isNew: true },
 ];
+
+/* ===== 3D 해부학 문제 (anat3d.js · 2026-11-27) =====
+ * 뼈: 3D 뼈 4개에 ①②③④ 과녁 → "노란 과녁 ②번 뼈는?" / "넙다리뼈는 몇 번?"  (key t:부위:뼈번호들:물어볼번호:종류)
+ * 근육: 근육 100개 중 3D 모델에 있는 것은 그 근육이 빛나요. 그림 문제는 3D 로 바뀌고, 이름 · 이는곳 등 문제에도 3D 를 같이 보여 줘요.
+ * 3D 를 못 쓰는 기기면 원래 사진 문제 그대로. 뼈 이름은 대한의사협회 6판. */
+const REGIONS = [
+  { name: "팔 · 어깨", bones: [["Right clavicle", "빗장뼈", "clavicle"], ["Right scapula", "어깨뼈", "scapula"], ["Right humerus", "위팔뼈", "humerus"], ["Right radius", "노뼈", "radius"], ["Right ulna", "자뼈", "ulna"]] },
+  { name: "손목뼈", bones: [["Right scaphoid", "손배뼈", "scaphoid"], ["Right lunate", "반달뼈", "lunate"], ["Right triquetral", "세모뼈", "triquetrum"], ["Right pisiform", "콩알뼈", "pisiform"],
+    ["Right trapezium", "큰마름뼈", "trapezium"], ["Right trapezoid", "작은마름뼈", "trapezoid"], ["Right capitate", "알머리뼈", "capitate"], ["Right hamate", "갈고리뼈", "hamate"]] },
+  { name: "다리", bones: [["Right hip bone", "볼기뼈", "hip bone"], ["Right femur", "넙다리뼈", "femur"], ["Right patella", "무릎뼈", "patella"], ["Right tibia", "정강뼈", "tibia"], ["Right fibula", "종아리뼈", "fibula"]] },
+  { name: "발목뼈", bones: [["Right talus", "목말뼈", "talus"], ["Right calcaneus", "발꿈치뼈", "calcaneus"], ["Right cuboid bone", "입방뼈", "cuboid"],
+    ["Right medial cuneiform bone", "안쪽쐐기뼈", "medial cuneiform"], ["Right intermediate cuneiform bone", "중간쐐기뼈", "intermediate cuneiform"], ["Right lateral cuneiform bone", "가쪽쐐기뼈", "lateral cuneiform"]] },
+  { name: "척주", bones: [["Atlas", "고리뼈", "atlas"], ["Axis", "중쇠뼈", "axis"], ["Seventh cervical vertebra", "일곱째목뼈", "C7"], ["Twelfth thoracic vertebra", "열두째등뼈", "T12"],
+    ["Third lumbar vertebra", "셋째허리뼈", "L3"], ["Sacrum", "엉치뼈", "sacrum"]] },
+  { name: "가슴 · 어깨", bones: [["Manubrium", "복장뼈자루", "manubrium"], ["Body of sternum", "복장뼈몸통", "body of sternum"], ["Right clavicle", "빗장뼈", "clavicle"], ["Right scapula", "어깨뼈", "scapula"], ["Right humerus", "위팔뼈", "humerus"]] },
+];
+const NUM = "①②③④⑤⑥";
+const boneRe = (n) => new RegExp("^" + n + "$", "i");
+const reEsc = (t) => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+let use3D = false, M3 = {}, boot3D = null;
+function ensure3D() {     // 처음 한 번: 3D 를 불러오고 근육 100개를 3D 모델 이름과 짝 맞춰요
+  if (boot3D) return boot3D;
+  boot3D = (async () => {
+    for (let t = 0; !window.YN3D && t < 60; t++) await new Promise(r => setTimeout(r, 100));
+    if (!window.YN3D) return false;
+    const ok = await YN3D.init($("v3"));
+    if ($("v3load")) $("v3load").remove();
+    if (!ok) return false;
+    const names = YN3D.names("muscle");
+    const SYN = [[/peroneus/, "fibularis"], [/superior gemellus/, "gemellus superior"], [/inferior gemellus/, "gemellus inferior"], [/lumbricales/, "lumbrical"], [/levator scapula$/, "levator scapulae"]];
+    M.forEach((m, i) => {
+      let key = m.en.toLowerCase().replace(/\(.*?\)/g, "").replace(/\bmuscles?\b/g, "").replace(/\s+/g, " ").trim();
+      SYN.forEach(([a, b]) => { key = key.replace(a, b); });
+      const hand = /아래팔|손/.test(m.part), foot = /종아리|발/.test(m.part);
+      const hit = names.filter(n => {
+        const l = n.toLowerCase(); if (!/\bright\b/.test(l)) return false;
+        if ((hand && /foot/.test(l)) || (foot && /hand/.test(l))) return false;
+        const k = l.indexOf(key); if (k < 0) return false;
+        const after = l.slice(k + key.length); return after === "" || /^ of /.test(after);
+      });
+      if (hit.length) M3[i] = new RegExp("^(" + hit.map(reEsc).join("|") + ")$");
+    });
+    use3D = true;
+    const m3 = MODES.find(x => x.id === "3d"); if (m3) m3.small = `뼈 ${REGIONS.reduce((s, r) => s + r.bones.length, 0)}개 · 근육 ${Object.keys(M3).length}개`;
+    return true;
+  })().catch(e => { console.warn(e); return false; });
+  return boot3D;
+}
+function bone3Q(r, idx, ask, type) {
+  if (r == null) {
+    r = Math.random() * REGIONS.length | 0;
+    idx = shuffle(REGIONS[r].bones.map((_, k) => k)).slice(0, 4);
+    ask = Math.random() * 4 | 0; type = Math.random() < .6 ? "name" : "num";
+  }
+  const rg = REGIONS[r], four = idx.map(k => rg.bones[k]), b = four[ask];
+  const key = `t:${r}:${idx.join(".")}:${ask}:${type}`, base = { key, tag: `🧊 ${rg.name} · 3D`, three: { bones: four.map(x => boneRe(x[0])), ask: type === "name" ? ask : -1 } };
+  if (type === "name") return Object.assign(base, { q: `노란 과녁 <mark>${NUM[ask]}번</mark> 뼈는?`, opts: shuffle(four.map((x, k) => ({ t: `${x[1]} · ${x[2]}`, ok: k === ask }))) });
+  return Object.assign(base, { q: `<mark>${b[1]}</mark>${jo(b[1], "은", "는")} 몇 번?`, opts: four.map((x, k) => ({ t: `${NUM[k]}번`, ok: k === ask })) });
+}
+function muscle3Q() {
+  const i = +pick(Object.keys(M3));
+  return muscleQ(i, pick(["img", "img", "img", "ko2en", "en2ko", "origin", "insert", "nerve", "action"]));
+}
+// 문제를 보여 줄 때: 3D 로 보여 줄 수 있으면 3D (근육 그림 문제는 사진 대신 빛나는 3D 근육)
+function view3d(q) {
+  if (!use3D) return false;
+  const p = q.key.split(":");
+  if (p[0] === "t") { YN3D.bones(q.three.bones, q.three.ask); return true; }
+  if (p[0] === "m" && M3[+p[1]] && !p[2].startsWith("r_")) {
+    YN3D.muscle(M3[+p[1]]);
+    if (p[2] === "img") q.q = "과녁이 가리키는\n<mark>빛나는 근육</mark>의 이름은?";
+    return true;
+  }
+  return false;
+}
 
 /* ===== 소리 ===== */
 let ac;
@@ -440,7 +548,7 @@ function home() {
   if (why) { $("gradeBody").innerHTML = `<div class="lockBox"><em>🔒</em>${G.name} 문제는 잠겨 있어요<br><small>${esc(why)}</small></div>`; show("home"); return; }
   $("gradeBody").innerHTML = `
     <div class="menu" style="margin:0">
-      <div class="modes" id="modes">${MODES.map(m => `<button class="mode${m.id === MODE ? " on" : ""}" data-m="${m.id}"><em>${m.ic}</em><b>${m.name}</b><small>${m.small}</small></button>`).join("")}</div>
+      <div class="modes" id="modes">${MODES.map(m => `<button class="mode${m.id === MODE ? " on" : ""}${m.isNew ? " new" : ""}" data-m="${m.id}"><em>${m.ic}</em><b>${m.name}</b><small>${m.small}</small></button>`).join("")}</div>
       <div class="segLabel">문제 수</div>
       <div class="seg" id="lenSeg">${[5, 10, 20].map(n => `<button data-n="${n}" class="${n === LEN ? "on" : ""}">${n}</button>`).join("")}</div>
       <button class="btn wide" id="go">시작하기</button>
@@ -459,6 +567,7 @@ function home() {
 let L = null;
 async function start(fromWrong) {
   if (window.Wallet) await Wallet.ready;
+  if (MODE === "3d" || MODE === "bone" || MODE === "muscle" || MODE === "mix" || fromWrong) { const g = $("go"); if (g) { g.disabled = true; g.textContent = "3D 준비 중…"; } await ensure3D(); }
   let list;
   if (fromWrong) list = shuffle(S.wrong.slice()).slice(0, LEN).map(fromKey).filter(Boolean);
   else {
@@ -483,9 +592,12 @@ function next() {
   $("labelText").textContent = L.cur.retry ? "다시 한번 맞혀 보게" : "알맞은 답을 고르게";
   $("srcTag").textContent = L.cur.retry ? "🔁 다시 풀기" : q.tag;
   $("srcTag").className = "tag" + (L.cur.retry ? " re" : "");
-  $("fig").classList.toggle("hide", !q.img); $("fig").classList.toggle("dark", !!q.dark);
-  if (q.img) $("figImg").src = q.img;
+  const is3d = view3d(q);
+  $("v3").classList.toggle("hide", !is3d);
+  $("fig").classList.toggle("hide", !q.img || is3d); $("fig").classList.toggle("dark", !!q.dark);
+  if (q.img && !is3d) $("figImg").src = q.img;
   $("qText").innerHTML = q.q;
+  L.think = pick(DINO.think);
   setWiz("idle");
   $("choices").className = "choices";
   $("choices").innerHTML = L.opts.map((o, i) => `<button class="choice" data-i="${i}"><span class="n">${i + 1}</span><span>${esc(o.t)}</span></button>`).join("");
@@ -499,9 +611,12 @@ function select(i) {
   [...$("choices").children].forEach((b, k) => b.classList.toggle("sel", k === i));
   $("check").disabled = false;
 }
+// 공룡 캐릭터 (img/dino/*.webp): 문제 = 생각하는 얼굴, 정답 = 점프 · 풍선, 오답 = 놀람 · 울음
+const DINO = { think: ["a2", "b1", "c5", "b2"], happy: ["a1", "b5", "c4", "a7", "c1"], sad: ["b6", "b8", "a6", "a4"] };
+const dinoSrc = (n) => `img/dino/${n}.webp`;
 function setWiz(m) {
   const w = $("lessonWiz");
-  w.src = m === "happy" ? "img/wizard-cast.png" : "img/wizard-idle.png";
+  w.src = dinoSrc(m === "happy" ? pick(DINO.happy) : m === "sad" ? pick(DINO.sad) : (L && L.think) || "a2");
   w.classList.remove("happy", "sad"); void w.offsetWidth;
   if (m !== "idle") w.classList.add(m);
 }
@@ -573,8 +688,8 @@ function finish(clear) {
   if (clear) touchStreak();
   save();
   if (clear) sfx.done(); else sfx.wrong();
-  $("endWiz").src = clear ? "img/wizard-cast.png" : "img/wizard-idle.png";
-  $("endWiz").className = "wiz " + (clear ? "happy" : "sad");
+  $("endWiz").src = dinoSrc(clear ? (acc >= 70 ? "b5" : "c1") : "a3");
+  $("endWiz").className = "wiz dino " + (clear ? "happy" : "sad");
   $("endTitle").textContent = clear ? (acc === 100 ? "완벽한 레슨!" : "레슨 완료!") : "하트를 다 썼네!";
   $("endTitle").style.color = clear ? "" : "var(--bad)";
   $("endSay").innerHTML = (clear
@@ -612,6 +727,7 @@ document.addEventListener("keydown", (e) => {
 });
 if (window.Wallet) Wallet.onChange(c => { $("hCash").textContent = fmt(c); });
 home();
+setTimeout(() => ensure3D().then(() => { if (!$("home").classList.contains("hide")) home(); }), 600);   // 3D 를 미리 불러 둬요
 // 로그인 상태를 다 읽으면 (학년 · 이름) 홈을 다시 그려요
 if (auth() && auth().ready) auth().ready.then(() => { if (!$("home").classList.contains("hide")) home(); });
 </script>
