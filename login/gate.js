@@ -55,7 +55,8 @@
   /* 게스트: 로그인 버튼만큼 크고 눈에 띄게, 분홍 */
   .lg-guest{margin-top:12px;background:linear-gradient(90deg,#ff2e88,#ff5fa8);color:#fff;font:900 19px 'Pretendard Variable',sans-serif;
     filter:drop-shadow(0 0 14px rgba(255,46,136,.65))}
-  .lg-guest small{font-weight:600;font-size:13px;color:#ffe0ee;opacity:.95}
+  .lg-btn,.lg-guest{white-space:nowrap}
+  .lg-gnote{margin:8px 0 0;text-align:center;font-size:12.5px;color:#ff9cc8}
   .lg-btn:hover,.lg-guest:hover{filter:brightness(1.1) drop-shadow(0 0 18px rgba(255,46,136,.5));transform:translateY(-1px)}
   .lg-btn:disabled,.lg-guest:disabled{filter:grayscale(.7) brightness(.7);cursor:default;transform:none}
   .lg-links{display:flex;justify-content:space-between;gap:10px;margin-top:16px;font-size:13px;color:#9d8dbe;flex-wrap:wrap}
@@ -94,7 +95,8 @@
           <label class="lg-field"><i>PASS</i><input name="pw" type="password" placeholder="비밀번호" autocomplete="current-password"></label>
           <p class="lg-msg" id="lgMsg"></p>
           <button class="lg-btn" type="submit">▶ 게임 시작하기</button>
-          <button class="lg-guest" type="button" id="lgGuest">🎮 게스트로 둘러보기 <small>· 기록·통계에 남지 않아요</small></button>
+          <button class="lg-guest" type="button" id="lgGuest">🎮 게스트로 둘러보기</button>
+          <p class="lg-gnote">게스트는 기록 · 통계에 남지 않아요</p>
         </form>
         <div class="lg-links"><span>비밀번호를 잊으셨나요? <a data-forgot>찾기</a></span><a class="dim" data-admin>관리자 로그인</a></div>
       </div>
@@ -127,7 +129,7 @@
   // 로그인 필수가 켜져 있으면 게스트 잠금
   sb.from('settings').select('value').eq('key', 'login_required').maybeSingle().then(({ data }) => {
     if (data && data.value === true) {
-      const g = $('#lgGuest'); g.disabled = true; g.innerHTML = '🔒 지금은 로그인해야 들어갈 수 있어요';
+      const g = $('#lgGuest'); g.disabled = true; g.innerHTML = '🔒 지금은 로그인해야 들어갈 수 있어요'; const n = el.querySelector('.lg-gnote'); if (n) n.remove();
       if (isGuest()) { setGuest(false); show(); }
     }
   }, () => {});
