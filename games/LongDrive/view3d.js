@@ -46,6 +46,27 @@ function resize() {
   camera.updateProjectionMatrix();
 }
 addEventListener('resize', resize); resize();
+// 부드럽게 (2026-11-27): 화면이 버벅이면(1초에 45장 못 그리면) 그림 해상도를 한 단계씩 낮춰요.
+// 오래 여유가 있으면 다시 올려요. 가장 낮은 단계에서는 빛 번짐(블룸)도 꺼요.
+const PR_MAX = Math.min(devicePixelRatio || 1, MOBILE ? 1.5 : 1.75);
+const PR_STEPS = [...new Set([PR_MAX, Math.min(PR_MAX, 1.25), Math.min(PR_MAX, 1), .8])].sort((a, b) => b - a);
+const Q = { i: 0, t: 0, n: 0, good: 0, since: performance.now() };
+function adaptQuality(dt) {
+  if (document.hidden || performance.now() - Q.since < 4000) { Q.t = Q.n = 0; return; }   // 켠 직후 · 바꾼 직후는 재지 않아요
+  Q.t += dt; Q.n++; if (Q.t < 1.5) return;
+  const avg = Q.t / Q.n; Q.t = Q.n = 0;
+  if (avg > 1 / 45 && Q.i < PR_STEPS.length - 1) { Q.want = Q.i + 1; Q.good = 0; }
+  else if (avg < 1 / 57 && Q.i > 0) { if (++Q.good >= 6) { Q.want = Q.i - 1; Q.good = 0; } }
+  else Q.good = 0;
+}
+// 해상도 바꾸는 순간 한 번 멈칫해서, 공을 치거나 날아가는 중이 아닐 때만 바꿔요
+function applyQuality() {
+  if (Q.want === undefined || Q.want === Q.i || !(phase === 'ready' || phase === 'done' || phase === 'idle')) return;
+  Q.i = Q.want; Q.want = undefined;
+  renderer.setPixelRatio(PR_STEPS[Q.i]); bloom.enabled = Q.i < PR_STEPS.length - 1; resize(); Q.since = performance.now();
+}
+// 그림자는 타석 근처에서만 새로 그려요 (공을 따라 멀리 가면 타석 그림자는 안 보여서)
+renderer.shadowMap.autoUpdate = false; renderer.shadowMap.needsUpdate = true;
 
 const V = (x = 0, y = 0, z = 0) => new THREE.Vector3(x, y, z);
 const UP = V(0, 1, 0);
@@ -1315,8 +1336,8 @@ function updateFire(dt, pos, vel, sc, rate) {
     if (t >= 1) { p.s.visible = false; continue; }
     p.s.position.addScaledVector(p.v, dt);
     p.s.scale.setScalar(p.size * (1 + t * 1.6));
-    const c = t < .4 ? FIRE_COL[0].clone().lerp(FIRE_COL[1], t / .4) : FIRE_COL[1].clone().lerp(FIRE_COL[2], (t - .4) / .6);
-    p.s.material.color.copy(c).multiplyScalar(1.25); p.s.material.opacity = .95 * (1 - t * t);
+    if (t < .4) p.s.material.color.copy(FIRE_COL[0]).lerp(FIRE_COL[1], t / .4); else p.s.material.color.copy(FIRE_COL[1]).lerp(FIRE_COL[2], (t - .4) / .6);
+    p.s.material.color.multiplyScalar(1.25); p.s.material.opacity = .95 * (1 - t * t);
   }
 }
 const prevBall = V(), ballVel = V();
@@ -1362,9 +1383,6 @@ function makeBoosterObj(b) {
     const fuse = new THREE.Mesh(SG('Cylinder', .09, .09, 1.1, 6), BOOST_MAT.fuse); fuse.position.set(.25, 4.3, 0); fuse.rotation.z = -.45; body.add(fuse);
     const spark = new THREE.Sprite(new THREE.SpriteMaterial({ map: fireTex, color: glow(0xffc040, 2.5), blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false }));
     spark.position.set(.5, 4.85, 0); spark.scale.setScalar(1.2); body.add(spark); o.spark = spark;
-    const fb = new THREE.Mesh(SG('Sphere', 1, 20, 14), BOOST_MAT.fire.clone()); fb.visible = false; fb.position.y = 2; g.add(fb); o.fireball = fb;
-    const wave = new THREE.Mesh(SG('Ring', .85, 1, 48), BOOST_MAT.fire.clone()); wave.rotation.x = -Math.PI / 2; wave.position.y = .1; wave.visible = false; g.add(wave); o.wave = wave;
-    const scorch = new THREE.Mesh(SG('Circle', 4, 24), BOOST_MAT.scorch); scorch.rotation.x = -Math.PI / 2; scorch.position.y = .07; scorch.visible = false; g.add(scorch); o.scorch = scorch;
   } else {
     const base = new THREE.Mesh(SG('Box', 3.2, 1.2, 4), BOOST_MAT.wood); base.position.y = 1.2; base.castShadow = true; g.add(base);
     for (const sx of [-1, 1]) {
@@ -1376,13 +1394,26 @@ function makeBoosterObj(b) {
     const muzzle = new THREE.Mesh(SG('Torus', .8, .16, 8, 24), BOOST_MAT.neonC); muzzle.position.y = 4.95; muzzle.rotation.x = Math.PI / 2; barrel.add(muzzle);
     const stripe = new THREE.Mesh(SG('Torus', .92, .1, 8, 24), BOOST_MAT.neonC); stripe.position.y = .6; stripe.rotation.x = Math.PI / 2; barrel.add(stripe);
     const back = new THREE.Mesh(SG('Sphere', 1, 16, 12), BOOST_MAT.iron); back.position.y = -.4; barrel.add(back);
-    const flash = new THREE.Sprite(new THREE.SpriteMaterial({ map: fireTex, color: glow(0xffb040, 3), blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false }));
-    flash.position.y = 5.6; flash.visible = false; barrel.add(flash); o.flash = flash;
-    o.smoke = [];
-    for (let k = 0; k < 6; k++) { const s = new THREE.Mesh(SG('Sphere', 1, 12, 10), BOOST_MAT.smoke.clone()); s.visible = false; g.add(s); o.smoke.push(s); }
   }
   return o;
 }
+// 터질 때 쓰는 불꽃 · 연기는 닿은 부스터에만 그때 만들어요 (예전엔 새 샷마다 130개 전부에 미리 만들어서 멈칫했어요)
+function makeFx(o) {
+  o.fxOn = true; const g = o.g;
+  if (o.b.type === 'bomb') {
+    const fb = new THREE.Mesh(SG('Sphere', 1, 20, 14), BOOST_MAT.fire.clone()); fb.visible = false; fb.position.y = 2; g.add(fb); o.fireball = fb;
+    const wave = new THREE.Mesh(SG('Ring', .85, 1, 48), BOOST_MAT.fire.clone()); wave.rotation.x = -Math.PI / 2; wave.position.y = .1; wave.visible = false; g.add(wave); o.wave = wave;
+    const scorch = new THREE.Mesh(SG('Circle', 4, 24), BOOST_MAT.scorch); scorch.rotation.x = -Math.PI / 2; scorch.position.y = .07; scorch.visible = false; g.add(scorch); o.scorch = scorch;
+  } else {
+    const flash = new THREE.Sprite(new THREE.SpriteMaterial({ map: fireTex, color: glow(0xffb040, 3), blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false }));
+    flash.position.y = 5.6; flash.visible = false; o.barrel.add(flash); o.flash = flash;
+    o.smoke = [];
+    for (let k = 0; k < 6; k++) { const sm = new THREE.Mesh(SG('Sphere', 1, 12, 10), BOOST_MAT.smoke.clone()); sm.visible = false; g.add(sm); o.smoke.push(sm); }
+  }
+}
+// 미리 그려 두기(prewarm)에 불꽃 · 연기 모양도 들어가게, 안 보이는 견본을 하나씩 둬요
+{ const sample = { b: { type: 'bomb' }, g: new THREE.Group() }; makeFx(sample); const s2 = { b: { type: 'cannon' }, g: new THREE.Group(), barrel: new THREE.Group() }; s2.g.add(s2.barrel); makeFx(s2);
+  for (const x of [sample, s2]) { x.g.visible = false; x.g.position.set(0, -50, 0); scene.add(x.g); } }
 function updateBoosters(now) {
   if (boosterSrc !== boosters) {   // 새 샷 → 새로 깔기
     boosterObjs.forEach(o => { scene.remove(o.g); o.g.traverse(m => { if (m.geometry && !m.geometry.userData.shared) m.geometry.dispose(); }); });
@@ -1395,6 +1426,7 @@ function updateBoosters(now) {
     const near = Math.abs(o.g.position.z - cz) < 900; if (o.g.visible !== near) o.g.visible = near;
     if (!near) continue;
     const b = o.b, t = b.hitAt ? (now - b.hitAt) / 1000 : -1;
+    if (t >= 0 && !o.fxOn) makeFx(o);
     o.ring.material.opacity = b.used ? .15 : .7 + .25 * Math.sin(now / 250 + b.id);
     if (b.type === 'bomb') {
       if (t < 0) { o.spark.scale.setScalar(1 + .4 * Math.sin(now / 45 + b.id)); o.body.position.y = .1 * Math.sin(now / 400 + b.id); continue; }
@@ -1459,15 +1491,16 @@ pickTeeCam(); addEventListener('resize', pickTeeCam);
 const camPos = TEE_CAM.pos.clone(), camLook = TEE_CAM.look.clone();
 camera.position.copy(camPos); camera.lookAt(camLook);
 let prevPhase = '', DBG = null;   // DBG: 확인용 카메라 (GolfView.debugCam)
+const _cbw = V(), _ccp = V(), _ccl = V(), _cpos = V(), _clook = V();   // 매 프레임 새로 만들지 않게
 function updateCamera(now, dt) {
   const ph = phase, b = ball;
   let pos = TEE_CAM.pos, look = TEE_CAM.look;
   if (b && (ph === 'fly' || ph === 'roll' || ph === 'done')) {
-    const bw = V(b.x, Math.max(0, b.y), -b.z);
-    const chasePos = V(bw.x * .85, bw.y + 2.4 + Math.min(4, -bw.z * .01), bw.z + 15);
-    const chaseLook = V(bw.x, bw.y - 1.2, bw.z - 22);
+    const bw = _cbw.set(b.x, Math.max(0, b.y), -b.z);
+    const chasePos = _ccp.set(bw.x * .85, bw.y + 2.4 + Math.min(4, -bw.z * .01), bw.z + 15);
+    const chaseLook = _ccl.set(bw.x, bw.y - 1.2, bw.z - 22);
     const k = Math.min(1, (now - hitAt) / 900), e = k * k * (3 - 2 * k);   // 친 직후 0.9초 동안 타석 카메라 → 공 따라가기
-    pos = V().lerpVectors(TEE_CAM.pos, chasePos, e); look = V().lerpVectors(TEE_CAM.look, chaseLook, e);
+    pos = _cpos.lerpVectors(TEE_CAM.pos, chasePos, e); look = _clook.lerpVectors(TEE_CAM.look, chaseLook, e);
     camPos.copy(pos); camLook.copy(look);
   } else {
     camPos.copy(pos); camLook.copy(look);
@@ -1541,6 +1574,8 @@ function frame(now, dt) {
   balloons.forEach(g => { g.position.y += Math.sin(now / 1500 + g.userData.bob) * .01; g.rotation.y += dt * .05; });
   updateTrail();
   updateCamera(now, dt);
+  renderer.shadowMap.needsUpdate = camera.position.z > -120;
+  adaptQuality(dt); applyQuality();
   composer.render(dt);
 }
 // 잔렉 줄이기: 처음 보는 물체(우주 · 네온 구역, 폭탄 불꽃 등)가 화면에 처음 나올 때

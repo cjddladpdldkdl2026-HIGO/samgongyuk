@@ -557,7 +557,9 @@ function step(dt) {
     meterPos += meterDir * speed * dt;
     if (phase === "power" && meterPos >= 1) { meterPos = 1; meterDir = -1; }
     if (phase === "power" && meterPos <= 0 && meterDir < 0) { meterPos = 0; meterDir = 1; }
-    if (phase === "accuracy" && meterPos <= 0) hit(0);   // 못 누르면 헛스윙에 가까운 샷
+    // 임팩트: 저절로 치지 않고, 누를 때까지 게이지가 왔다 갔다 해요 (2026-11-27 · 예전엔 왼쪽 끝에서 자동으로 헛스윙)
+    if (phase === "accuracy" && meterPos <= 0) { meterPos = 0; meterDir = 1; }
+    if (phase === "accuracy" && meterPos >= 1) { meterPos = 1; meterDir = -1; }
   }
   if (phase === "down" && performance.now() - downAt >= DOWN_MS) launch();
   if (phase === "fly") {
