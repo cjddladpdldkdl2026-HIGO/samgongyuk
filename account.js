@@ -299,6 +299,7 @@
 
   /* ── 이용 기록 ───────────────────────────────────────────────────────── */
   function logVisit(game) {
+    if (SamAuth.guest) return;   // 게스트는 이용 통계에 안 쌓여요 (login/gate.js)
     try {
       const token = S.session && S.session.access_token;
       fetch(`${URL_}/rest/v1/visits`, {
@@ -647,6 +648,7 @@
   window.Account = {
     logPlay(app) { logVisit(app && app.title ? app.title : 'unknown'); },
     open: openSide, page: openPage,
+    tab(t) { S.tab = t; renderSide(); openSide(); },   // 첫 화면(login/gate.js)의 회원가입 · 관리자 로그인 → 그 탭으로 사이드바 열기
     /* 메뉴·페이지 붙이기: { id, ic, label, admin?, login?, render(arg) → html, bind?(arg) }
      * admin: 승인된 관리자만 (ADMIN 칸), login: 로그인한 사람만, 둘 다 없으면 누구나 (COMMUNITY 칸) */
     addPage(p) { if (!extra(p.id)) EXTRA.push(p); renderSide(); },

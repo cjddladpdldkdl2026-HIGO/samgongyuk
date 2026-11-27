@@ -30,6 +30,8 @@
     url: URL_, key: KEY_, client: null, user: null, profile: null,
     get loggedIn() { return !!this.user; },
     get joined() { return !!this.profile; },
+    // 게스트(첫 화면에서 "게스트로 둘러보기", login/gate.js): 이 창을 닫을 때까지. 로그인하면 풀려요. 통계(접속 신호 · 방문 기록)에 안 쌓여요
+    get guest() { if (this.user) return false; try { return sessionStorage.getItem('samgongyuk-guest') === '1'; } catch { return false; } },
     get displayName() {
       const p = this.profile; if (!p) return '';
       return p.kind === 'student' ? `${mask(p.name)} (${String(p.login_id).slice(0, 2)})` : p.name;
@@ -219,7 +221,7 @@
     const page = (PAGE_KO[raw] || raw || 'hub').slice(0, 60);
     let stop = false, last = 0;
     const ping = async () => {
-      if (stop || document.visibilityState === 'hidden' || Date.now() - last < 50000) return;
+      if (stop || A.guest || document.visibilityState === 'hidden' || Date.now() - last < 50000) return;   // 게스트는 접속자 통계에서 빼요
       last = Date.now();
       try {
         await A.ready;

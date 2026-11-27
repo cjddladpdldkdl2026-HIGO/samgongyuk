@@ -713,6 +713,7 @@
 <script src="account.js"></script>   <!-- 오른쪽 위 ☰ 사이드바: 로그인·회원가입·공지·게시판·회원 관리 -->
 <script src="ops.js"></script>       <!-- part3: ☰ 사이드바에 🏆 랭킹 · 🗂 관리자 전력 분석 자료 · 🛠 서버 점검·백업 -->
 <script src="study.js"></script>     <!-- ☰ 사이드바에 📋 진료 차트 · 🧑‍🎓 회원 활동 · 문항 분석 (supabase/answers.sql) -->
+<script src="login/gate.js"></script> <!-- 첫 화면: 포스터 로그인 · 게스트로 둘러보기 (게스트는 통계에 안 쌓여요) -->
 <script src="sheets.js"></script>
 <script>
 /* ============================================================
@@ -830,22 +831,6 @@ const APPS = [
     bgPos: "center 40%",                 // 하늘 · 산 · 열기구 · 대포가 보이게
     heroBig: true,                        // 배너 속 화면을 크게, 뒤의 노란 해 없이
     facts: [["420", "기출문제"], ["⛳", "비거리 대결"], ["🏆", "회원 랭킹"]],
-    featured: true
-  },
-  {
-    title: "시그널 슬래시",
-    emoji: "⚔️",
-    category: "game",
-    tag: "NEW",
-    year: "2026",
-    who: "PTX+AI · 삼공육",
-    desc: "신경 터널 저편에서 상태창이 날아와요! 5초 안에 정답을 소리 내어 말하면 로봇 검사가 단칼에 베어 버려요. 축삭 · 척수 반사 · 오름/내림신경로 · 뇌줄기 · 뇌신경 · 대뇌, 그리고 병변 진단 코어까지 신경해부학 67문제. 마이크가 없으면 1~4 키로도 할 수 있어요.",
-    url: "games/SignalSlash/index.html",
-    glow: "#ff2e88",
-    thumb: "thumbs/signalslash.jpg",   // 게임 화면 캡처 (로봇 검사 + 상태창, 2026-11-25)
-    hero: "thumbs/signalslash.jpg",
-    heroBig: true,
-    facts: [["67", "신경해부학"], ["🎤", "말하면 벤다"], ["3D", "로봇 검사"]],
     featured: true
   },
   {
