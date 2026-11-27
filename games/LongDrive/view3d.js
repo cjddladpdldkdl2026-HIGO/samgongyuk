@@ -1372,10 +1372,12 @@ const BOOST_MAT = {
   neonC: new THREE.MeshStandardMaterial({ color: 0x2de2e6, emissive: 0x2de2e6, emissiveIntensity: 1.2 }),
   fire: new THREE.MeshBasicMaterial({ color: glow(0xff8a1a, 2), toneMapped: false, transparent: true, depthWrite: false }),
   smoke: new THREE.MeshStandardMaterial({ color: 0x9a9aa2, roughness: 1, transparent: true, depthWrite: false }),
-  scorch: new THREE.MeshBasicMaterial({ color: 0x1a140f, transparent: true, opacity: .55, depthWrite: false }),
+  scorch: new THREE.MeshBasicMaterial({ color: 0x1a140f, transparent: true, opacity: .55, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -8 }),
 };
-const zoneMat = (hex) => new THREE.MeshBasicMaterial({ color: hex, transparent: true, opacity: .22, depthWrite: false });
-const ringMatOf = (hex) => new THREE.MeshBasicMaterial({ color: glow(hex, 1.6), toneMapped: false, transparent: true, opacity: .9, depthWrite: false });
+// 바닥 원 · 고리: 어떤 컴퓨터에서는 잔디에 묻혀 안 보였어요 (깊이 계산이 덜 정밀한 그래픽) → 조금 띄우고 · 잔디보다 앞으로 밀어서 그려요 (2026-11-27)
+const GROUND_FX = { transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -8 };
+const zoneMat = (hex) => new THREE.MeshBasicMaterial(Object.assign({ color: hex, opacity: .22 }, GROUND_FX));
+const ringMatOf = (hex) => new THREE.MeshBasicMaterial(Object.assign({ color: glow(hex, 1.6), toneMapped: false, opacity: .9 }, GROUND_FX));
 const BOOST_LOOK = { bomb: { zone: zoneMat(0xff3b3b), ring: ringMatOf(0xff3b3b) }, cannon: { zone: zoneMat(0x2de2e6), ring: ringMatOf(0x2de2e6) } };
 let boosterSrc = null; const boosterObjs = [];
 // 부스터 모양(구 · 고리 · 원통…)은 같은 크기끼리 하나를 같이 써요.
@@ -1390,8 +1392,8 @@ function SG(kind, ...args) {
 function makeBoosterObj(b) {
   const g = new THREE.Group(); g.position.set(b.x, 0, -b.z); scene.add(g);
   const L = BOOST_LOOK[b.type];
-  const zone = new THREE.Mesh(SG('Circle', b.r, 40), L.zone); zone.rotation.x = -Math.PI / 2; zone.position.y = .05; g.add(zone);
-  const ring = new THREE.Mesh(SG('Ring', b.r - .5, b.r, 48), L.ring); ring.rotation.x = -Math.PI / 2; ring.position.y = .06; g.add(ring);
+  const zone = new THREE.Mesh(SG('Circle', b.r, 40), L.zone); zone.rotation.x = -Math.PI / 2; zone.position.y = .22; zone.renderOrder = 2; g.add(zone);
+  const ring = new THREE.Mesh(SG('Ring', b.r - .5, b.r, 48), L.ring); ring.rotation.x = -Math.PI / 2; ring.position.y = .25; ring.renderOrder = 3; g.add(ring);
   const o = { b, g, zone, ring, fx: [] };
   if (b.type === 'bomb') {
     const body = new THREE.Group(); g.add(body); o.body = body;
@@ -1420,7 +1422,7 @@ function makeFx(o) {
   if (o.b.type === 'bomb') {
     const fb = new THREE.Mesh(SG('Sphere', 1, 20, 14), BOOST_MAT.fire.clone()); fb.visible = false; fb.position.y = 2; g.add(fb); o.fireball = fb;
     const wave = new THREE.Mesh(SG('Ring', .85, 1, 48), BOOST_MAT.fire.clone()); wave.rotation.x = -Math.PI / 2; wave.position.y = .1; wave.visible = false; g.add(wave); o.wave = wave;
-    const scorch = new THREE.Mesh(SG('Circle', 4, 24), BOOST_MAT.scorch); scorch.rotation.x = -Math.PI / 2; scorch.position.y = .07; scorch.visible = false; g.add(scorch); o.scorch = scorch;
+    const scorch = new THREE.Mesh(SG('Circle', 4, 24), BOOST_MAT.scorch); scorch.rotation.x = -Math.PI / 2; scorch.position.y = .2; scorch.visible = false; g.add(scorch); o.scorch = scorch;
   } else {
     const flash = new THREE.Sprite(new THREE.SpriteMaterial({ map: fireTex, color: glow(0xffb040, 3), blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false }));
     flash.position.y = 5.6; flash.visible = false; o.barrel.add(flash); o.flash = flash;
