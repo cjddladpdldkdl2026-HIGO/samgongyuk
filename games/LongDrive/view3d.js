@@ -1148,7 +1148,7 @@ function loadChar(i) {
     // 임팩트 때 손 자리가 어드레스와 조금 달라요 → 내려칠 때만 살짝 밀어서 채가 공에 닿게
     fbxAt(FBX.t.addr); golfer.updateMatrixWorld(true); const La = fbxHands()[0];
     fbxAt(FBX.t.imp); const Li = fbxHands()[0];
-    FBX.pos0 = o.position.clone(); FBX.shift = V(La.x - Li.x, 0, La.z - Li.z);
+    FBX.pos0 = o.position.clone(); FBX.shift = V(La.x - Li.x, 0, La.z - Li.z); FBX.rotY0 = o.rotation.y;
     // 직접 만든 학생은 숨기고, 채는 새 길이로 다시 만들기
     golfer.children.forEach(ch => { if (ch !== o && !clubGroups.includes(ch)) ch.visible = false; });
     clubGroups.forEach(g => g && golfer.remove(g)); clubGroups.length = 0; lookClub = -1;
@@ -1164,7 +1164,24 @@ function fbxTime(now) {
   if (ph === 'fly' || ph === 'roll' || ph === 'done') { const k = Math.min(1, (now - hitAt) / 700); return T.imp + (T.fin - T.imp) * (1 - (1 - k) * (1 - k)); }
   return T.addr;
 }
+/* 🎉 신기록 춤 (2026-11-27): 피니시 자세로 통통 뛰고 · 몸을 흔들고 · 한 바퀴 돌아요. 채는 잠깐 숨겨요. */
+let danceAt = 0, danceUntil = 0;
+const dancing = () => !!FBX.model && performance.now() < danceUntil;
+function danceFBX(now) {
+  const t = (now - danceAt) / 1000, o = FBX.model, T = FBX.t;
+  fbxAt(T.fin + (T.imp - T.fin) * .25 * (1 + Math.sin(t * Math.PI * 2.4)) * .5);   // 피니시 자세 근처에서 팔이 들썩들썩
+  const spin = t > 1.1 && t < 1.9 ? (1 - Math.cos((t - 1.1) / .8 * Math.PI)) * Math.PI : t >= 1.9 ? Math.PI * 2 : 0;
+  o.rotation.y = FBX.rotY0 + Math.sin(t * Math.PI * 1.2) * .7 + spin;
+  o.rotation.z = Math.sin(t * Math.PI * 2.4) * .12;
+  o.position.copy(FBX.pos0); o.position.y += Math.abs(Math.sin(t * Math.PI * 2.4)) * .24;
+  if (FBX.armL && FBX.armR) { const a = Math.sin(t * Math.PI * 4.8) * .75; FBX.armL.rotation.x += a; FBX.armR.rotation.x -= a; }
+  golfer.updateMatrixWorld(true);
+}
 function poseFBX(now) {
+  const g0 = clubGroups[lookClub];
+  if (dancing()) { if (g0) g0.visible = false; danceFBX(now); return; }
+  if (g0 && !g0.visible) g0.visible = true;
+  if (FBX.rotY0 !== undefined) { FBX.model.rotation.y = FBX.rotY0; FBX.model.rotation.z = 0; }
   let w = 0;
   if (phase === 'down') { const k = Math.min(1, (now - downAt) / DOWN_MS); w = k * k; }
   else if (phase === 'fly' || phase === 'roll' || phase === 'done') w = 1 - Math.min(1, (now - hitAt) / 350);
@@ -1505,6 +1522,12 @@ function updateCamera(now, dt) {
   } else {
     camPos.copy(pos); camLook.copy(look);
   }
+  if (dancing()) {   // 춤추는 동안은 캐릭터 앞에서 봐요
+    const h = FBX.pos0 ? golfer.localToWorld(_cbw.copy(FBX.pos0)) : _cbw.set(0, 0, 0);
+    _ccp.set(h.x + 1.1, 1.6, h.z - 3.3); _ccl.set(h.x, 1.05, h.z);   // 피니시 자세는 목표(-z) 쪽을 보고 있어서 그 앞에서
+    const k = Math.min(1, (performance.now() - danceAt) / 450);
+    camPos.lerpVectors(pos, _ccp, k * k * (3 - 2 * k)); camLook.lerpVectors(look, _ccl, k * k * (3 - 2 * k));
+  }
   if (DBG) { camPos.copy(DBG.pos); camLook.copy(DBG.look); }
   camera.position.copy(camPos); camera.lookAt(camLook);
   // 그림자 카메라는 타석에 고정
@@ -1592,4 +1615,5 @@ function prewarm() {
 setTimeout(prewarm, 600);
 // 확인용: 지금 화면을 그림 파일(data URL)로 (허브 배너·썸네일 만들 때 씀)
 function snapshot(type = 'image/jpeg', q = .88) { composer.render(); return renderer.domElement.toDataURL(type, q); }
-window.GolfView = { frame, ready: true, snapshot, scene, debugCam: (pos, look) => { DBG = pos ? { pos: V(...pos), look: V(...look) } : null; } };
+window.GolfView = { frame, ready: true, snapshot, scene,
+  dance: (ms = 3000) => { if (!FBX.model) return; danceAt = performance.now(); danceUntil = danceAt + ms; }, stopDance: () => { danceUntil = 0; }, dancing, debugCam: (pos, look) => { DBG = pos ? { pos: V(...pos), look: V(...look) } : null; } };

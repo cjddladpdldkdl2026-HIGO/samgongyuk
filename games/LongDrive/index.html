@@ -297,10 +297,10 @@ const OB_X = 70;                         // 옆으로 이만큼(m) 벗어나면 
 // 골프채 (뼈 골프채 4개, 약한 순서): speed = 공 속도 + (m/s). 3D 모양은 view3d.js buildClub()
 const CLUBS = [
   { name: "기본 드라이버",       ic: "🏌️", price: 0,   speed: 0,  desc: "누구나 처음엔 이걸로! · 기본 채" },
-  { name: "어깨뼈 드라이버",     ic: "🦴", price: 80,  speed: 6,  desc: "위팔뼈를 잡고 넓적한 어깨뼈로 쳐요" },
-  { name: "손뼈 드라이버",       ic: "✋", price: 200, speed: 13, desc: "위팔뼈 · 노뼈 · 자뼈 샤프트, 손바닥으로 철썩!" },
-  { name: "다리뼈 드라이버",     ic: "🦶", price: 450, speed: 20, desc: "넙다리뼈 · 정강뼈 · 종아리뼈 샤프트, 발로 뻥!" },
-  { name: "척추 레전드 드라이버", ic: "🐉", price: 900, speed: 28, desc: "목뼈를 잡고 엉치뼈 · 꼬리뼈로 쳐요 · 최강" },
+  { name: "어깨뼈 드라이버",     ic: "🦴", price: 80,  speed: 5,  desc: "위팔뼈를 잡고 넓적한 어깨뼈로 쳐요" },
+  { name: "손뼈 드라이버",       ic: "✋", price: 200, speed: 10, desc: "위팔뼈 · 노뼈 · 자뼈 샤프트, 손바닥으로 철썩!" },
+  { name: "다리뼈 드라이버",     ic: "🦶", price: 450, speed: 16, desc: "넙다리뼈 · 정강뼈 · 종아리뼈 샤프트, 발로 뻥!" },
+  { name: "척추 레전드 드라이버", ic: "🐉", price: 900, speed: 22, desc: "목뼈를 잡고 엉치뼈 · 꼬리뼈로 쳐요 · 최강" },
 ];
 const OLD_CLUB_PRICES = [0, 60, 150, 300, 550, 900];   // 예전 금속 채 6개 (2026-11-18 까지) — 산 사람에게 캐쉬를 돌려줘요
 // 골프공 (4개, 약한 순서): drag = 공기 저항(작을수록 멀리), roll = 떨어진 뒤 굴러가는 비율, wind = 바람 영향. 3D 모양은 view3d.js buildBall()
@@ -319,14 +319,14 @@ const curChar = () => CHARS[S.char] || CHARS[0];
 const charPerks = (c) => [c.steer && "공 좌우 조종", c.power && `파워 +${c.power}`, c.roll && `굴러감 +${Math.round(c.roll * 100)}%`].filter(Boolean);
 const BALLS = [
   { name: "기본 골프공", ic: "⚪", price: 0,   drag: 1.00, roll: .18, wind: 1.00, desc: "평범한 하얀 골프공 · 기본" },
-  { name: "무릎뼈 공",   ic: "🦴", price: 60,  drag: .88,  roll: .22, wind: .85,  desc: "무릎뼈만 떼어 만든 세모난 공" },
-  { name: "머리뼈 공",   ic: "💀", price: 150, drag: .76,  roll: .27, wind: .65,  desc: "데굴데굴 구르며 날아가는 해골" },
-  { name: "눈알 공",     ic: "👁️", price: 380, drag: .63,  roll: .32, wind: .45,  desc: "날아가는 쪽을 똑바로 쳐다봐요" },
-  { name: "파이어볼",    ic: "🔥", price: 800, drag: .50,  roll: .38, wind: .25,  desc: "치면 불꽃 꼬리를 그리며 날아가요 · 최강" },
+  { name: "무릎뼈 공",   ic: "🦴", price: 60,  drag: .90,  roll: .21, wind: .85,  desc: "무릎뼈만 떼어 만든 세모난 공" },
+  { name: "머리뼈 공",   ic: "💀", price: 150, drag: .81,  roll: .25, wind: .65,  desc: "데굴데굴 구르며 날아가는 해골" },
+  { name: "눈알 공",     ic: "👁️", price: 380, drag: .70,  roll: .29, wind: .45,  desc: "날아가는 쪽을 똑바로 쳐다봐요" },
+  { name: "파이어볼",    ic: "🔥", price: 800, drag: .60,  roll: .34, wind: .25,  desc: "치면 불꽃 꼬리를 그리며 날아가요 · 최강" },
 ];
 const OLD_BALL_PRICES = [0, 50, 120, 250, 450, 800];   // 예전 공 6개 (2026-11-18 까지)
-// 파워: 레벨마다 공 속도 +1.8 m/s, 가격은 다음 레벨 값
-const POWER_MAX = 10, POWER_SPEED = 1.8;
+// 파워: 레벨마다 공 속도 +1.5 m/s, 가격은 다음 레벨 값
+const POWER_MAX = 10, POWER_SPEED = 1.5;   // 2026-11-27 아이템 효과 20%쯤 줄임 (예전 1.8 · 채 6/13/20/28 · 공 drag .88/.76/.63/.50)
 const POWER_PRICE = [40, 60, 90, 120, 160, 210, 270, 340, 420, 520];
 const BASE_SPEED = 50;                   // 장비 없이 풀파워일 때 공 속도 (m/s)
 const DRAG_K = 0.0045, LIFT_K = 0.0014, LAUNCH_DEG = 15;
@@ -500,7 +500,7 @@ function boost(b) {
 const ZONE = { at: .08, nice: .07, sweet: .022 };
 // 공 조종 (steer 캐릭터): 누르는 동안 옆으로 acc(m/s²)씩 밀어요. 옆 속도가 max(m/s)가 될 때까지.
 // 2026-11-27: 예전엔 한 샷에 쓸 수 있는 양(10)이 정해져 있어서 다 쓰면 눌러도 안 움직였어요 → 이제 누르는 동안은 언제나 반응해요 (반대로 누르면 바로 돌아와요)
-const STEER = { acc: 14, max: 22 };
+const STEER = { acc: 7, max: 12 };   // 2026-11-27 너무 잘 움직여서 반쯤으로 (예전 14 · 22)
 let steerDir = 0; const steerKeys = { L: false, R: false };
 const canSteer = () => !!(CHARS[S.char] && CHARS[S.char].steer);   // 임팩트 칸 위치·너비 (게이지 비율)
 
@@ -520,6 +520,7 @@ function setupShot() {
   if (!setupShot.hinted) { setupShot.hinted = true; setTimeout(() => toast("필드의 💣폭탄 · 💥대포에 공이 닿으면<br>더 멀리 날아가요!"), 400); }
 }
 function tap() {
+  if (window.GolfView && GolfView.dancing && GolfView.dancing()) { GolfView.stopDance(); return; }   // 춤 넘기기
   if (!$("sHome").classList.contains("hidden") || !$("sShop").classList.contains("hidden") || !$("sRank").classList.contains("hidden")) return;
   if (phase === "ready") { phase = "power"; meterPos = 0; meterDir = 1; $("swingHint").textContent = "한 번 더 탭해서 파워 결정! (오른쪽 끝 = MAX)"; snd("tick"); }
   else if (phase === "power") {
@@ -626,6 +627,7 @@ function finishShot() {
     if (opened.length) setTimeout(() => { toast(`🔓 새 캐릭터 해금! ${opened.map(c => c.ic + ' ' + esc(c.name)).join(' · ')}<br><small>메뉴에서 고를 수 있어요</small>`); snd("buy"); }, 1200);
     msg.classList.add("best"); msg.textContent = before > 0 ? `🎉 최고 기록 갱신! (+${(dist - before).toFixed(1)}m)` : "🎉 첫 기록!";
     sub.textContent = member() ? "랭킹에 올리는 중…" : "로그인하면 이 기록이 랭킹에 올라가요";
+    if (window.GolfView && GolfView.dance) GolfView.dance(3000);   // 🎉 신기록 춤 3초 (스페이스 · 탭으로 넘기기)
     snd("best"); recordBest(dist).then(() => { if (member()) sub.textContent = topBoard && topBoard.myRank ? `지금 ${topBoard.myRank}위!` : "랭킹 저장 완료"; });
   } else {
     msg.textContent = lastShot.perfect ? "깔끔한 샷!" : lastShot.acc < -.5 ? "왼쪽으로 휘었어요 (훅)" : lastShot.acc > .5 ? "오른쪽으로 휘었어요 (슬라이스)" : "좋아요!";
