@@ -955,7 +955,16 @@ function fitHeroTitles() {
   const h = $("hero"); if (!h) return;
   h.style.removeProperty("--h1-fit");
   let r = 1;
-  h.querySelectorAll(".slide h1").forEach(t => { if (t.clientWidth && t.scrollWidth > t.clientWidth) r = Math.min(r, t.clientWidth / t.scrollWidth); });
+  // 글자 실제 폭과 쓸 수 있는 폭 비교. 큰 그림 배너(big-art)는 그림이 글자 칸 위로 겹쳐 나와서, 그림이 시작되는 곳까지만 써요 (11-27)
+  h.querySelectorAll(".slide h1").forEach(t => {
+    if (!t.clientWidth) return;
+    const rg = document.createRange(); rg.selectNodeContents(t);
+    const textW = rg.getBoundingClientRect().width, left = t.getBoundingClientRect().left;
+    const art = t.closest(".slide").querySelector(".hero-art");
+    let room = t.clientWidth;
+    if (art) { const al = art.getBoundingClientRect().left - left - 24; if (al > 0) room = Math.min(room, al); }
+    if (textW > room) r = Math.min(r, room / textW);
+  });
   if (r < 1) h.style.setProperty("--h1-fit", (r * 0.97).toFixed(3));
   // 글자 시작 높이: 가장 긴 글 묶음이 가운데 오게 하고, 다른 배너도 같은 높이에서 시작
   h.style.removeProperty("--hero-text-pad");
