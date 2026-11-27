@@ -494,13 +494,13 @@ function boost(b) {
     snd("cannon"); toast("💥 대포 발사!");
   }
   ball.y = .05; ball.spin = 0; ball.lx = ball.x; ball.lz = ball.z;
-  ball.steer = 0;   // 부스트로 다시 날면 공 조종도 새로 (예전엔 한 샷 내내 한도가 쌓여서 4000m쯤부터 조종이 안 됐어요)
   (lastShot.boosts = lastShot.boosts || []).push(b.type);
   phase = "fly";
 }
 const ZONE = { at: .08, nice: .07, sweet: .022 };
-// 공 조종 (steer 캐릭터): 누르는 동안 옆으로 이만큼씩 밀어요 · 한 샷에 최대 max(m/s) 까지
-const STEER = { acc: 4.5, max: 10 };
+// 공 조종 (steer 캐릭터): 누르는 동안 옆으로 acc(m/s²)씩 밀어요. 옆 속도가 max(m/s)가 될 때까지.
+// 2026-11-27: 예전엔 한 샷에 쓸 수 있는 양(10)이 정해져 있어서 다 쓰면 눌러도 안 움직였어요 → 이제 누르는 동안은 언제나 반응해요 (반대로 누르면 바로 돌아와요)
+const STEER = { acc: 14, max: 22 };
 let steerDir = 0; const steerKeys = { L: false, R: false };
 const canSteer = () => !!(CHARS[S.char] && CHARS[S.char].steer);   // 임팩트 칸 위치·너비 (게이지 비율)
 
@@ -568,7 +568,7 @@ function step(dt) {
       const rx = ball.vx - wind.x * ball.wind, rz = ball.vz - wind.z * ball.wind, ry = ball.vy;
       const v = Math.hypot(rx, ry, rz), d = ball.drag * v, vh = Math.hypot(ball.vx, ball.vz);
       ball.vx += (-d * rx + ball.spin * Math.min(1, vh / 40)) * h;
-      if (steerDir && canSteer()) { const dv = Math.max(-STEER.max, Math.min(STEER.max, ball.steer + steerDir * STEER.acc * h)) - ball.steer; ball.steer += dv; ball.vx += dv; }
+      if (steerDir && canSteer() && steerDir * ball.vx < STEER.max) ball.vx += steerDir * STEER.acc * (steerDir * ball.vx < 0 ? 2 : 1) * h;   // 반대쪽으로 가고 있으면 두 배로 빨리 돌려요
       ball.vz += (-d * rz) * h;
       ball.vy += (-9.8 - d * ry + LIFT_K * vh * vh) * h;
       ball.x += ball.vx * h; ball.y += ball.vy * h; ball.z += ball.vz * h;
