@@ -1523,6 +1523,18 @@ function frame(now, dt) {
   updateCamera(now, dt);
   composer.render(dt);
 }
+// 잔렉 줄이기: 처음 보는 물체(우주 · 네온 구역, 폭탄 불꽃 등)가 화면에 처음 나올 때
+// 그래픽 준비(셰이더 만들기 · 그림 · 모양 올리기)를 하느라 0.5~1초 멈춰요.
+// 그래서 시작 화면에서 미리 전부 한 번 작은 화면에 그려 둬요. (사람 눈에는 안 보여요)
+function prewarm() {
+  const hid = [], cull = [];
+  scene.traverse(o => { if (!o.visible) { hid.push(o); o.visible = true; } if (o.frustumCulled) { cull.push(o); o.frustumCulled = false; } });
+  const rt = new THREE.WebGLRenderTarget(64, 64);
+  try { renderer.setRenderTarget(rt); renderer.render(scene, camera); } catch (e) { /* 미리 그리기 실패해도 게임은 그대로 */ }
+  renderer.setRenderTarget(null); rt.dispose();
+  hid.forEach(o => { o.visible = false; }); cull.forEach(o => { o.frustumCulled = true; });
+}
+setTimeout(prewarm, 600);
 // 확인용: 지금 화면을 그림 파일(data URL)로 (허브 배너·썸네일 만들 때 씀)
 function snapshot(type = 'image/jpeg', q = .88) { composer.render(); return renderer.domElement.toDataURL(type, q); }
 window.GolfView = { frame, ready: true, snapshot, scene, debugCam: (pos, look) => { DBG = pos ? { pos: V(...pos), look: V(...look) } : null; } };
