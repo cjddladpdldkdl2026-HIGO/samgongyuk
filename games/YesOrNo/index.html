@@ -281,6 +281,17 @@ const fmt = (n) => Math.round(n).toLocaleString("ko-KR");
 const shuffle = (a) => { for (let i = a.length - 1; i > 0; i--) { const j = Math.random() * (i + 1) | 0; [a[i], a[j]] = [a[j], a[i]]; } return a; };
 const pick = (a) => a[Math.random() * a.length | 0];
 const D = window.YESNO_G1 || { muscles: [], bones: [] };
+/* 손과 발에 이름이 똑같은 근육(긴엄지굽힘근 등)은 문제에서 헷갈리지 않게 (손) · (발) 을 붙여요.
+   시트에서 새로 옮겨 와도 자동으로 붙어요: 이름이 두 번 이상 나오는 근육만, 부위(part)를 보고 정해요. */
+(() => {
+  const side = (part) => /아래팔|손/.test(part) ? "손" : /종아리|발/.test(part) ? "발" : "";
+  const tag = (f, ko, en) => {   // 영어 이름이 똑같은 것(abductor digiti minimi 등)도 (hand) · (foot)
+    const key = (m) => String(m[f] || "").replace(/\s/g, "").toLowerCase();
+    const cnt = {}; (D.muscles || []).forEach(m => { cnt[key(m)] = (cnt[key(m)] || 0) + 1; });
+    (D.muscles || []).forEach(m => { const s = side(m.part); if (key(m) && cnt[key(m)] > 1 && s && !/\)$/.test(m[f])) m[f] += ` (${s === "손" ? ko[0] : ko[1]})`; });
+  };
+  tag("ko", ["손", "발"]); tag("en", ["hand", "foot"]);
+})();
 const back = BACK[new URLSearchParams(location.search).get("back")];
 
 /* ===== 저장 (연속 학습일 · 오답 노트 — 이 기기) ===== */
@@ -310,7 +321,7 @@ function lockWhy(G) {
 const M = D.muscles, B = D.bones;
 const nm = (m, lang) => lang === "en" ? m.en : m.ko;
 // 받침에 맞는 조사: jo("등세모근", "은", "는") → "은" · 영어면 "은(는)"
-const jo = (w, a, b) => { const c = String(w).trim().slice(-1).charCodeAt(0); return c >= 0xAC00 && c <= 0xD7A3 ? ((c - 0xAC00) % 28 ? a : b) : `${a}(${b})`; };
+const jo = (w, a, b) => { const c = String(w).replace(/\s*\([^)]*\)$/, "").trim().slice(-1).charCodeAt(0); return c >= 0xAC00 && c <= 0xD7A3 ? ((c - 0xAC00) % 28 ? a : b) : `${a}(${b})`; };
 function distract(answer, pool, n = 3) {
   const seen = new Set([answer]), out = [];
   for (const t of shuffle(pool.slice())) { if (!t || seen.has(t)) continue; seen.add(t); out.push(t); if (out.length >= n) break; }
