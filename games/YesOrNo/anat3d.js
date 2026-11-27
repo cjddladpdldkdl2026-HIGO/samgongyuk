@@ -54,7 +54,7 @@ const View = {
       M.bone = new T.MeshStandardMaterial({ color: 0xf1e6cc, roughness: 0.55 });
       M.dimBone = new T.MeshStandardMaterial({ color: 0xcfc4ad, roughness: 0.8, transparent: true, opacity: 0.22, depthWrite: false });
       M.musc = new T.MeshStandardMaterial({ color: 0x8c4a44, roughness: 0.7, transparent: true, opacity: 0.28, depthWrite: false });
-      M.hi = new T.MeshStandardMaterial({ color: 0xffe27a, roughness: 0.4, emissive: 0xffb21a, emissiveIntensity: 0.8 });
+      M.hi = new T.MeshStandardMaterial({ color: 0xff2a2a, roughness: 0.4, emissive: 0xe0101a, emissiveIntensity: 0.8 });   // 문제 근육은 빨갛게 (2026-11-27 · 예전 노랑)
       center = new T.Vector3(0, 1.2, 0); want = center.clone();
       await Promise.all([load('skeleton'), load('muscle')]);
       box.addEventListener('pointerdown', e => { drag = { x: e.clientX, th: theta }; spin = false; box.setPointerCapture(e.pointerId); });

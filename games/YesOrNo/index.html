@@ -217,6 +217,22 @@ button { font: inherit; color: inherit; cursor: pointer; }
   .bubble { font-size: 15px; max-width: 220px; }
   .mode em { font-size: 26px; }
 }
+
+/* ---------- 문제 화면을 한 화면에 (2026-11-27) ----------
+   그림 · 3D 칸이 남는 높이만 차지하고, 보기 4개 · 확인 버튼은 스크롤 없이 보여요. */
+#lesson { height: 100dvh; min-height: 0; overflow-y: auto; }
+#lesson .v3, #lesson .fig { flex: 1 1 0; min-height: 150px; max-height: 440px; height: auto; display: flex; }
+#lesson .fig img { max-height: none; height: 100%; }
+#lesson .combo { height: 18px; margin-top: 2px; }
+#lesson .label { margin: 2px 0 0; }
+#lesson .ask { margin: 8px 0 10px; }
+#lesson .ask .wiz.dino { height: 78px; }
+#lesson .ask .bubble { margin-bottom: 14px; font-size: 16px; padding-top: 10px; padding-bottom: 10px; }
+#lesson .choices { gap: 8px; padding-bottom: 12px; }
+#lesson .choice { padding: 10px 16px; }
+#lesson .foot { padding-top: 12px; padding-bottom: calc(12px + env(safe-area-inset-bottom)); }
+@media (max-width: 560px) { #lesson .foot .in { flex-direction: row; } #lesson .foot .btn { width: auto; flex: 1; } }
+.modes { grid-template-columns: repeat(3, 1fr); }
 </style>
 </head>
 <body>
@@ -438,7 +454,7 @@ const MODES = [
   { id: "bone", ic: "🦴", name: "뼈대계", small: `그림 ${B.length}장 · ${B.reduce((s, b) => s + b.items.length, 0)}칸` },
   { id: "muscle", ic: "💪", name: "근육", small: `${M.length}개 · 이는곳 · 닿는곳` },
   { id: "mix", ic: "🎲", name: "섞어서", small: "뼈 + 근육" },
-  { id: "3d", ic: "🧊", name: "3D 해부학", small: "번호 과녁 · 빛나는 근육", isNew: true },
+  // 🧊 3D 해부학 단독 메뉴는 뺐어요 (2026-11-27). 뼈 · 근육 문제 안에서는 3D 가 그대로 나와요.
 ];
 
 /* ===== 3D 해부학 문제 (anat3d.js · 2026-11-27) =====
@@ -510,7 +526,7 @@ function view3d(q) {
   if (p[0] === "t") { YN3D.bones(q.three.bones, q.three.ask); return true; }
   if (p[0] === "m" && M3[+p[1]] && !p[2].startsWith("r_")) {
     YN3D.muscle(M3[+p[1]]);
-    if (p[2] === "img") q.q = "과녁이 가리키는\n<mark>빛나는 근육</mark>의 이름은?";
+    if (p[2] === "img") q.q = "과녁이 가리키는\n<mark>빨간 근육</mark>의 이름은?";
     return true;
   }
   return false;
