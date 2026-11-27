@@ -79,15 +79,11 @@
     const now = new Date(), sy = now.getMonth() < 2 ? now.getFullYear() - 1 : now.getFullYear();
     const grade = me.kind === 'student' ? (me.grade_override || Math.max(1, sy - (me.entry_year || sy) + 1)) : null;
     const st = acc == null ? ['none', '진찰 대기', '기록이 쌓이면 나와요'] : acc >= 80 ? ['good', '건강 양호', '지금처럼!'] : acc >= 60 ? ['mid', '경과 관찰', '조금만 더!'] : ['low', '집중 치료', '처방대로 연습해요'];
-    return `<div class="chart-head"><div><h3>진료 차트</h3><span class="no">No. ${esc(me.login_id || '-')} · 청암대학교 물리치료과</span></div>
-        <div class="stamp ${st[0]}">${st[1]}<small>${st[2]}</small></div></div>
-      <div class="pt-info">
-        <div><small>환자명</small><b>${esc(me.name || '-')}</b></div>
-        <div><small>${me.kind === 'student' ? '학번 · 학년' : '구분'}</small><b>${me.kind === 'student' ? `${esc(me.login_id)} · ${grade}학년` : '관리자'}</b></div>
-        <div><small>첫 내원</small><b>${me.created_at ? K.fmtDate(me.created_at) : '-'}</b></div>
-        <div><small>최근 내원</small><b>${lastAt ? K.fmtDate(lastAt) : '-'}</b></div>
-        <div><small>총 진료</small><b>${n(plays)}회</b></div>
-      </div>`;
+    // 한 줄로 (11-27: 진료 차트가 휠 없이 한 화면에 들어가게)
+    return `<div class="chart-head st-hd"><div><h3>진료 차트 <span class="no">No. ${esc(me.login_id || '-')} · 청암대학교 물리치료과</span></h3>
+        <div class="st-pt"><span>환자명 <b>${esc(me.name || '-')}</b></span><span>${me.kind === 'student' ? `학번 · 학년 <b>${esc(me.login_id)} · ${grade}학년</b>` : '<b>관리자</b>'}</span>
+          <span>첫 내원 <b>${me.created_at ? K.fmtDate(me.created_at) : '-'}</b></span><span>최근 내원 <b>${lastAt ? K.fmtDate(lastAt) : '-'}</b></span><span>총 진료 <b>${n(plays)}회</b></span></div></div>
+        <div class="stamp ${st[0]}">${st[1]}<small>${st[2]}</small></div></div>`;
   }
 
   async function gameRecords() {   // 진료 차트 계산 (보여 주기는 아래 칸 · 팝업)
@@ -311,19 +307,23 @@
       const tabs = filt('wg', M.game, [[null, '전체'], ...GAMES.map(g => [g.id, `${g.ic} ${g.ko}`])]);
       const per = filt('wd', M.days, [[null, '전체 기간'], [30, '최근 30일'], [7, '최근 7일']]).replace('class="filt"', 'class="filt sm"');
       const qOk = !d._err && d.total;
-      const vitals = R.rows ? `<div class="vitals st-v5">
-          <div class="vital ${accTone(R.allAcc)}"><small>평균 정확도</small><b>${R.allAcc == null ? '-' : `${R.allAcc}%`}</b><span>${qOk ? `문제 정답률 ${pct(d.right, d.total)}%` : '정확도를 남기는 게임만'}</span></div>
-          <div class="vital"><small>진료 횟수</small><b>${n(R.runs.length)}판</b><span>끝까지 한 판 · ${R.gamesIn.length}개 게임</span></div>
-          <div class="vital"><small>최근 7일</small><b>${n(R.week)}판</b><span>내원 ${n(R.visitDays)}일째</span></div>
-          <div class="vital ${R.strong ? 'good' : ''}"><small>💪 가장 건강한 부위</small><b class="sm">${R.strong ? R.label(R.strong) : '-'}</b><span>${R.strong ? `정확도 ${R.strong.acc}%` : ''}</span></div>
-          <div class="vital ${R.weakest && R.weakest !== R.strong ? 'low' : ''}"><small>⚠ 치료가 가장 필요한</small><b class="sm">${R.weakest && R.weakest !== R.strong ? R.label(R.weakest) : '-'}</b><span>${R.weakest && R.weakest !== R.strong ? `정확도 ${R.weakest.acc}%` : ''}</span></div>
-        </div>` : `<p class="empty2">${M.game || M.days ? '이 조건에는' : '아직'} 진료 기록이 없어요. 로그인한 채로 게임을 한 판 끝까지 하면 첫 진찰 결과가 나와요 🎮</p>`;
-      const rx1 = R.rx ? `<div class="st-rx1"><span class="ic">💊</span><span class="sp"><b>오늘의 처방</b> ${R.rx[0].txt}</span>
-          ${R.rx.length > 1 ? `<button class="more" type="button" data-sttile="rx">처방 ${R.rx.length - 1}개 더 ↗</button>` : ''}${R.rx[0].url ? `<a class="go" href="${esc(R.rx[0].url)}">▶ 처방대로 연습하기</a>` : ''}</div>` : '';
-      return `<h2>📋 진료 차트</h2>
-        <p class="sub">내 게임 기록으로 진찰한 결과예요. 아래 칸을 누르면 자세한 내용이 창으로 떠요.</p>${tabs}${per}
-        <div class="chart">${R.head}${vitals}${rx1}${tilesHtml()}
-          <div class="st-foot"><button type="button" data-sttile="info">ℹ️ 어떤 기록을 모으나요?</button><span>칸을 누르면 창이 떠요 · 오른쪽 위 ✕ 로 닫기</span></div></div>`;
+      // 한 화면 배치 (휠 없이): 왼쪽 = 바이탈 5줄 + 오늘의 처방 / 오른쪽 = 칸 8개 (2 × 4). 자세한 건 칸을 누르면 팝업
+      const vr = (cls, k, v, sub) => `<div class="st-vr ${cls}"><span class="k">${k}</span><b>${v}</b>${sub ? `<small>${sub}</small>` : ''}</div>`;
+      const weakOk = R.weakest && R.weakest !== R.strong;
+      const vitals = R.rows ? `<div class="st-vl">
+          ${vr(accTone(R.allAcc), '평균 정확도', R.allAcc == null ? '-' : `${R.allAcc}%`, qOk ? `문제 ${pct(d.right, d.total)}%` : '')}
+          ${vr('', '진료 횟수', `${n(R.runs.length)}판`, `${R.gamesIn.length}개 게임`)}
+          ${vr('', '최근 7일', `${n(R.week)}판`, `내원 ${n(R.visitDays)}일째`)}
+          ${vr(R.strong ? 'good' : '', '💪 건강', R.strong ? R.label(R.strong) : '-', R.strong ? `${R.strong.acc}%` : '')}
+          ${vr(weakOk ? 'low' : '', '⚠ 치료 필요', weakOk ? R.label(R.weakest) : '-', weakOk ? `${R.weakest.acc}%` : '')}
+        </div>` : `<p class="empty2 st-none">${M.game || M.days ? '이 조건에는' : '아직'} 진료 기록이 없어요.<br>로그인한 채로 게임을 한 판 끝까지 하면 첫 진찰 결과가 나와요 🎮</p>`;
+      // 오늘의 처방: 왼쪽 칸에 처방 전부 (최대 4개) · 줄마다 ▶ 연습하기
+      const rx1 = R.rx ? `<div class="st-rx1"><div class="t"><span>💊 <b>오늘의 처방</b></span><small>${R.rx.length}개</small></div>
+          <ol class="st-rxl">${R.rx.slice(0, 4).map(x => `<li><span>${x.txt}</span>${x.url ? `<a class="go" href="${esc(x.url)}">▶ 연습</a>` : ''}</li>`).join('')}</ol></div>` : '';
+      return `<div class="st-top"><h2>📋 진료 차트</h2>${per}</div>${tabs}
+        <div class="chart st-one">${R.head}
+          <div class="st-body"><div class="st-left">${vitals}${rx1}</div><div class="st-right">${tilesHtml()}</div></div>
+          <div class="st-foot"><button type="button" data-sttile="info">ℹ️ 어떤 기록을 모으나요?</button><span>칸을 누르면 자세한 창이 떠요 · ✕ 로 닫기</span></div></div>`;
     },
     bind() {
       const pg = K.pg;
