@@ -18,7 +18,10 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 const canvas = document.getElementById('scene');
 const MOBILE = Math.min(innerWidth, innerHeight) < 600;
 // logarithmicDepthBuffer: 멀리서 · 높은 데서 봐도 잔디 겹(러프 · 페어웨이 · 선)이 깨지지 않게 (깊이 계산을 거리에 맞게 정밀하게)
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance', logarithmicDepthBuffer: true });
+// 2026-11-27: 오래된 그래픽(WebGL2 도 EXT_frag_depth 도 없음)에서는 이 방식이 꼭짓점에서만 계산돼서
+// 넓은 바닥 판 가운데 깊이가 틀어졌어요 → 먼 페어웨이가 눈밭에 덮이고 폭탄 · 대포 원이 안 보였어요. 그런 컴퓨터에서는 끄고 그려요.
+const FRAG_DEPTH = (() => { try { const c = document.createElement('canvas'); if (c.getContext('webgl2')) return true; const g = c.getContext('webgl'); return !!(g && g.getExtension('EXT_frag_depth')); } catch (e) { return false; } })();
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance', logarithmicDepthBuffer: FRAG_DEPTH });
 renderer.setPixelRatio(Math.min(devicePixelRatio || 1, MOBILE ? 1.5 : 1.75));
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -29,7 +32,7 @@ const scene = new THREE.Scene();
 const HAZE = new THREE.Color(0xbdd9f5);
 scene.fog = new THREE.Fog(HAZE, 220, 1500);
 scene.background = HAZE;
-const camera = new THREE.PerspectiveCamera(52, innerWidth / innerHeight, 0.1, 6000);
+const camera = new THREE.PerspectiveCamera(52, innerWidth / innerHeight, FRAG_DEPTH ? 0.1 : 0.6, 6000);   // 오래된 그래픽은 가까운 끝을 조금 멀리 (간판 겹침 줄무늬 방지)
 
 const composer = new EffectComposer(renderer);
 composer.addPass(new RenderPass(scene, camera));
