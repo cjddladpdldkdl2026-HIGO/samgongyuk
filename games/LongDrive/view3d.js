@@ -1074,7 +1074,12 @@ const CLUB_LEN0 = CLUB_LEN;   // 학생 기준 채 길이 (공 자리 계산용)
 const FBX = { model: null, mixer: null, act: null, lead: null, trail: null, armL: null, armR: null, hips: null, t: { addr: 0, top: 0, imp: 0, fin: 0 } };
 let charWant = -1, charToken = 0;
 function fbxAt(t) { FBX.act.time = t; FBX.mixer.update(0); golfer.updateMatrixWorld(true); }
-function fbxHands() { return [golfer.worldToLocal(FBX.lead.getWorldPosition(V())), golfer.worldToLocal(FBX.trail.getWorldPosition(V()))]; }
+// 채를 잡는 자리 = 두 손 가운뎃손가락 첫마디의 가운데 (손목 뼈에 붙이면 백스윙 꼭대기에서 채가 손 밖으로 떠 보였어요)
+function fbxGrip() {
+  if (!FBX.gripL || !FBX.gripR) return golfer.worldToLocal(FBX.lead.getWorldPosition(V()));
+  return golfer.worldToLocal(FBX.gripL.getWorldPosition(V()).add(FBX.gripR.getWorldPosition(V())).multiplyScalar(.5));
+}
+function fbxHands() { return [fbxGrip(), golfer.worldToLocal(FBX.trail.getWorldPosition(V()))]; }
 /* 채 방향 = 스윙 평면 위에서 '어깨 → 왼손' 팔 각도 + 손목 꺾임(h, 학생 스윙과 같은 값) */
 function fbxClubDir(L, h) {
   const sh = golfer.worldToLocal(FBX.armL.getWorldPosition(V())).add(golfer.worldToLocal(FBX.armR.getWorldPosition(V()))).multiplyScalar(.5);
@@ -1087,9 +1092,9 @@ function loadChar(i) {
     if (token !== charToken) return;   // 그 사이 다른 캐릭터를 골랐어요
     const o = gl.scene, clip = gl.animations.find(a => a.duration > .1); if (!clip) return;
     o.scale.setScalar(.01);   // cm → m
-    const F = { lead: null, trail: null, armL: null, armR: null, hips: null };
+    const F = { lead: null, trail: null, armL: null, armR: null, hips: null, gripL: null, gripR: null };
     o.traverse(m => { if (m.isMesh) { m.castShadow = true; m.frustumCulled = false; [].concat(m.material).forEach(x => { x.envMap = ENV_TEX; x.envMapIntensity = 1; }); } });
-    o.traverse(b => { if (/LeftHand$/.test(b.name)) F.lead = b; if (/RightHand$/.test(b.name)) F.trail = b; if (/LeftArm$/.test(b.name)) F.armL = b; if (/RightArm$/.test(b.name)) F.armR = b; if (/Hips$/.test(b.name)) F.hips = b; });
+    o.traverse(b => { if (/LeftHand$/.test(b.name)) F.lead = b; if (/RightHand$/.test(b.name)) F.trail = b; if (/LeftArm$/.test(b.name)) F.armL = b; if (/RightArm$/.test(b.name)) F.armR = b; if (/Hips$/.test(b.name)) F.hips = b; if (/LeftHandMiddle1$/.test(b.name)) F.gripL = b; if (/RightHandMiddle1$/.test(b.name)) F.gripR = b; });
     if (!F.lead || !F.trail || !F.armL || !F.armR || !F.hips) return;
     if (FBX.model) golfer.remove(FBX.model);
     golfer.visible = true;
