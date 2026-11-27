@@ -87,7 +87,7 @@
     <div class="lg-side"><div class="lg-in">
       <div class="lg-kicker"><span>청암대학교 물리치료과 <b>PTX+AI</b> 동아리가 만든</span></div>
       <img class="lg-logo" src="login/logo.webp" alt="삼공육">
-      <div class="lg-sub"><span class="lg-tag"><span>해부학, 게임이 되다</span></span><em>ANATOMY GAME LAB</em></div>
+      <div class="lg-sub"><span class="lg-tag"><span>뼛속까지 플레이하라</span></span><em>GAME ON. BRAIN ON</em></div>
       <div class="lg-card">
         <div class="lg-tabs"><button type="button" class="on">로그인</button><button type="button" data-join>회원가입</button></div>
         <form id="lgForm" autocomplete="on" novalidate>
