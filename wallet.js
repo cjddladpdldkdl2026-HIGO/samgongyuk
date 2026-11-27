@@ -16,6 +16,7 @@
   const keyOf = () => `samgongyuk-wallet/v1/${member() ? A().user.id : "guest"}`;
   const blank = () => ({ v: 1, cash: 0, earned: 0, spent: 0, updated: 0 });
   const listeners = [];
+  const ADMIN_GIFT = 10000;
   let W = blank(), timer = null, remoteOK = true, who;   // who = 지금 지갑 주인 (회원 id 또는 null)
 
   function readLocal(k) { try { const d = JSON.parse(localStorage.getItem(k) || "null"); return d && d.v === 1 ? d : null; } catch { return null; } }
@@ -50,6 +51,11 @@
     }
     W = Object.assign(blank(), best || {});
     W.cash = Math.max(0, Math.round(+W.cash || 0));
+    // 관리자 계정은 처음 한 번 10000 캐쉬 (게임 아이템 점검용 · 2026-11-27). adminGift 표시가 있으면 다시 안 줘요.
+    const pf = A() && A().profile;
+    if (member() && pf && pf.kind === "admin" && pf.approved && !W.adminGift) {
+      W.cash += ADMIN_GIFT; W.earned += ADMIN_GIFT; W.adminGift = ADMIN_GIFT; W.updated = Date.now();
+    }
     writeLocal(); emit();
     if (member() && remoteOK) push();
   }
